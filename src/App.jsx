@@ -235,8 +235,13 @@ export default function App() {
       {page === 'profile' && (
         <ProfilePage user={user} onViewCommand={viewCommand} onNavigate={navigate} />
       )}
-      {page === 'detail' && selectedCmd && (
-        <CommandDetailPage cmd={selectedCmd} onBack={() => navigate('browse')} user={user} />
+      {page === 'detail' && (
+        <CommandDetailPage
+          cmd={selectedCmd}
+          loading={!selectedCmd}
+          onBack={() => navigate('browse')}
+          user={user}
+        />
       )}
 
       <Footer onNavigate={navigate} />

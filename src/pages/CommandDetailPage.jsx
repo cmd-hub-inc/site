@@ -17,7 +17,48 @@ import { C } from '../constants';
 import { FrameworkBadge, TypeBadge, TagBadge } from '../components/Badges';
 import { StatPill } from '../components/Stars';
 
-export default function CommandDetailPage({ cmd, onBack, user }) {
+export default function CommandDetailPage({ cmd, onBack, user, loading = false }) {
+  if (loading || !cmd) {
+    return (
+      <div style={{ maxWidth: 920, margin: '0 auto', padding: '44px 24px' }}>
+        <div style={{ marginBottom: 28 }}>
+          <div className="skeleton" style={{ width: 140, height: 22, borderRadius: 8 }} />
+        </div>
+        <div
+          className="skeleton"
+          style={{
+            background: C.surface,
+            border: `1px solid ${C.border}`,
+            borderRadius: 16,
+            padding: 28,
+            minHeight: 300,
+          }}
+        />
+        <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 16, marginTop: 18 }}>
+          <div
+            className="skeleton"
+            style={{
+              background: C.surface,
+              border: `1px solid ${C.border}`,
+              borderRadius: 12,
+              padding: 20,
+              height: 140,
+            }}
+          />
+          <div
+            className="skeleton"
+            style={{
+              background: C.surface,
+              border: `1px solid ${C.border}`,
+              borderRadius: 12,
+              padding: 20,
+              height: 140,
+            }}
+          />
+        </div>
+      </div>
+    );
+  }
   const [copied, setCopied] = useState(false);
   const [faved, setFaved] = useState(null);
   const [favCount, setFavCount] = useState(cmd.favourites || 0);

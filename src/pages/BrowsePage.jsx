@@ -14,7 +14,8 @@ export default function BrowsePage({ initialTag, onViewCommand }) {
   const [showFilters, setShowFilters] = useState(false);
 
   const API_BASE = import.meta.env.DEV ? '' : import.meta.env.VITE_API_BASE || '';
-  const [commands, setCommands] = useState(MOCK_COMMANDS);
+  const [commands, setCommands] = useState([]);
+  const [loadingCommands, setLoadingCommands] = useState(true);
 
   useEffect(() => {
     if (initialTag) setSelectedTags([initialTag]);
@@ -43,6 +44,7 @@ export default function BrowsePage({ initialTag, onViewCommand }) {
           await new Promise((r) => setTimeout(r, 1000));
         }
       }
+      if (!cancelled) setLoadingCommands(false);
     })();
     return () => {
       cancelled = true;
@@ -82,9 +84,9 @@ export default function BrowsePage({ initialTag, onViewCommand }) {
   };
 
   // Top downloaded commands (used in the section below the search controls)
-  const topDownloaded = [...commands]
-    .sort((a, b) => (b.downloads || 0) - (a.downloads || 0))
-    .slice(0, 5);
+  const topDownloaded = loadingCommands
+    ? []
+    : [...commands].sort((a, b) => (b.downloads || 0) - (a.downloads || 0)).slice(0, 5);
 
   return (
     <div style={{ maxWidth: 1100, margin: '0 auto', padding: '44px 24px' }}>
@@ -277,41 +279,73 @@ export default function BrowsePage({ initialTag, onViewCommand }) {
       )}
 
       {/* Most Downloaded section placed immediately below the search controls */}
-      {commands && commands.length > 0 && !search && selectedTags.length === 0 && !selectedFW && !selectedType && (
-        <div style={{ marginBottom: 18 }}>
-          <div
-            style={{
-              display: 'flex',
-              justifyContent: 'space-between',
-              alignItems: 'center',
-              marginBottom: 10,
-            }}
-          >
-            <div style={{ color: C.white, fontSize: 15, fontWeight: 700 }}>Most downloaded</div>
-            <div style={{ color: C.muted, fontSize: 12 }}>{topDownloaded.length} trending</div>
+      {commands &&
+        commands.length > 0 &&
+        !search &&
+        selectedTags.length === 0 &&
+        !selectedFW &&
+        !selectedType && (
+          <div style={{ marginBottom: 18 }}>
+            <div
+              style={{
+                display: 'flex',
+                justifyContent: 'space-between',
+                alignItems: 'center',
+                marginBottom: 10,
+              }}
+            >
+              <div style={{ color: C.white, fontSize: 15, fontWeight: 700 }}>Most downloaded</div>
+              <div style={{ color: C.muted, fontSize: 12 }}>{topDownloaded.length} trending</div>
+            </div>
+            <div
+              style={{
+                display: 'grid',
+                gridTemplateColumns: 'repeat(auto-fill, minmax(220px, 1fr))',
+                gap: 12,
+              }}
+            >
+              {loadingCommands
+                ? [1, 2, 3, 4, 5].map((i) => (
+                    <CommandCard key={`top-skel-${i}`} loading={true} cmd={{}} onClick={() => {}} />
+                  ))
+                : topDownloaded.map((cmd) => (
+                    <CommandCard key={`top-${cmd.id}`} cmd={cmd} onClick={onViewCommand} />
+                  ))}
+            </div>
           </div>
-          <div
-            style={{
-              display: 'grid',
-              gridTemplateColumns: 'repeat(auto-fill, minmax(220px, 1fr))',
-              gap: 12,
-            }}
-          >
-            {topDownloaded.map((cmd) => (
-              <CommandCard key={`top-${cmd.id}`} cmd={cmd} onClick={onViewCommand} />
-            ))}
-          </div>
-        </div>
-      )}
+        )}
 
-      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'baseline', marginBottom: 10 }}>
+      <div
+        style={{
+          display: 'flex',
+          justifyContent: 'space-between',
+          alignItems: 'baseline',
+          marginBottom: 10,
+        }}
+      >
         <div>
-          <div style={{ fontSize: 18, fontWeight: 800, color: C.white, marginBottom: 4 }}>All commands</div>
-          <div style={{ color: C.muted, fontSize: 13 }}>{filtered.length} command{filtered.length !== 1 ? 's' : ''} found</div>
+          <div style={{ fontSize: 18, fontWeight: 800, color: C.white, marginBottom: 4 }}>
+            All commands
+          </div>
+          <div style={{ color: C.muted, fontSize: 13 }}>
+            {filtered.length} command{filtered.length !== 1 ? 's' : ''} found
+          </div>
         </div>
       </div>
 
-      {filtered.length > 0 ? (
+      {loadingCommands ? (
+        <div
+          style={{
+            display: 'grid',
+            gridTemplateColumns: 'repeat(auto-fill, minmax(290px, 1fr))',
+            gap: 16,
+          }}
+        >
+          {[...Array(8)].map((_, i) => (
+            <CommandCard key={`skel-${i}`} loading={true} cmd={{}} onClick={() => {}} />
+          ))}
+        </div>
+      ) : filtered.length > 0 ? (
         <div
           style={{
             display: 'grid',
