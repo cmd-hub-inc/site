@@ -25,6 +25,52 @@ async function ensure() {
     console.log(`[dbEnsure] Missing tables: ${missing.join(', ')}.`)
     console.log('[dbEnsure] Attempting to create/migrate schema using Prisma (this may prompt)...')
 
+    // Try programmatic creation first to avoid CLI hangs (useful in dev without Docker)
+    try {
+      console.log('[dbEnsure] Attempting programmatic table creation via Prisma client...')
+      // Create User table (id as text so external IDs like Discord IDs can be used)
+      await prisma.$executeRawUnsafe(`
+        CREATE TABLE IF NOT EXISTS "User" (
+          id text PRIMARY KEY,
+          username text NOT NULL,
+          avatar text,
+          "createdAt" timestamptz DEFAULT now()
+        )
+      `)
+
+      // Create Command table with a foreign key to User
+      await prisma.$executeRawUnsafe(`
+        CREATE TABLE IF NOT EXISTS "Command" (
+          id text PRIMARY KEY,
+          name text NOT NULL UNIQUE,
+          description text NOT NULL,
+          type text NOT NULL,
+          framework text NOT NULL,
+          version text NOT NULL,
+          tags text[] DEFAULT '{}'::text[],
+          "githubUrl" text,
+          "websiteUrl" text,
+          downloads integer DEFAULT 0,
+          rating double precision DEFAULT 0,
+          "ratingCount" integer DEFAULT 0,
+          favourites integer DEFAULT 0,
+          views integer DEFAULT 0,
+          changelog text,
+          "rawData" text NOT NULL,
+          "createdAt" timestamptz DEFAULT now(),
+          "updatedAt" timestamptz DEFAULT now(),
+          "authorId" text NOT NULL,
+          CONSTRAINT fk_author FOREIGN KEY ("authorId") REFERENCES "User"(id) ON DELETE CASCADE
+        )
+      `)
+
+      console.log('[dbEnsure] Programmatic table creation completed.')
+      return
+    } catch (progErr) {
+      console.warn('[dbEnsure] Programmatic creation failed:', progErr && progErr.message ? progErr.message : progErr)
+      // fall through to CLI-based methods
+    }
+
     // Prefer using the project's local prisma binary if available to avoid global CLI mismatches
     const localPrisma = path.resolve(process.cwd(), 'node_modules', '.bin', process.platform === 'win32' ? 'prisma.cmd' : 'prisma')
     const prismaCmd = fs.existsSync(localPrisma) ? localPrisma : 'npx prisma'

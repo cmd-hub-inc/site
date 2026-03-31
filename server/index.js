@@ -87,6 +87,34 @@ function runDbEnsureBackground() {
 // Start dbEnsure in background
 runDbEnsureBackground()
 
+// Also probe DB directly so we can mark readiness if tables already exist
+async function probeDbReady() {
+  try {
+    const needed = ['User', 'Command']
+    const rows = await prisma.$queryRaw`
+      SELECT table_name FROM information_schema.tables
+      WHERE table_schema = 'public' AND table_name = ANY(${needed})
+    `
+    const existing = rows.map(r => (r.table_name || r.tableName || '').toString())
+    const missing = needed.filter(n => !existing.includes(n))
+    if (missing.length === 0) {
+      dbReady = true
+      console.log('[start] DB probe: required tables exist; server marked ready.')
+    } else {
+      console.log('[start] DB probe: still missing tables:', missing.join(', '))
+    }
+  } catch (e) {
+    console.warn('[start] DB probe failed:', e && e.message ? e.message : e)
+  }
+}
+
+// Probe immediately and every 2 seconds until ready
+probeDbReady()
+const _probeInterval = setInterval(async () => {
+  if (dbReady) return clearInterval(_probeInterval)
+  await probeDbReady()
+}, 2000)
+
 // readiness endpoint for external health checks
 app.get('/ready', (req, res) => {
   if (dbReady) return res.json({ ok: true })
