@@ -578,6 +578,92 @@ app.get('/api/users/:id', requireDbReady, async (req, res) => {
   }
 });
 
+// Follow a user (requires auth)
+app.post('/api/users/:id/follow', requireDbReady, requireAuth, async (req, res) => {
+  try {
+    const targetId = String(req.params.id);
+    const me = req.session && req.session.user && String(req.session.user.id);
+    if (!me) return res.status(401).json({ error: 'Not authenticated' });
+    if (me === targetId) return res.status(400).json({ error: 'cannot_follow_self' });
+    try {
+      // best-effort insert if not exists
+      await prisma.$executeRaw`
+        INSERT INTO "Follower" ("followerId","followeeId")
+        SELECT ${me}, ${targetId}
+        WHERE NOT EXISTS (
+          SELECT 1 FROM "Follower" WHERE "followerId" = ${me} AND "followeeId" = ${targetId}
+        )
+      `;
+    } catch (e) {
+      console.warn('follow insert raw SQL error', e && e.message ? e.message : e);
+    }
+    // return updated follower count
+    try {
+      const rows = await prisma.$queryRaw`
+        SELECT COUNT(*) as cnt FROM "Follower" WHERE "followeeId" = ${targetId}
+      `;
+      const cnt = Array.isArray(rows) && rows.length ? Number(rows[0].cnt || 0) : 0;
+      return res.json({ ok: true, following: true, followers: cnt });
+    } catch (e) {
+      return res.json({ ok: true, following: true });
+    }
+  } catch (err) {
+    console.error('follow error', err && err.message ? err.message : err);
+    return res.status(500).json({ error: 'failed' });
+  }
+});
+
+// Unfollow a user (requires auth)
+app.post('/api/users/:id/unfollow', requireDbReady, requireAuth, async (req, res) => {
+  try {
+    const targetId = String(req.params.id);
+    const me = req.session && req.session.user && String(req.session.user.id);
+    if (!me) return res.status(401).json({ error: 'Not authenticated' });
+    if (me === targetId) return res.status(400).json({ error: 'cannot_unfollow_self' });
+    try {
+      await prisma.$executeRaw`
+        DELETE FROM "Follower" WHERE "followerId" = ${me} AND "followeeId" = ${targetId}
+      `;
+    } catch (e) {
+      console.warn('unfollow raw SQL error', e && e.message ? e.message : e);
+    }
+    try {
+      const rows = await prisma.$queryRaw`
+        SELECT COUNT(*) as cnt FROM "Follower" WHERE "followeeId" = ${targetId}
+      `;
+      const cnt = Array.isArray(rows) && rows.length ? Number(rows[0].cnt || 0) : 0;
+      return res.json({ ok: true, following: false, followers: cnt });
+    } catch (e) {
+      return res.json({ ok: true, following: false });
+    }
+  } catch (err) {
+    console.error('unfollow error', err && err.message ? err.message : err);
+    return res.status(500).json({ error: 'failed' });
+  }
+});
+
+// Check if current authenticated user is following given user
+app.get('/api/users/:id/is-following', requireDbReady, requireAuth, async (req, res) => {
+  try {
+    const targetId = String(req.params.id);
+    const me = req.session && req.session.user && String(req.session.user.id);
+    if (!me) return res.status(401).json({ error: 'Not authenticated' });
+    try {
+      const rows = await prisma.$queryRaw`
+        SELECT 1 FROM "Follower" WHERE "followerId" = ${me} AND "followeeId" = ${targetId} LIMIT 1
+      `;
+      const following = Array.isArray(rows) && rows.length > 0;
+      return res.json({ following });
+    } catch (e) {
+      console.warn('is-following check failed', e && e.message ? e.message : e);
+      return res.json({ following: false });
+    }
+  } catch (err) {
+    console.error('is-following error', err && err.message ? err.message : err);
+    return res.status(500).json({ error: 'failed' });
+  }
+});
+
 // Get favourited commands for a user (public)
 app.get('/api/users/:id/favourites', requireDbReady, async (req, res) => {
   const { id } = req.params;

@@ -33,7 +33,7 @@ export default function App() {
   const navigate = (p, params = {}) => {
     setPage(p);
     setPageParams(params);
-    if (p !== 'detail') setSelectedCmd(null);
+    if (p !== 'detail' && p !== 'edit') setSelectedCmd(null);
     try {
       window.scrollTo(0, 0);
     } catch {}
@@ -51,12 +51,32 @@ export default function App() {
         if (pid && (!params || String(params.id) !== String(pid))) {
           setPageParams({ ...params, id: pid });
         }
-      } else if (p === 'detail' && params && params.id)
+      } else if (p === 'detail' && params && params.id) {
         newPath = `/command/${encodeURIComponent(params.id)}`;
+      } else if (p === 'edit' && params && params.id) {
+        newPath = `/command/${encodeURIComponent(params.id)}/edit`;
+      }
       window.history.pushState({}, '', newPath);
     } catch (e) {
       // ignore
     }
+
+    // If navigating to edit, fetch command in background to hydrate editor
+    try {
+      if (p === 'edit' && params && params.id) {
+        (async () => {
+          try {
+            const rc = await fetch(`${API_BASE}/api/commands/${encodeURIComponent(params.id)}`);
+            if (rc.ok) {
+              const cmd = await rc.json();
+              setSelectedCmd(cmd);
+            }
+          } catch (e) {
+            // ignore
+          }
+        })();
+      }
+    } catch (e) {}
   };
 
   const requiresAuth = (p) => p === 'upload' || p === 'edit';
@@ -139,8 +159,21 @@ export default function App() {
 
           if (editMatch) {
             const id = decodeURIComponent(editMatch[1]);
-            setPage('edit');
-            setPageParams({ id });
+            try {
+              const rc = await fetch(`${API_BASE}/api/commands/${encodeURIComponent(id)}`);
+              if (rc.ok) {
+                const cmd = await rc.json();
+                setSelectedCmd(cmd);
+                setPage('edit');
+                setPageParams({ id });
+              } else {
+                setPage('edit');
+                setPageParams({ id });
+              }
+            } catch (e) {
+              setPage('edit');
+              setPageParams({ id });
+            }
           } else if (cmdMatch) {
             const id = decodeURIComponent(cmdMatch[1]);
             try {
@@ -196,6 +229,16 @@ export default function App() {
 
         if (editMatch) {
           const id = decodeURIComponent(editMatch[1]);
+          try {
+            const rc = await fetch(`${API_BASE}/api/commands/${encodeURIComponent(id)}`);
+            if (rc.ok) {
+              const cmd = await rc.json();
+              setSelectedCmd(cmd);
+              setPage('edit');
+              setPageParams({ id });
+              return;
+            }
+          } catch (e) {}
           setPage('edit');
           setPageParams({ id });
           return;

@@ -22,6 +22,7 @@ export default function ProfilePage({ user, profileId, onViewCommand, onNavigate
   const [favCmds, setFavCmds] = useState([]);
   const [loadingUserCmds, setLoadingUserCmds] = useState(true);
   const [loadingFavCmds, setLoadingFavCmds] = useState(true);
+  const [isFollowing, setIsFollowing] = useState(false);
   const totalDownloads = userCmds.reduce((a, c) => a + (c.downloads || 0), 0);
   const totalFavs = userCmds.reduce((a, c) => a + (c.favourites || 0), 0);
 
@@ -278,6 +279,25 @@ export default function ProfilePage({ user, profileId, onViewCommand, onNavigate
     };
   }, [profileId, user, viewUser]);
 
+  // Check if current authenticated user is following this profile
+  useEffect(() => {
+    let cancelled = false;
+    (async () => {
+      if (!displayUser || !user) return;
+      if (String(displayUser.id) === String(user.id)) return;
+      try {
+        const r = await fetch(`${API_BASE}/api/users/${encodeURIComponent(displayUser.id)}/is-following`, { credentials: 'include' });
+        if (r.ok) {
+          const b = await r.json();
+          if (!cancelled) setIsFollowing(!!b.following);
+        }
+      } catch (e) {}
+    })();
+    return () => {
+      cancelled = true;
+    };
+  }, [displayUser, user]);
+
   return (
     <div style={{ maxWidth: 960, margin: '0 auto', padding: '44px 24px' }}>
       <div
@@ -339,7 +359,7 @@ export default function ProfilePage({ user, profileId, onViewCommand, onNavigate
             </div>
           </div>
           <div style={{ display: 'flex', gap: 28 }}>
-            {[
+                {[
               { label: 'Commands', value: loadingUserCmds ? null : userCmds.length },
               { label: 'Downloads', value: loadingUserCmds ? null : totalDownloads },
               { label: 'Favourites', value: loadingUserCmds ? null : totalFavs },
@@ -387,22 +407,66 @@ export default function ProfilePage({ user, profileId, onViewCommand, onNavigate
         >
           Uploaded Commands
         </h2>
-        {displayUser && user && String(displayUser.id) === String(user.id) && (
-          <button
-            onClick={() => onNavigate('upload')}
-            style={{
-              background: C.blurple,
-              color: '#fff',
-              border: 'none',
-              borderRadius: 8,
-              padding: '8px 18px',
-              fontSize: 13,
-              fontWeight: 700,
-            }}
-          >
-            Upload New
-          </button>
-        )}
+        <div style={{ display: 'flex', gap: 8, alignItems: 'center' }}>
+          {displayUser && user && String(displayUser.id) === String(user.id) && (
+            <button
+              onClick={() => onNavigate('upload')}
+              style={{
+                background: C.blurple,
+                color: '#fff',
+                border: 'none',
+                borderRadius: 8,
+                padding: '8px 18px',
+                fontSize: 13,
+                fontWeight: 700,
+              }}
+            >
+              Upload New
+            </button>
+          )}
+
+          {/* Follow / Unfollow for other users */}
+          {displayUser && user && String(displayUser.id) !== String(user.id) && (
+            <button
+              onClick={async () => {
+                try {
+                  if (isFollowing) {
+                    const r = await fetch(`${API_BASE}/api/users/${encodeURIComponent(displayUser.id)}/unfollow`, { method: 'POST', credentials: 'include' });
+                    if (r.ok) {
+                      const body = await r.json();
+                      setIsFollowing(false);
+                      if (body && typeof body.followers !== 'undefined') {
+                        setViewUser((v) => ({ ...(v || {}), followers: body.followers }));
+                      }
+                    }
+                  } else {
+                    const r = await fetch(`${API_BASE}/api/users/${encodeURIComponent(displayUser.id)}/follow`, { method: 'POST', credentials: 'include' });
+                    if (r.ok) {
+                      const body = await r.json();
+                      setIsFollowing(true);
+                      if (body && typeof body.followers !== 'undefined') {
+                        setViewUser((v) => ({ ...(v || {}), followers: body.followers }));
+                      }
+                    }
+                  }
+                } catch (e) {
+                  // ignore
+                }
+              }}
+              style={{
+                background: isFollowing ? 'transparent' : C.blurple,
+                color: isFollowing ? C.white : '#fff',
+                border: isFollowing ? `1px solid ${C.border}` : 'none',
+                borderRadius: 8,
+                padding: '8px 18px',
+                fontSize: 13,
+                fontWeight: 700,
+              }}
+            >
+              {isFollowing ? 'Following' : 'Follow'}
+            </button>
+          )}
+        </div>
       </div>
       {loadingUserCmds ? (
         <div
