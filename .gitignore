@@ -60,3 +60,5 @@ coverage-final.json
 # Optional environment files
 .env.production
 .env.test
+.vercel
+.env*.local
