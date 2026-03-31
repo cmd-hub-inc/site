@@ -43,8 +43,15 @@ export default function App() {
       let newPath = '/';
       if (p === 'browse') newPath = '/browse';
       else if (p === 'upload') newPath = '/upload';
-      else if (p === 'profile') newPath = params && params.id ? `/profile/${encodeURIComponent(params.id)}` : '/profile';
-      else if (p === 'detail' && params && params.id)
+      else if (p === 'profile') {
+        // if no id provided and we have an authenticated `user`, canonicalize to use their id
+        const pid = params && params.id ? params.id : user && user.id ? user.id : undefined;
+        newPath = pid ? `/profile/${encodeURIComponent(pid)}` : '/profile';
+        // write back canonical id into pageParams so app state matches URL
+        if (pid && (!params || String(params.id) !== String(pid))) {
+          setPageParams({ ...params, id: pid });
+        }
+      } else if (p === 'detail' && params && params.id)
         newPath = `/command/${encodeURIComponent(params.id)}`;
       window.history.pushState({}, '', newPath);
     } catch (e) {
@@ -213,6 +220,16 @@ export default function App() {
           const id = decodeURIComponent(profMatch[1]);
           setPage('profile');
           setPageParams({ id });
+          setSelectedCmd(null);
+          return;
+        }
+
+        // handle bare /profile when user is authenticated: canonicalize to /profile/:id
+        if (pathname === '/profile' && user) {
+          const pid = user.id;
+          window.history.replaceState({}, '', `/profile/${encodeURIComponent(pid)}`);
+          setPage('profile');
+          setPageParams({ id: pid });
           setSelectedCmd(null);
           return;
         }
