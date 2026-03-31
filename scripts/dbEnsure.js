@@ -19,6 +19,53 @@ async function ensure() {
     const missing = needed.filter(n => !existing.includes(n))
     if (missing.length === 0) {
       console.log('[dbEnsure] All required tables exist.')
+      // If commands table exists but is empty, seed mock data for dev convenience
+      try {
+        const cmdCount = await prisma.command.count()
+        if (cmdCount === 0) {
+          console.log('[dbEnsure] Commands table empty — seeding mock commands...')
+          try {
+            const mockPath = path.resolve(process.cwd(), 'src', 'data', 'mockCommands.js')
+            const { MOCK_COMMANDS } = await import(`file://${mockPath}`)
+            for (const m of MOCK_COMMANDS) {
+              const authorId = (m.author && m.author.id) ? String(m.author.id) : `author-${Math.random().toString(36).slice(2,8)}`
+              try {
+                await prisma.user.upsert({ where: { id: authorId }, create: { id: authorId, username: m.author && m.author.username ? m.author.username : 'unknown' }, update: { username: m.author && m.author.username ? m.author.username : 'unknown' } })
+              } catch (uerr) {
+                console.warn('[dbEnsure] Failed to upsert user for seed:', uerr && uerr.message ? uerr.message : uerr)
+              }
+              try {
+                await prisma.command.create({ data: {
+                  id: m.id ? String(m.id) : undefined,
+                  name: m.name,
+                  description: m.description || '',
+                  type: m.type || '',
+                  framework: m.framework || '',
+                  version: m.version || '',
+                  tags: m.tags || [],
+                  githubUrl: m.githubUrl || null,
+                  websiteUrl: m.websiteUrl || null,
+                  downloads: m.downloads || 0,
+                  rating: typeof m.rating === 'number' ? m.rating : 0,
+                  ratingCount: m.ratingCount || 0,
+                  favourites: m.favourites || 0,
+                  views: m.views || 0,
+                  changelog: m.changelog || null,
+                  rawData: m.rawData ? String(m.rawData) : '{}',
+                  authorId: authorId,
+                }})
+              } catch (cerr) {
+                console.warn('[dbEnsure] Failed to create command during seed:', cerr && cerr.message ? cerr.message : cerr)
+              }
+            }
+            console.log('[dbEnsure] Mock seeding completed.')
+          } catch (impErr) {
+            console.warn('[dbEnsure] Failed to import/mock-seed:', impErr && impErr.message ? impErr.message : impErr)
+          }
+        }
+      } catch (countErr) {
+        console.warn('[dbEnsure] Failed to check command count for seeding:', countErr && countErr.message ? countErr.message : countErr)
+      }
       return
     }
 
@@ -65,6 +112,54 @@ async function ensure() {
       `)
 
       console.log('[dbEnsure] Programmatic table creation completed.')
+      // Seed mock data if Commands table is empty (useful for local dev)
+      try {
+        const cmdCount = await prisma.command.count()
+        if (cmdCount === 0) {
+          console.log('[dbEnsure] No commands found — seeding mock commands into DB...')
+          try {
+            const mockPath = path.resolve(process.cwd(), 'src', 'data', 'mockCommands.js')
+            const { MOCK_COMMANDS } = await import(`file://${mockPath}`)
+            for (const m of MOCK_COMMANDS) {
+              const authorId = (m.author && m.author.id) ? String(m.author.id) : `author-${Math.random().toString(36).slice(2,8)}`
+              try {
+                await prisma.user.upsert({ where: { id: authorId }, create: { id: authorId, username: m.author && m.author.username ? m.author.username : 'unknown' }, update: { username: m.author && m.author.username ? m.author.username : 'unknown' } })
+              } catch (uerr) {
+                console.warn('[dbEnsure] Failed to upsert user for seed:', uerr && uerr.message ? uerr.message : uerr)
+              }
+
+              try {
+                await prisma.command.create({ data: {
+                  id: m.id ? String(m.id) : undefined,
+                  name: m.name,
+                  description: m.description || '',
+                  type: m.type || '',
+                  framework: m.framework || '',
+                  version: m.version || '',
+                  tags: m.tags || [],
+                  githubUrl: m.githubUrl || null,
+                  websiteUrl: m.websiteUrl || null,
+                  downloads: m.downloads || 0,
+                  rating: typeof m.rating === 'number' ? m.rating : 0,
+                  ratingCount: m.ratingCount || 0,
+                  favourites: m.favourites || 0,
+                  views: m.views || 0,
+                  changelog: m.changelog || null,
+                  rawData: m.rawData ? String(m.rawData) : '{}',
+                  authorId: authorId,
+                }})
+              } catch (cerr) {
+                console.warn('[dbEnsure] Failed to create command during seed:', cerr && cerr.message ? cerr.message : cerr)
+              }
+            }
+            console.log('[dbEnsure] Mock seeding completed.')
+          } catch (impErr) {
+            console.warn('[dbEnsure] Failed to import/mock-seed:', impErr && impErr.message ? impErr.message : impErr)
+          }
+        }
+      } catch (countErr) {
+        console.warn('[dbEnsure] Failed to check command count for seeding:', countErr && countErr.message ? countErr.message : countErr)
+      }
       return
     } catch (progErr) {
       console.warn('[dbEnsure] Programmatic creation failed:', progErr && progErr.message ? progErr.message : progErr)

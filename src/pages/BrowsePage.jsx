@@ -13,16 +13,54 @@ export default function BrowsePage({ initialTag, onViewCommand }) {
   const [sort, setSort] = useState('downloads')
   const [showFilters, setShowFilters] = useState(false)
 
+  const API_BASE = import.meta.env.DEV ? '' : (import.meta.env.VITE_API_BASE || '')
+  const [commands, setCommands] = useState(MOCK_COMMANDS)
+
   useEffect(() => { if (initialTag) setSelectedTags([initialTag]) }, [initialTag])
   const toggleTag = (t) => setSelectedTags(prev => prev.includes(t) ? prev.filter(x=>x!==t) : [...prev, t])
 
-  const filtered = MOCK_COMMANDS.filter(cmd => {
-    if (search) { const q = search.toLowerCase(); if (!cmd.name.includes(q) && !cmd.description.toLowerCase().includes(q)) return false }
-    if (selectedTags.length && !selectedTags.every(t => cmd.tags.includes(t))) return false
+  useEffect(() => {
+    let cancelled = false
+    ;(async () => {
+      const maxAttempts = 30
+      for (let i = 0; i < maxAttempts && !cancelled; i++) {
+        try {
+          const r = await fetch(`${API_BASE}/api/commands`)
+          if (r.ok) {
+            const data = await r.json()
+            if (!cancelled && Array.isArray(data)) setCommands(data)
+            break
+          }
+          if (r.status === 503) {
+            await new Promise(r => setTimeout(r, 1000))
+            continue
+          }
+          break
+        } catch (e) {
+          await new Promise(r => setTimeout(r, 1000))
+        }
+      }
+    })()
+    return () => { cancelled = true }
+  }, [])
+
+  const filtered = commands.filter(cmd => {
+    if (search) {
+      const q = search.toLowerCase()
+      const name = (cmd.name || '').toLowerCase()
+      const desc = (cmd.description || '').toLowerCase()
+      if (!name.includes(q) && !desc.includes(q)) return false
+    }
+    if (selectedTags.length && !selectedTags.every(t => (cmd.tags || []).includes(t))) return false
     if (selectedFW && cmd.framework !== selectedFW) return false
     if (selectedType && cmd.type !== selectedType) return false
     return true
-  }).sort((a,b)=>{ if (sort==='downloads') return b.downloads-a.downloads; if (sort==='rating') return b.rating-a.rating; if (sort==='newest') return new Date(b.createdAt)-new Date(a.createdAt); return 0 })
+  }).sort((a,b)=>{
+    if (sort==='downloads') return (b.downloads||0)-(a.downloads||0)
+    if (sort==='rating') return (b.rating||0)-(a.rating||0)
+    if (sort==='newest') return new Date(b.createdAt)-new Date(a.createdAt)
+    return 0
+  })
 
   const activeFilterCount = selectedTags.length + (selectedFW?1:0) + (selectedType?1:0)
 
