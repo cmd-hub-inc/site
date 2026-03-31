@@ -661,10 +661,8 @@ app.get('/api/users', requireDbReady, async (req, res) => {
 
     return res.json({ users: normalized, page, limit, total });
   } catch (err) {
-    const detail = err && (err.stack || err.message || String(err));
-    console.error('users list error', detail);
-    // Return error details in dev to aid debugging (remove in production)
-    return res.status(500).json({ error: 'failed', detail });
+    console.error('users list error', err && err.stack ? err.stack : err && err.message ? err.message : err);
+    return res.status(500).json({ error: 'failed' });
   }
 });
 
