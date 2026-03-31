@@ -2,6 +2,7 @@ import React, { useState } from 'react';
 import { LogIn, Upload } from 'lucide-react';
 import { C, CMD_TYPES, FRAMEWORKS, ALL_TAGS } from '../constants';
 import { TagBadge } from '../components/Badges';
+import MonacoEditor from '../components/MonacoEditor';
 
 export default function UploadPage({ user, onNavigate }) {
   const API_BASE = import.meta.env.DEV ? '' : import.meta.env.VITE_API_BASE || '';
@@ -371,23 +372,34 @@ export default function UploadPage({ user, onNavigate }) {
             </label>
             {jsonError && <span style={{ color: C.red, fontSize: 12 }}>⚠ {jsonError}</span>}
           </div>
-          <textarea
-            value={form.rawData}
-            onChange={(e) => handleRaw(e.target.value)}
-            placeholder={
-              form.uploadCategory === 'Bot Tool'
-                ? '{\n  "name": "your-command",\n  "description": "...",\n  "options": []\n}'
-                : '// Paste your framework code here, e.g. JavaScript, TypeScript or Python snippets.'
-            }
-            rows={10}
-            style={{
-              ...inp,
-              fontFamily: form.uploadCategory === 'Bot Tool' ? "'JetBrains Mono', monospace" : 'inherit',
-              fontSize: 12,
-              resize: 'vertical',
-              border: `1px solid ${jsonError ? C.red : C.border}`,
-            }}
-          />
+          {form.uploadCategory === 'Bot Tool' ? (
+            <textarea
+              value={form.rawData}
+              onChange={(e) => handleRaw(e.target.value)}
+              placeholder={'{\\n  "name": "your-command",\\n  "description": "...",\\n  "options": []\\n}'}
+              rows={10}
+              style={{
+                ...inp,
+                fontFamily: "'JetBrains Mono', monospace",
+                fontSize: 12,
+                resize: 'vertical',
+                border: `1px solid ${jsonError ? C.red : C.border}`,
+              }}
+            />
+          ) : (
+            <MonacoEditor
+              value={form.rawData}
+              onChange={(v) => handleRaw(v)}
+              language={
+                form.framework && form.framework.toLowerCase().includes('python')
+                  ? 'python'
+                  : form.framework && form.framework.toLowerCase().includes('json')
+                  ? 'json'
+                  : 'javascript'
+              }
+              height="300px"
+            />
+          )}
           <div style={{ marginTop: 8, color: C.muted, fontSize: 13 }}>
             {form.uploadCategory === 'Bot Tool' ? (
               <>
