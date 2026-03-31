@@ -4,6 +4,7 @@ import { C, CMD_TYPES, FRAMEWORKS, ALL_TAGS } from '../constants'
 import { TagBadge } from '../components/Badges'
 
 export default function UploadPage({ user, onNavigate }) {
+  const API_BASE = import.meta.env.DEV ? '' : (import.meta.env.VITE_API_BASE || '')
   const [form, setForm] = useState({ name:'', description:'', type:'Slash', framework:'Discord.js', version:'v1.0.0', tags:[], githubUrl:'', websiteUrl:'', changelog:'', rawData:'' })
   const [jsonError, setJsonError] = useState('')
   const [submitted, setSubmitted] = useState(false)
@@ -13,7 +14,7 @@ export default function UploadPage({ user, onNavigate }) {
       <div style={{ width:72, height:72, borderRadius:'50%', background:C.blurpleDim, border:`1px solid rgba(88,101,242,0.3)`, display:'flex', alignItems:'center', justifyContent:'center', margin:'0 auto 20px' }}><LogIn size={28} color={C.blurple} /></div>
       <h2 style={{ fontFamily: "'Syne', sans-serif", color:C.white, marginBottom:8, fontSize:24 }}>Login Required</h2>
       <p style={{ color:C.muted, marginBottom:28, maxWidth:380, margin:'0 auto 28px' }}>You need to log in with Discord to upload commands to CmdHub.</p>
-      <button onClick={()=>{ window.location.href = '/api/auth/discord' }} style={{ background:C.blurple, color:'#fff', border:'none', borderRadius:8, padding:'12px 28px', fontSize:15, fontWeight:700 }}>Login with Discord</button>
+      <a href="/api/auth/discord" onClick={() => console.log('[client] upload page login anchor clicked')} style={{ background:C.blurple, color:'#fff', textDecoration:'none', border:'none', borderRadius:8, padding:'12px 28px', fontSize:15, fontWeight:700, display:'inline-block' }}>Login with Discord</a>
     </div>
   )
 

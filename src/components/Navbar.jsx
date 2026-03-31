@@ -35,9 +35,9 @@ export default function Navbar({ page, user, onNavigate, onLogin, onLogout }) {
           <button onClick={onLogout} title="Log out" style={{ background: 'none', border: 'none', color: C.faint, cursor: 'pointer', padding: 6, borderRadius: 6 }}><LogOut size={16} /></button>
         </div>
       ) : (
-        <button onClick={onLogin} style={{ background: C.blurple, color: '#fff', border: 'none', borderRadius: 8, padding: '8px 18px', fontSize: 14, fontWeight: 700, cursor: 'pointer', display: 'flex', alignItems: 'center', gap: 7 }}>
+        <a href="/api/auth/discord" onClick={() => console.log('[client] login anchor clicked')} style={{ background: C.blurple, color: '#fff', textDecoration: 'none', border: 'none', borderRadius: 8, padding: '8px 18px', fontSize: 14, fontWeight: 700, cursor: 'pointer', display: 'inline-flex', alignItems: 'center', gap: 7 }}>
           Login with Discord
-        </button>
+        </a>
       )}
     </nav>
   )

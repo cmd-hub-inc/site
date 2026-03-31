@@ -17,6 +17,8 @@ export default function App() {
   const navigate = (p, params = {}) => { setPage(p); setPageParams(params); setSelectedCmd(null); try { window.scrollTo(0,0) } catch {} }
   const viewCommand = (cmd) => { setSelectedCmd(cmd); setPage('detail'); try { window.scrollTo(0,0) } catch {} }
 
+  const API_BASE = import.meta.env.DEV ? '' : (import.meta.env.VITE_API_BASE || '')
+
   useEffect(() => {
     // Poll /ready before asking server for current user (avoids 503 during startup)
     let cancelled = false
@@ -26,7 +28,7 @@ export default function App() {
       try {
         for (let i = 0; i < maxAttempts && !cancelled; i++) {
           try {
-            const r = await fetch('/ready')
+            const r = await fetch(`${API_BASE}/api/ready`)
             if (r.ok) break
           } catch (e) {
             // ignore and retry
@@ -35,12 +37,39 @@ export default function App() {
         }
 
         if (cancelled) return
+            // If URL contains pendingToken, try to complete auth flow first
+            const params = new URLSearchParams(window.location.search)
+            const pendingToken = params.get('pendingToken')
+            if (pendingToken) {
+              // Poll /api/auth/complete until it returns 200
+              for (let a = 0; a < 60 && !cancelled; a++) {
+                try {
+                  const r = await fetch(`${API_BASE}/api/auth/complete?token=${encodeURIComponent(pendingToken)}`, { credentials: 'include' })
+                  if (r.status === 200) {
+                    const body = await r.json()
+                    setUser(body.user)
+                    // remove pendingToken from URL
+                    params.delete('pendingToken')
+                    const url = new URL(window.location.href)
+                    url.search = params.toString()
+                    window.history.replaceState({}, document.title, url.toString())
+                    return
+                  }
+                  if (r.status === 202) {
+                    // still pending, wait and retry
+                  }
+                } catch (e) {
+                  // ignore and retry
+                }
+                await new Promise(r => setTimeout(r, 1000))
+              }
+            }
 
-        const resp = await fetch('/api/me', { credentials: 'include' })
-        if (resp.ok) {
-          const u = await resp.json()
-          setUser(u)
-        }
+            const resp = await fetch(`${API_BASE}/api/me`, { credentials: 'include' })
+            if (resp.ok) {
+              const u = await resp.json()
+              setUser(u)
+            }
       } catch (e) {
         // ignore
       }
@@ -50,7 +79,7 @@ export default function App() {
 
   return (
     <div style={{ minHeight: '100vh', background: '#1e1f22' }}>
-      <Navbar page={page} user={user} onNavigate={navigate} onLogin={() => { window.location.href = '/api/auth/discord' }} onLogout={async () => { try { await fetch('/api/logout', { method: 'POST', credentials: 'include' }) } catch {} setUser(null) }} />
+      <Navbar page={page} user={user} onNavigate={navigate} onLogin={() => { console.log('[client] login click, navigating to', `${API_BASE}/api/auth/discord`); window.location.href = `${API_BASE}/api/auth/discord` }} onLogout={async () => { try { await fetch(`${API_BASE}/api/logout`, { method: 'POST', credentials: 'include' }) } catch {} setUser(null) }} />
 
       {page === 'home' && <HomePage onNavigate={navigate} onViewCommand={viewCommand} />}
       {page === 'browse' && <BrowsePage initialTag={pageParams.tag} onViewCommand={viewCommand} />}
