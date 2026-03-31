@@ -5,6 +5,7 @@ import session from 'express-session'
 import connectPgSimple from 'connect-pg-simple'
 import { randomUUID } from 'crypto'
 import path from 'path'
+import { spawn } from 'child_process'
 import ensure from '../scripts/dbEnsure.js'
 // Note: `ioredis` is imported dynamically below so the server can run without it installed.
 import { PrismaClient } from '@prisma/client'
@@ -61,6 +62,30 @@ app.get('/api/health', (req, res) => res.json({ ok: true }))
 
 // Readiness flag: false until DB ensure completes successfully
 let dbReady = false
+
+// Run dbEnsure in a non-blocking background child to avoid blocking server startup
+function runDbEnsureBackground() {
+  try {
+    console.log('[start] Spawning dbEnsure background process...')
+    const scriptPath = path.resolve(process.cwd(), 'scripts', 'dbEnsure.js')
+    const child = spawn(process.execPath, [scriptPath], { stdio: 'inherit', env: { ...process.env, CI: 'true' } })
+    child.on('close', (code) => {
+      if (code === 0) {
+        dbReady = true
+        console.log('[start] dbEnsure background exited successfully; server marked as ready.')
+      } else {
+        console.error(`[start] dbEnsure background exited with code ${code}; server will remain unhealthy.`)
+      }
+    })
+    child.on('error', (err) => console.error('[start] Failed to spawn dbEnsure background', err && err.message ? err.message : err))
+    child.unref()
+  } catch (e) {
+    console.error('[start] Error while starting dbEnsure background', e && e.message ? e.message : e)
+  }
+}
+
+// Start dbEnsure in background
+runDbEnsureBackground()
 
 // readiness endpoint for external health checks
 app.get('/ready', (req, res) => {
@@ -295,21 +320,7 @@ app.post('/api/commands', requireDbReady, requireAuth, async (req, res) => {
   }
 })
 
-// Ensure DB schema exists before accepting requests
-async function startServer() {
-  try {
-    console.log('[start] Ensuring database schema is present (this may take a while)...')
-    await ensure()
-    dbReady = true
-    console.log('[start] Database ensure completed; server marked as ready.')
-  } catch (e) {
-    console.error('[start] Database ensure failed:', e && e.message ? e.message : e)
-    // keep dbReady=false so DB-dependent routes remain blocked
-  }
-
-  app.listen(PORT, () => {
-    console.log(`Server running on http://localhost:${PORT}`)
-  })
-}
-
-startServer()
+// Start server immediately; dbEnsure runs in background (db-dependent routes will return 503 until ready)
+app.listen(PORT, () => {
+  console.log(`Server running on http://localhost:${PORT}`)
+})
