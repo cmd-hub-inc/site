@@ -96,7 +96,7 @@ export default function Navbar({ page, user, onNavigate, onLogin, onLogout }) {
       ) : user ? (
         <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
           <button
-            onClick={() => onNavigate('profile')}
+            onClick={() => onNavigate('profile', { id: user && user.id ? user.id : undefined })}
             style={{
               background: page === 'profile' ? C.blurpleDim : 'none',
               border: 'none',

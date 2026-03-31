@@ -43,7 +43,7 @@ export default function App() {
       let newPath = '/';
       if (p === 'browse') newPath = '/browse';
       else if (p === 'upload') newPath = '/upload';
-      else if (p === 'profile') newPath = '/profile';
+      else if (p === 'profile') newPath = params && params.id ? `/profile/${encodeURIComponent(params.id)}` : '/profile';
       else if (p === 'detail' && params && params.id)
         newPath = `/command/${encodeURIComponent(params.id)}`;
       window.history.pushState({}, '', newPath);
