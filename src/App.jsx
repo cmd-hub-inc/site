@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import Navbar from './components/Navbar';
+import ErrorBoundary from './components/ErrorBoundary';
 import HomePage from './pages/HomePage';
 import BrowsePage from './pages/BrowsePage';
 import UploadPage from './pages/UploadPage';
@@ -272,6 +273,7 @@ export default function App() {
         }}
       />
       <main style={{ flex: 1 }}>
+        <ErrorBoundary>
         {page === 'home' && <HomePage onNavigate={navigate} onViewCommand={viewCommand} />}
         {page === 'browse' && <BrowsePage initialTag={pageParams.tag} onViewCommand={viewCommand} />}
         {page === 'creators' && <CreatorsPage onNavigate={navigate} />}
@@ -296,6 +298,7 @@ export default function App() {
           <EditCommandPage user={user} pageParams={pageParams} />
         )}
         {page === 'notfound' && <NotFound />}
+        </ErrorBoundary>
       </main>
 
       <Footer onNavigate={navigate} />

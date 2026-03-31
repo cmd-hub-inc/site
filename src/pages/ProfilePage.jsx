@@ -17,7 +17,9 @@ export default function ProfilePage({ user, profileId, onViewCommand, onNavigate
         const r = await fetch(`${API_BASE}/api/users/${encodeURIComponent(profileId)}`);
         if (r.ok) {
           const data = await r.json();
-          if (!cancelled) setViewUser(data);
+          // Normalize API shape: some responses return { user: {...}, top: [...] }
+          const normalized = data && data.user ? data.user : data;
+          if (!cancelled) setViewUser(normalized);
         }
       } catch (e) {
         // ignore
