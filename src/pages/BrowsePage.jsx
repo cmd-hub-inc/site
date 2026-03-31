@@ -66,6 +66,9 @@ export default function BrowsePage({ initialTag, onViewCommand }) {
 
   const inp = { background: C.surface, border: `1px solid ${C.border}`, borderRadius: 8, padding: '10px 14px', color: C.text, fontSize: 14 }
 
+  // Top downloaded commands (used in the section below the search controls)
+  const topDownloaded = [...commands].sort((a, b) => (b.downloads || 0) - (a.downloads || 0)).slice(0, 5)
+
   return (
     <div style={{ maxWidth: 1100, margin: '0 auto', padding: '44px 24px' }}>
       <h1 style={{ fontFamily: "'Syne', sans-serif", fontSize: 30, fontWeight: 800, color: C.white, marginBottom: 28 }}>Browse Commands</h1>
@@ -94,6 +97,19 @@ export default function BrowsePage({ initialTag, onViewCommand }) {
             <div style={{ display:'flex', flexWrap:'wrap', gap:6 }}>{ALL_TAGS.map(t => <TagBadge key={t} tag={t} onClick={()=>toggleTag(t)} selected={selectedTags.includes(t)} />)}</div>
           </div>
           {activeFilterCount>0 && <button onClick={()=>{ setSelectedTags([]); setSelectedFW(''); setSelectedType('') }} style={{ marginTop:12, background:'none', border:`1px solid ${C.border}`, borderRadius:8, padding:'6px 14px', color:C.muted, display:'flex', alignItems:'center', gap:5 }}><X size={13} /> Clear filters</button>}
+        </div>
+      )}
+
+      {/* Most Downloaded section placed immediately below the search controls */}
+      {commands && commands.length > 0 && (
+        <div style={{ marginBottom: 18 }}>
+          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 10 }}>
+            <div style={{ color: C.white, fontSize: 15, fontWeight: 700 }}>Most downloaded</div>
+            <div style={{ color: C.muted, fontSize: 12 }}>{topDownloaded.length} trending</div>
+          </div>
+          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(220px, 1fr))', gap: 12 }}>
+            {topDownloaded.map(cmd => <CommandCard key={`top-${cmd.id}`} cmd={cmd} onClick={onViewCommand} />)}
+          </div>
         </div>
       )}
 
