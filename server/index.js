@@ -265,7 +265,11 @@ app.get('/api/auth/discord/callback', async (req, res) => {
 
     const discordUser = await userResp.json();
     const discordId = discordUser.id;
-    const username = `${discordUser.username}#${discordUser.discriminator}`;
+    // Discord removed discriminators for many users — avoid showing '#0'
+    const username =
+      discordUser.discriminator && discordUser.discriminator !== '0'
+        ? `${discordUser.username}#${discordUser.discriminator}`
+        : discordUser.username;
     const avatar = discordUser.avatar
       ? `https://cdn.discordapp.com/avatars/${discordId}/${discordUser.avatar}.png`
       : null;
@@ -348,7 +352,9 @@ app.get('/api/me', requireDbReady, async (req, res) => {
     if (!s) return res.status(401).json({ error: 'Not authenticated' });
     const user = await prisma.user.findUnique({ where: { id: s.id } });
     if (!user) return res.status(401).json({ error: 'Invalid user' });
-    res.json({ id: user.id, username: user.username, avatar: user.avatar });
+    // sanitize username: strip trailing '#0' if present
+    const username = user.username && user.username.endsWith('#0') ? user.username.replace(/#0$/, '') : user.username;
+    res.json({ id: user.id, username, avatar: user.avatar });
   } catch (err) {
     console.error('me error', err);
     res.status(401).json({ error: 'Not authenticated' });
@@ -441,6 +447,20 @@ app.get('/api/users/:id/commands', requireDbReady, async (req, res) => {
     return res.json(cmds);
   } catch (err) {
     console.error('user commands error', err && err.message ? err.message : err);
+    return res.status(500).json({ error: 'failed' });
+  }
+});
+
+// Public: get basic user profile by id
+app.get('/api/users/:id', requireDbReady, async (req, res) => {
+  const { id } = req.params;
+  try {
+    const u = await prisma.user.findUnique({ where: { id } });
+    if (!u) return res.status(404).json({ error: 'Not found' });
+    const username = u.username && u.username.endsWith('#0') ? u.username.replace(/#0$/, '') : u.username;
+    return res.json({ id: u.id, username, avatar: u.avatar });
+  } catch (err) {
+    console.error('get user profile error', err && err.message ? err.message : err);
     return res.status(500).json({ error: 'failed' });
   }
 });

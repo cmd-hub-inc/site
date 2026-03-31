@@ -5,8 +5,30 @@ import CommandCard from '../components/CommandCard';
 import { MOCK_COMMANDS } from '../data/mockCommands';
 import CountUp from '../components/CountUp';
 
-export default function ProfilePage({ user, onViewCommand, onNavigate }) {
-  if (!user)
+export default function ProfilePage({ user, profileId, onViewCommand, onNavigate }) {
+  const [viewUser, setViewUser] = useState(user || null);
+  // if viewing someone else's profile, we'll fetch their public profile
+  React.useEffect(() => {
+    let cancelled = false;
+    (async () => {
+      if (!profileId) return;
+      const API_BASE = import.meta.env.DEV ? '' : import.meta.env.VITE_API_BASE || '';
+      try {
+        const r = await fetch(`${API_BASE}/api/users/${encodeURIComponent(profileId)}`);
+        if (r.ok) {
+          const data = await r.json();
+          if (!cancelled) setViewUser(data);
+        }
+      } catch (e) {
+        // ignore
+      }
+    })();
+    return () => {
+      cancelled = true;
+    };
+  }, [profileId]);
+
+  if (!viewUser)
     return (
       <div style={{ textAlign: 'center', padding: '100px 24px' }}>
         <div
@@ -154,11 +176,13 @@ export default function ProfilePage({ user, onViewCommand, onNavigate }) {
 
   useEffect(() => {
     let cancelled = false;
-    if (!user) return;
+    if (!viewUser) return;
     (async () => {
       setLoadingUserCmds(true);
       try {
-        const r = await fetch(`${API_BASE}/api/users/${encodeURIComponent(user.id)}/commands`);
+        const r = await fetch(`${API_BASE}/api/users/${encodeURIComponent(
+          viewUser.id,
+        )}/commands`);
         if (r.ok) {
           const cmds = await r.json();
           if (!cancelled) setUserCmds(cmds);
@@ -173,7 +197,9 @@ export default function ProfilePage({ user, onViewCommand, onNavigate }) {
 
       setLoadingFavCmds(true);
       try {
-        const r2 = await fetch(`${API_BASE}/api/users/${encodeURIComponent(user.id)}/favourites`);
+        const r2 = await fetch(`${API_BASE}/api/users/${encodeURIComponent(
+          viewUser.id,
+        )}/favourites`);
         if (r2.ok) {
           const f = await r2.json();
           if (!cancelled) setFavCmds(f);
@@ -217,7 +243,15 @@ export default function ProfilePage({ user, onViewCommand, onNavigate }) {
               color: '#fff',
             }}
           >
-            {user.username[0].toUpperCase()}
+            {user.avatar ? (
+              <img
+                src={user.avatar}
+                alt={user.username}
+                style={{ width: 76, height: 76, borderRadius: '50%', objectFit: 'cover' }}
+              />
+            ) : (
+              user.username[0].toUpperCase()
+            )}
           </div>
           <div style={{ flex: 1 }}>
             <h1

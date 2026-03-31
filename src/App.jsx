@@ -120,9 +120,10 @@ export default function App() {
         // If URL path looks like a command link, fetch and show that command
         try {
           const pathname = window.location.pathname || '';
-          const match = pathname.match(/^\/command\/(.+)$/);
-          if (match) {
-            const id = decodeURIComponent(match[1]);
+          const cmdMatch = pathname.match(/^\/command\/(.+)$/);
+          const profMatch = pathname.match(/^\/profile\/(.+)$/);
+          if (cmdMatch) {
+            const id = decodeURIComponent(cmdMatch[1]);
             try {
               const rc = await fetch(`${API_BASE}/api/commands/${encodeURIComponent(id)}`);
               if (rc.ok) {
@@ -134,6 +135,10 @@ export default function App() {
             } catch (e) {
               // ignore
             }
+          } else if (profMatch) {
+            const id = decodeURIComponent(profMatch[1]);
+            setPage('profile');
+            setPageParams({ id });
           }
         } catch (e) {
           // ignore
@@ -164,23 +169,31 @@ export default function App() {
     let mounted = true;
     const onPop = async () => {
       if (!mounted) return;
-      try {
-        const pathname = window.location.pathname || '';
-        const match = pathname.match(/^\/command\/(.+)$/);
-        if (match) {
-          const id = decodeURIComponent(match[1]);
-          try {
-            const rc = await fetch(`${API_BASE}/api/commands/${encodeURIComponent(id)}`);
-            if (rc.ok) {
-              const cmd = await rc.json();
-              setSelectedCmd(cmd);
-              setPage('detail');
-              return;
+        try {
+          const pathname = window.location.pathname || '';
+          const cmdMatch = pathname.match(/^\/command\/(.+)$/);
+          const profMatch = pathname.match(/^\/profile\/(.+)$/);
+          if (cmdMatch) {
+            const id = decodeURIComponent(cmdMatch[1]);
+            try {
+              const rc = await fetch(`${API_BASE}/api/commands/${encodeURIComponent(id)}`);
+              if (rc.ok) {
+                const cmd = await rc.json();
+                setSelectedCmd(cmd);
+                setPage('detail');
+                return;
+              }
+            } catch (e) {
+              // ignore
             }
-          } catch (e) {
-            // ignore
           }
-        }
+          if (profMatch) {
+            const id = decodeURIComponent(profMatch[1]);
+            setPage('profile');
+            setPageParams({ id });
+            setSelectedCmd(null);
+            return;
+          }
         // fallback: map path to pages
         if (pathname.startsWith('/browse')) {
           setPage('browse');
@@ -233,7 +246,12 @@ export default function App() {
       {page === 'browse' && <BrowsePage initialTag={pageParams.tag} onViewCommand={viewCommand} />}
       {page === 'upload' && <UploadPage user={user} onNavigate={navigate} />}
       {page === 'profile' && (
-        <ProfilePage user={user} onViewCommand={viewCommand} onNavigate={navigate} />
+        <ProfilePage
+          user={user}
+          profileId={pageParams && pageParams.id}
+          onViewCommand={viewCommand}
+          onNavigate={navigate}
+        />
       )}
       {page === 'detail' && (
         <CommandDetailPage

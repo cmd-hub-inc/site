@@ -401,7 +401,11 @@ export default function CommandDetailPage({ cmd, onBack, user, loading = false }
               )}
             </div>
             <div>
-              <div style={{ color: C.text, fontWeight: 600 }}>{cmd.author.username}</div>
+              <div style={{ color: C.text, fontWeight: 600 }}>
+                {cmd.author && cmd.author.username
+                  ? cmd.author.username.replace(/#0$/, '')
+                  : ''}
+              </div>
               <div
                 style={{
                   color: C.faint,
