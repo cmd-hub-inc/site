@@ -14,10 +14,7 @@
     "prisma:migrate": "prisma migrate dev --name init --preview-feature"
   },
   "dependencies": {
-    "@codemirror/lang-javascript": "^6.1.4",
-    "@codemirror/lang-json": "^6.1.4",
-    "@codemirror/lang-python": "^6.1.4",
-    "@uiw/react-codemirror": "^5.0.0",
+    
     "@prisma/client": "^5.6.0",
     "@monaco-editor/react": "^5.1.1",
     "concurrently": "^8.2.0",
