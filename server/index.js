@@ -30,7 +30,7 @@ const isProd = process.env.NODE_ENV === 'production';
 
 // Configure CORS to allow multiple frontends and echo the request origin
 const allowedOrigins = [
-  process.env.CLIENT_URL,
+  CLIENT_URL,
   process.env.FRONTEND_URL,
   process.env.VERCEL_URL ? `https://${process.env.VERCEL_URL}` : undefined,
   ...(process.env.ALLOWED_ORIGINS ? process.env.ALLOWED_ORIGINS.split(',') : []),
