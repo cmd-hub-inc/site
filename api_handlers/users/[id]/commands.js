@@ -1,4 +1,4 @@
-import prisma from '../../../_lib/prisma.js';
+import prisma from '../../_lib/prisma.js';
 
 export default async function handler(req, res) {
   if (req.method !== 'GET') return res.setHeader('Allow', 'GET') && res.status(405).end('Method Not Allowed');

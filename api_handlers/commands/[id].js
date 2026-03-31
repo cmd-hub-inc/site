@@ -1,5 +1,5 @@
-import prisma from '../../_lib/prisma.js';
-import { getSessionFromReq } from '../../_lib/utils.js';
+import prisma from '../_lib/prisma.js';
+import { getSessionFromReq } from '../_lib/utils.js';
 
 export default async function handler(req, res) {
   const { id } = req.query;
