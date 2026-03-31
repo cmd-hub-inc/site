@@ -388,6 +388,19 @@ export default function UploadPage({ user, onNavigate }) {
               border: `1px solid ${jsonError ? C.red : C.border}`,
             }}
           />
+          <div style={{ marginTop: 8, color: C.muted, fontSize: 13 }}>
+            {form.uploadCategory === 'Bot Tool' ? (
+              <>
+                Expecting framework-agnostic JSON. Provide an object with the command metadata and options
+                (name, description, options, etc.). Invalid JSON will be rejected.
+              </>
+            ) : (
+              <>
+                Expecting source code or snippets for the chosen framework (JavaScript, TypeScript,
+                Python, etc.). Include only the command implementation or export needed for the framework.
+              </>
+            )}
+          </div>
         </div>
         <div style={{ marginBottom: 20 }}>
           <label style={label}>Changelog / Update Notes</label>
