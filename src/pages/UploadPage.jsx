@@ -441,8 +441,38 @@ export default function UploadPage({ user, onNavigate }) {
           </div>
         </div>
         <button
-          onClick={() => {
-            if (canSubmit) setSubmitted(true);
+          onClick={async () => {
+            if (!canSubmit) return;
+            // client-side validation for Bot Tool JSON
+            if (form.uploadCategory === 'Bot Tool') {
+              try {
+                JSON.parse(form.rawData);
+              } catch (e) {
+                setJsonError('Invalid JSON — please check your syntax');
+                return;
+              }
+            }
+            try {
+              const payload = { ...form };
+              const r = await fetch(`${API_BASE}/api/commands`, {
+                method: 'POST',
+                credentials: 'include',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify(payload),
+              });
+              if (r.status === 201) {
+                setSubmitted(true);
+                // optionally could navigate to the created command here
+              } else if (r.status === 401) {
+                alert('You must be logged in to submit a command.');
+              } else {
+                const txt = await r.text();
+                alert('Submission failed: ' + txt);
+              }
+            } catch (err) {
+              console.error('submit failed', err);
+              alert('Submission failed — check console for details.');
+            }
           }}
           disabled={!canSubmit}
           style={{
