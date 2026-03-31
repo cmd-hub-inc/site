@@ -47,14 +47,19 @@ export default function HomePage({ onNavigate, onViewCommand }) {
             .sort((a, b) => new Date(b.createdAt) - new Date(a.createdAt))
             .slice(0, 4);
 
-          // top creators
+          // top creators (group by author id when available, fallback to username)
           const creatorMap = cmds.reduce((acc, c) => {
+            const id = c.author && c.author.id ? c.author.id : null;
             const name = (c.author && c.author.username) || 'Unknown';
-            acc[name] = (acc[name] || 0) + 1;
+            const avatar = (c.author && (c.author.avatar || c.author.avatarUrl || c.author.avatar_url)) || null;
+            const key = id || name;
+            if (!acc[key]) acc[key] = { id, name, avatar: avatar || null, count: 0 };
+            acc[key].count += 1;
+            if (avatar && !acc[key].avatar) acc[key].avatar = avatar;
             return acc;
           }, {});
           const creators = Object.keys(creatorMap)
-            .map((k) => ({ name: k, count: creatorMap[k] }))
+            .map((k) => ({ id: creatorMap[k].id, name: creatorMap[k].name, count: creatorMap[k].count }))
             .sort((a, b) => b.count - a.count)
             .slice(0, 6);
 
@@ -280,12 +285,39 @@ export default function HomePage({ onNavigate, onViewCommand }) {
               {derived.creators == null ? (
                 [0, 1, 2, 3].map((i) => <div key={i} className="skeleton" style={{ height: 18, marginBottom: 8, borderRadius: 6 }} />)
               ) : (
-                derived.creators.map((c) => (
-                  <div key={c.name} style={{ display: 'flex', justifyContent: 'space-between', padding: '8px 6px' }}>
-                    <div style={{ color: C.white }}>{c.name}</div>
-                    <div style={{ color: C.muted }}>{c.count} uploads</div>
-                  </div>
-                ))
+                (() => {
+                  const max = Math.max(1, ...derived.creators.map((c) => c.count));
+                  return derived.creators.map((c, idx) => (
+                    <div key={c.name} style={{ display: 'flex', flexDirection: 'column', gap: 6, padding: '6px 0' }}>
+                      <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+                        <div style={{ width: 26, color: C.muted, fontWeight: 700 }}>{idx + 1}</div>
+                        <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+                          {c.avatar ? (
+                            <img src={c.avatar} alt={c.name} style={{ width: 32, height: 32, borderRadius: 999, objectFit: 'cover' }} />
+                          ) : (
+                            <div style={{ width: 32, height: 32, borderRadius: 999, background: C.surface2, display: 'flex', alignItems: 'center', justifyContent: 'center', color: C.white, fontWeight: 700 }}>
+                              {String(c.name || 'U').charAt(0).toUpperCase()}
+                            </div>
+                          )}
+                        </div>
+                        {c.id ? (
+                          <button
+                            onClick={() => onNavigate('profile', { id: c.id })}
+                            style={{ background: 'none', border: 'none', color: C.white, cursor: 'pointer', fontWeight: 700 }}
+                          >
+                            {c.name}
+                          </button>
+                        ) : (
+                          <div style={{ color: C.white, fontWeight: 700 }}>{c.name}</div>
+                        )}
+                        <div style={{ marginLeft: 'auto', color: C.muted, fontSize: 13 }}>{c.count}</div>
+                      </div>
+                      <div style={{ height: 8, background: C.surface2, borderRadius: 6, overflow: 'hidden' }}>
+                        <div style={{ width: `${Math.round((c.count / max) * 100)}%`, height: '100%', background: C.blurple, borderRadius: 6 }} />
+                      </div>
+                    </div>
+                  ));
+                })()
               )}
             </div>
           </div>
@@ -294,15 +326,40 @@ export default function HomePage({ onNavigate, onViewCommand }) {
             <h3 style={{ fontSize: 18, color: C.white, marginBottom: 8 }}>Browse by Framework</h3>
             <div style={{ background: C.surface, border: `1px solid ${C.border}`, borderRadius: 12, padding: 12 }}>
               {derived.frameworks == null ? (
-                [0, 1, 2, 3].map((i) => <div key={i} className="skeleton" style={{ height: 18, marginBottom: 8, borderRadius: 6 }} />)
+                [0, 1, 2, 3].map((i) => <div key={i} className="skeleton" style={{ height: 48, marginBottom: 8, borderRadius: 6 }} />)
               ) : (
-                <div style={{ display: 'flex', flexWrap: 'wrap', gap: 8 }}>
-                  {derived.frameworks.slice(0, 12).map((f) => (
-                    <button key={f.name} style={{ background: C.surface2, border: `1px solid ${C.border}`, borderRadius: 999, padding: '6px 10px', cursor: 'pointer' }}>
-                      {f.name} ({f.count})
-                    </button>
-                  ))}
-                </div>
+                (() => {
+                  const maxFw = Math.max(1, ...derived.frameworks.map((f) => f.count));
+                  return (
+                    <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(160px, 1fr))', gap: 10 }}>
+                      {derived.frameworks.slice(0, 12).map((f) => (
+                        <button
+                          key={f.name}
+                          onClick={() => onNavigate('browse', { framework: f.name })}
+                          style={{
+                            display: 'flex',
+                            flexDirection: 'column',
+                            alignItems: 'flex-start',
+                            gap: 6,
+                            padding: 10,
+                            background: C.surface2,
+                            border: `1px solid ${C.border}`,
+                            borderRadius: 10,
+                            cursor: 'pointer',
+                          }}
+                        >
+                          <div style={{ display: 'flex', alignItems: 'center', gap: 8, width: '100%' }}>
+                            <div style={{ fontWeight: 700, color: C.white }}>{f.name}</div>
+                            <div style={{ marginLeft: 'auto', color: C.muted }}>{f.count}</div>
+                          </div>
+                          <div style={{ width: '100%', height: 8, background: C.surface, borderRadius: 6, overflow: 'hidden' }}>
+                            <div style={{ width: `${Math.round((f.count / maxFw) * 100)}%`, height: '100%', background: C.green, borderRadius: 6 }} />
+                          </div>
+                        </button>
+                      ))}
+                    </div>
+                  );
+                })()
               )}
             </div>
           </div>
