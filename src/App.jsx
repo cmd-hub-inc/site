@@ -47,10 +47,8 @@ export default function App() {
         // if no id provided and we have an authenticated `user`, canonicalize to use their id
         const pid = params && params.id ? params.id : user && user.id ? user.id : undefined;
         newPath = pid ? `/profile/${encodeURIComponent(pid)}` : '/profile';
-        // write back canonical id into pageParams so app state matches URL
-        if (pid && (!params || String(params.id) !== String(pid))) {
-          setPageParams({ ...params, id: pid });
-        }
+        // always write canonical id into pageParams so parent and URL stay in sync
+        setPageParams({ ...(params || {}), id: pid });
       } else if (p === 'detail' && params && params.id) {
         newPath = `/command/${encodeURIComponent(params.id)}`;
       } else if (p === 'edit' && params && params.id) {
@@ -340,6 +338,7 @@ export default function App() {
         {page === 'upload' && <UploadPage user={user} onNavigate={navigate} />}
         {page === 'profile' && (
           <ProfilePage
+            key={pageParams && pageParams.id}
             user={user}
             profileId={pageParams && pageParams.id}
             onViewCommand={viewCommand}
