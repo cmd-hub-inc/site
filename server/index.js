@@ -1,6 +1,8 @@
 import express from 'express'
 import cors from 'cors'
 import dotenv from 'dotenv'
+import cookieParser from 'cookie-parser'
+import jwt from 'jsonwebtoken'
 import { PrismaClient } from '@prisma/client'
 
 dotenv.config()
@@ -10,9 +12,11 @@ const PORT = process.env.PORT || 4000
 const DISCORD_CLIENT_ID = process.env.DISCORD_CLIENT_ID
 const DISCORD_CLIENT_SECRET = process.env.DISCORD_CLIENT_SECRET
 const CLIENT_URL = process.env.CLIENT_URL || 'http://localhost:5173'
+const JWT_SECRET = process.env.JWT_SECRET || 'dev_secret_change_me'
 
-app.use(cors())
+app.use(cors({ origin: CLIENT_URL, credentials: true }))
 app.use(express.json())
+app.use(cookieParser())
 
 app.get('/api/health', (req, res) => res.json({ ok: true }))
 
@@ -71,13 +75,38 @@ app.get('/api/auth/discord/callback', async (req, res) => {
       update: { username },
     })
 
-    // Redirect back to client with user info in query (simple flow for demo)
-    const redirectTo = `${CLIENT_URL}/?userId=${encodeURIComponent(user.id)}&username=${encodeURIComponent(user.username)}`
-    res.redirect(redirectTo)
+    // Create JWT and set as httpOnly cookie for session
+    const token = jwt.sign({ id: user.id, username: user.username }, JWT_SECRET, { expiresIn: '7d' })
+    const isProd = process.env.NODE_ENV === 'production'
+    res.cookie('token', token, { httpOnly: true, secure: isProd, sameSite: 'lax', maxAge: 7 * 24 * 60 * 60 * 1000 })
+
+    // Redirect back to client (no user info in query)
+    res.redirect(CLIENT_URL)
   } catch (err) {
     console.error(err)
     res.status(500).send('OAuth error')
   }
+})
+
+// Return current authenticated user based on JWT cookie
+app.get('/api/me', async (req, res) => {
+  try {
+    const token = req.cookies && req.cookies.token
+    if (!token) return res.status(401).json({ error: 'Not authenticated' })
+    const payload = jwt.verify(token, JWT_SECRET)
+    const user = await prisma.user.findUnique({ where: { id: payload.id } })
+    if (!user) return res.status(401).json({ error: 'Invalid user' })
+    res.json({ id: user.id, username: user.username })
+  } catch (err) {
+    console.error('me error', err)
+    res.status(401).json({ error: 'Not authenticated' })
+  }
+})
+
+// Logout: clear the token cookie
+app.post('/api/logout', (req, res) => {
+  res.clearCookie('token')
+  res.json({ ok: true })
 })
 
 app.get('/api/commands', async (req, res) => {
