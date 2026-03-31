@@ -35,15 +35,64 @@ function requireAuth(req, res, next) {
 
 app.get('/api/health', (req, res) => res.json({ ok: true }))
 
+// Ensure DB tables exist before handling requests (best-effort)
+import ensureDb from '../scripts/dbEnsure.js'
+
+// Readiness flag: false until DB ensure completes successfully
+let dbReady = false
+
+const maxAttempts = parseInt(process.env.DB_ENSURE_ATTEMPTS || '10', 10)
+const delayMs = parseInt(process.env.DB_ENSURE_DELAY_MS || '3000', 10)
+
+async function runDbEnsureLoop() {
+  console.log(`[start] Running DB ensure with up to ${maxAttempts} attempts, ${delayMs}ms delay.`)
+  let attempt = 0
+  while (attempt < maxAttempts && !dbReady) {
+    attempt += 1
+    console.log(`[start] DB ensure attempt ${attempt}/${maxAttempts}...`)
+    try {
+      await ensureDb()
+      dbReady = true
+      console.log('[start] DB ensure succeeded. Marking server as ready.')
+      break
+    } catch (err) {
+      console.warn(`[start] DB ensure attempt ${attempt} failed:`, err && err.message ? err.message : err)
+      if (attempt < maxAttempts) {
+        console.log(`[start] Waiting ${delayMs}ms before retrying...`)
+        await new Promise(r => setTimeout(r, delayMs))
+      }
+    }
+  }
+
+  if (!dbReady) {
+    console.error('[start] DB ensure did not succeed after maximum attempts; server will remain unhealthy.')
+  }
+}
+
+// Start DB ensure loop in background
+runDbEnsureLoop()
+
+// readiness endpoint for external health checks
+app.get('/ready', (req, res) => {
+  if (dbReady) return res.json({ ok: true })
+  return res.status(503).json({ ok: false, reason: 'db_not_ready' })
+})
+
+// middleware to block DB-dependent routes until ready
+function requireDbReady(req, res, next) {
+  if (dbReady) return next()
+  return res.status(503).json({ error: 'Service not ready' })
+}
+
 // Start Discord OAuth: redirect user to Discord's authorize URL
-app.get('/api/auth/discord', (req, res) => {
+app.get('/api/auth/discord', requireDbReady, (req, res) => {
   const redirectUri = encodeURIComponent(`${process.env.BASE_URL || `http://localhost:${PORT}`}/api/auth/discord/callback`)
   const url = `https://discord.com/api/oauth2/authorize?client_id=${DISCORD_CLIENT_ID}&redirect_uri=${redirectUri}&response_type=code&scope=identify`
   res.redirect(url)
 })
 
 // OAuth callback: exchange code for token, fetch user, upsert in DB, redirect to client
-app.get('/api/auth/discord/callback', async (req, res) => {
+app.get('/api/auth/discord/callback', requireDbReady, async (req, res) => {
   try {
     const { code } = req.query
     if (!code) return res.status(400).send('Missing code')
@@ -120,7 +169,7 @@ app.get('/api/auth/discord/callback', async (req, res) => {
 })
 
 // Return current authenticated user based on JWT cookie
-app.get('/api/me', async (req, res) => {
+app.get('/api/me', requireDbReady, async (req, res) => {
   try {
     const s = req.session && req.session.user
     if (!s) return res.status(401).json({ error: 'Not authenticated' })
@@ -145,19 +194,19 @@ app.post('/api/logout', (req, res) => {
   })
 })
 
-app.get('/api/commands', async (req, res) => {
+app.get('/api/commands', requireDbReady, async (req, res) => {
   const cmds = await prisma.command.findMany({ include: { author: true } })
   res.json(cmds)
 })
 
-app.get('/api/commands/:id', async (req, res) => {
+app.get('/api/commands/:id', requireDbReady, async (req, res) => {
   const { id } = req.params
   const cmd = await prisma.command.findUnique({ where: { id }, include: { author: true } })
   if (!cmd) return res.status(404).json({ error: 'Not found' })
   res.json(cmd)
 })
 
-app.post('/api/commands', requireAuth, async (req, res) => {
+app.post('/api/commands', requireDbReady, requireAuth, async (req, res) => {
   try {
     const data = req.body
     // Use session user as authorId and ignore any client-supplied authorId
@@ -169,6 +218,7 @@ app.post('/api/commands', requireAuth, async (req, res) => {
   }
 })
 
+// Start listening immediately; DB ensure runs in background and readiness exposed on /ready
 app.listen(PORT, () => {
   console.log(`Server running on http://localhost:${PORT}`)
 })

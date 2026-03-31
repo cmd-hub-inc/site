@@ -18,9 +18,24 @@ export default function App() {
   const viewCommand = (cmd) => { setSelectedCmd(cmd); setPage('detail'); try { window.scrollTo(0,0) } catch {} }
 
   useEffect(() => {
-    // Ask server for current user (uses httpOnly cookie)
+    // Poll /ready before asking server for current user (avoids 503 during startup)
+    let cancelled = false
+    const pollInterval = 1000
+    const maxAttempts = 30
     ;(async () => {
       try {
+        for (let i = 0; i < maxAttempts && !cancelled; i++) {
+          try {
+            const r = await fetch('/ready')
+            if (r.ok) break
+          } catch (e) {
+            // ignore and retry
+          }
+          await new Promise(r => setTimeout(r, pollInterval))
+        }
+
+        if (cancelled) return
+
         const resp = await fetch('/api/me', { credentials: 'include' })
         if (resp.ok) {
           const u = await resp.json()
@@ -30,6 +45,7 @@ export default function App() {
         // ignore
       }
     })()
+    return () => { cancelled = true }
   }, [])
 
   return (

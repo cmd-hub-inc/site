@@ -6,6 +6,7 @@
   "scripts": {
     "dev": "concurrently \"vite\" \"npm:dev:server\"",
     "dev:server": "nodemon server/index.js --watch server --ext js,json",
+    "db:ensure": "node scripts/dbEnsure.js",
     "build": "vite build",
     "preview": "vite preview",
     "format": "prettier --write .",
