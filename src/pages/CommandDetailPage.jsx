@@ -7,13 +7,33 @@ import { StatPill } from '../components/Stars'
 export default function CommandDetailPage({ cmd, onBack, user }) {
   const [copied, setCopied] = useState(false)
   const [faved, setFaved] = useState(false)
+  const [favCount, setFavCount] = useState(cmd.favourites || 0)
   const [userRating, setUserRating] = useState(0)
   const [hoverRating, setHoverRating] = useState(0)
   const [activeTab, setActiveTab] = useState('raw')
+  const API_BASE = import.meta.env.DEV ? '' : (import.meta.env.VITE_API_BASE || '')
 
   const handleCopy = () => { try { navigator.clipboard.writeText(cmd.rawData) } catch{}; setCopied(true); setTimeout(()=>setCopied(false),2000) }
   const handleDownload = () => { const blob = new Blob([cmd.rawData], { type: 'application/json' }); const url = URL.createObjectURL(blob); const a = document.createElement('a'); a.href = url; a.download = `${cmd.name}.json`; a.click(); URL.revokeObjectURL(url) }
   const dateStr = (s) => new Date(s).toLocaleDateString('en-GB', { day:'numeric', month:'short', year:'numeric' })
+
+  // check initial favourited state
+  React.useEffect(() => {
+    let mounted = true
+    ;(async () => {
+      if (!user) return
+      try {
+        const r = await fetch(`${API_BASE}/api/commands/${encodeURIComponent(cmd.id)}/is-favourited`, { credentials: 'include' })
+        if (r.ok) {
+          const j = await r.json()
+          if (mounted) setFaved(Boolean(j.favourited))
+        }
+      } catch (e) {
+        // ignore
+      }
+    })()
+    return () => { mounted = false }
+  }, [cmd.id, user])
 
   return (
     <div style={{ maxWidth: 920, margin: '0 auto', padding: '44px 24px' }}>
@@ -33,13 +53,24 @@ export default function CommandDetailPage({ cmd, onBack, user }) {
           <div style={{ display:'flex', flexDirection:'column', gap:8, minWidth:180 }}>
             <button onClick={handleDownload} style={{ background:C.blurple, color:'#fff', border:'none', borderRadius:8, padding:'11px 20px', fontSize:14, fontWeight:700, cursor:'pointer' }}><Download size={15} /> Download JSON</button>
             <button onClick={handleCopy} style={{ background:C.surface2, color:copied?C.green:C.text, border:`1px solid ${copied? 'rgba(87,242,135,0.3)': C.border}`, borderRadius:8, padding:'11px 20px', fontSize:14, fontWeight:700, cursor:'pointer' }}>{copied ? <><Check size={15} /> Copied!</> : <><Copy size={15} /> Copy JSON</>}</button>
-            {user && <button onClick={()=>setFaved(!faved)} style={{ background: faved? 'rgba(237,66,69,0.12)': C.surface2, color: faved? C.red: C.muted, border: `1px solid ${faved? 'rgba(237,66,69,0.3)': C.border}`, borderRadius:8, padding:'11px 20px', fontSize:14, fontWeight:700 }}>{<Heart size={15} />} {faved ? 'Favourited' : 'Favourite'}</button>}
+            {user && <button onClick={async () => {
+              try {
+                const r = await fetch(`${API_BASE}/api/commands/${encodeURIComponent(cmd.id)}/favourite`, { method: 'POST', credentials: 'include' })
+                if (r.ok) {
+                  const j = await r.json()
+                  setFaved(Boolean(j.favourited))
+                  setFavCount(prev => j.favourited ? prev + 1 : Math.max(0, prev - 1))
+                }
+              } catch (e) {
+                console.error('favourite toggle failed', e)
+              }
+            }} style={{ background: faved? 'rgba(237,66,69,0.12)': C.surface2, color: faved? C.red: C.muted, border: `1px solid ${faved? 'rgba(237,66,69,0.3)': C.border}`, borderRadius:8, padding:'11px 20px', fontSize:14, fontWeight:700 }}>{<Heart size={15} />} {faved ? 'Favourited' : 'Favourite'}</button>}
           </div>
         </div>
         <div style={{ display:'flex', gap:24, flexWrap:'wrap', marginTop:22, paddingTop:20, borderTop:`1px solid ${C.border}` }}>
           <StatPill icon={<Download size={14} />} value={cmd.downloads} label='downloads' />
           <StatPill icon={<Eye size={14} />} value={cmd.views} label='views' />
-          <StatPill icon={<Heart size={14} />} value={cmd.favourites} label='favourites' />
+          <StatPill icon={<Heart size={14} />} value={favCount} label='favourites' />
           <div style={{ marginLeft:'auto', color:C.faint, fontSize:12 }}>Updated {dateStr(cmd.updatedAt)} · Created {dateStr(cmd.createdAt)}</div>
         </div>
       </div>

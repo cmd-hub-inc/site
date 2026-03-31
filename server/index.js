@@ -329,6 +329,104 @@ app.get('/api/commands', requireDbReady, async (req, res) => {
   res.json(cmds)
 })
 
+// Toggle favourite for a command (requires auth)
+app.post('/api/commands/:id/favourite', requireDbReady, requireAuth, async (req, res) => {
+  const cmdId = req.params.id
+  const userId = req.session.user.id
+  try {
+    const exists = await prisma.$queryRaw`
+      SELECT 1 FROM "Favourite" WHERE "userId" = ${userId} AND "commandId" = ${cmdId} LIMIT 1
+    `
+    const already = Array.isArray(exists) && exists.length > 0
+    if (already) {
+      await prisma.$executeRaw`
+        DELETE FROM "Favourite" WHERE "userId" = ${userId} AND "commandId" = ${cmdId}
+      `
+      try {
+        await prisma.command.update({ where: { id: cmdId }, data: { favourites: { decrement: 1 } } })
+      } catch (e) {
+        // ignore decrement errors
+      }
+      return res.json({ ok: true, favourited: false })
+    } else {
+      await prisma.$executeRaw`
+        INSERT INTO "Favourite" ("userId","commandId") VALUES (${userId}, ${cmdId})
+      `
+      try {
+        await prisma.command.update({ where: { id: cmdId }, data: { favourites: { increment: 1 } } })
+      } catch (e) {
+        // ignore increment errors
+      }
+      return res.json({ ok: true, favourited: true })
+    }
+  } catch (err) {
+    console.error('favourite toggle error', err && err.message ? err.message : err)
+    return res.status(500).json({ error: 'failed_to_toggle_favourite' })
+  }
+})
+
+// Check if current user has favourited a command
+app.get('/api/commands/:id/is-favourited', requireDbReady, requireAuth, async (req, res) => {
+  const cmdId = req.params.id
+  const userId = req.session.user.id
+  try {
+    const exists = await prisma.$queryRaw`
+      SELECT 1 FROM "Favourite" WHERE "userId" = ${userId} AND "commandId" = ${cmdId} LIMIT 1
+    `
+    const already = Array.isArray(exists) && exists.length > 0
+    return res.json({ favourited: already })
+  } catch (err) {
+    console.error('is-favourited error', err && err.message ? err.message : err)
+    return res.status(500).json({ error: 'failed' })
+  }
+})
+
+// Get commands uploaded by a user
+app.get('/api/users/:id/commands', requireDbReady, async (req, res) => {
+  const { id } = req.params
+  try {
+    const cmds = await prisma.command.findMany({ where: { authorId: id }, include: { author: true } })
+    return res.json(cmds)
+  } catch (err) {
+    console.error('user commands error', err && err.message ? err.message : err)
+    return res.status(500).json({ error: 'failed' })
+  }
+})
+
+// Get favourited commands for a user (public)
+app.get('/api/users/:id/favourites', requireDbReady, async (req, res) => {
+  const { id } = req.params
+  try {
+    const rows = await prisma.$queryRaw`
+      SELECT "commandId" FROM "Favourite" WHERE "userId" = ${id}
+    `
+    const ids = (Array.isArray(rows) ? rows.map(r => r.commandId || r.commandid || Object.values(r)[0]) : []).filter(Boolean)
+    if (ids.length === 0) return res.json([])
+    const cmds = await prisma.command.findMany({ where: { id: { in: ids } }, include: { author: true } })
+    return res.json(cmds)
+  } catch (err) {
+    console.error('user favourites error', err && err.message ? err.message : err)
+    return res.status(500).json({ error: 'failed' })
+  }
+})
+
+// Get favourited commands for current user (requires auth)
+app.get('/api/users/me/favourites', requireDbReady, requireAuth, async (req, res) => {
+  const userId = req.session.user.id
+  try {
+    const rows = await prisma.$queryRaw`
+      SELECT "commandId" FROM "Favourite" WHERE "userId" = ${userId}
+    `
+    const ids = (Array.isArray(rows) ? rows.map(r => r.commandId || r.commandid || Object.values(r)[0]) : []).filter(Boolean)
+    if (ids.length === 0) return res.json([])
+    const cmds = await prisma.command.findMany({ where: { id: { in: ids } }, include: { author: true } })
+    return res.json(cmds)
+  } catch (err) {
+    console.error('me favourites error', err && err.message ? err.message : err)
+    return res.status(500).json({ error: 'failed' })
+  }
+})
+
 // Aggregated stats for homepage
 app.get('/api/stats', requireDbReady, async (req, res) => {
   try {

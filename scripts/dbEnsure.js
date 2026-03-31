@@ -9,7 +9,7 @@ const prisma = new PrismaClient()
 async function ensure() {
   console.log(`[dbEnsure] Checking database tables...`)
   try {
-    const needed = ['User', 'Command']
+    const needed = ['User', 'Command', 'Favourite']
     console.log(`[dbEnsure] Querying information_schema for tables: ${needed.join(', ')}`)
     const rows = await prisma.$queryRaw`
       SELECT table_name FROM information_schema.tables
@@ -108,6 +108,18 @@ async function ensure() {
           "updatedAt" timestamptz DEFAULT now(),
           "authorId" text NOT NULL,
           CONSTRAINT fk_author FOREIGN KEY ("authorId") REFERENCES "User"(id) ON DELETE CASCADE
+        )
+      `)
+
+      // Create Favourite join table for user favourites
+      await prisma.$executeRawUnsafe(`
+        CREATE TABLE IF NOT EXISTS "Favourite" (
+          "userId" text NOT NULL,
+          "commandId" text NOT NULL,
+          "createdAt" timestamptz DEFAULT now(),
+          PRIMARY KEY ("userId", "commandId"),
+          CONSTRAINT fk_fav_user FOREIGN KEY ("userId") REFERENCES "User"(id) ON DELETE CASCADE,
+          CONSTRAINT fk_fav_command FOREIGN KEY ("commandId") REFERENCES "Command"(id) ON DELETE CASCADE
         )
       `)
 

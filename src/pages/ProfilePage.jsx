@@ -1,4 +1,4 @@
-import React from 'react'
+import React, { useEffect, useState } from 'react'
 import { User, Package } from 'lucide-react'
 import { C } from '../constants'
 import CommandCard from '../components/CommandCard'
@@ -13,9 +13,38 @@ export default function ProfilePage({ user, onViewCommand, onNavigate }) {
     </div>
   )
 
-  const userCmds = MOCK_COMMANDS.filter(c => c.author.id === user.id)
-  const totalDownloads = userCmds.reduce((a,c)=>a+c.downloads, 0)
-  const totalFavs = userCmds.reduce((a,c)=>a+c.favourites, 0)
+  const API_BASE = import.meta.env.DEV ? '' : (import.meta.env.VITE_API_BASE || '')
+  const [userCmds, setUserCmds] = useState([])
+  const [favCmds, setFavCmds] = useState([])
+  const totalDownloads = userCmds.reduce((a,c)=>a+(c.downloads||0), 0)
+  const totalFavs = userCmds.reduce((a,c)=>a+(c.favourites||0), 0)
+
+  useEffect(() => {
+    let cancelled = false
+    if (!user) return
+    ;(async () => {
+      try {
+        const r = await fetch(`${API_BASE}/api/users/${encodeURIComponent(user.id)}/commands`)
+        if (r.ok) {
+          const cmds = await r.json()
+          if (!cancelled) setUserCmds(cmds)
+        }
+      } catch (e) {
+        // ignore
+      }
+
+      try {
+        const r2 = await fetch(`${API_BASE}/api/users/${encodeURIComponent(user.id)}/favourites`)
+        if (r2.ok) {
+          const f = await r2.json()
+          if (!cancelled) setFavCmds(f)
+        }
+      } catch (e) {
+        // ignore
+      }
+    })()
+    return () => { cancelled = true }
+  }, [user])
 
   return (
     <div style={{ maxWidth:960, margin:'0 auto', padding:'44px 24px' }}>
@@ -31,6 +60,13 @@ export default function ProfilePage({ user, onViewCommand, onNavigate }) {
         <button onClick={()=>onNavigate('upload')} style={{ background:C.blurple, color:'#fff', border:'none', borderRadius:8, padding:'8px 18px', fontSize:13, fontWeight:700 }}>Upload New</button>
       </div>
       {userCmds.length===0 ? (<div style={{ background:C.surface, border:`1px solid ${C.border}`, borderRadius:14, padding:'60px 20px', textAlign:'center', color:C.muted }}><Package size={36} style={{ marginBottom:14, opacity:0.25, display:'block', margin:'0 auto 14px' }} /><p style={{ margin:0, fontSize:16 }}>No commands uploaded yet</p><p style={{ fontSize:13, marginTop:8 }}>Be the first to share your work with the community</p><button onClick={()=>onNavigate('upload')} style={{ marginTop:20, background:C.blurple, color:'#fff', border:'none', borderRadius:8, padding:'10px 22px', fontSize:14, fontWeight:600 }}>Upload your first command</button></div>) : (<div style={{ display:'grid', gridTemplateColumns:'repeat(auto-fill, minmax(290px, 1fr))', gap:16 }}>{userCmds.map(cmd => <CommandCard key={cmd.id} cmd={cmd} onClick={onViewCommand} />)}</div>)}
+
+      <div style={{ marginTop: 32 }}>
+        <div style={{ display:'flex', justifyContent:'space-between', alignItems:'center', marginBottom:18 }}>
+          <h2 style={{ fontFamily: "'Syne', sans-serif", fontSize:20, fontWeight:800, color:C.white, margin:0 }}>Favourited Commands</h2>
+        </div>
+        {favCmds.length===0 ? (<div style={{ background:C.surface, border:`1px solid ${C.border}`, borderRadius:14, padding:'40px 20px', textAlign:'center', color:C.muted }}>No favourited commands yet</div>) : (<div style={{ display:'grid', gridTemplateColumns:'repeat(auto-fill, minmax(290px, 1fr))', gap:16 }}>{favCmds.map(cmd => <CommandCard key={cmd.id} cmd={cmd} onClick={onViewCommand} />)}</div>)}
+      </div>
     </div>
   )
 }
