@@ -147,11 +147,17 @@ export default function UploadPage({ user, onNavigate }) {
       setJsonError('');
       return;
     }
-    try {
-      JSON.parse(v);
+    // Only validate JSON when upload category is Bot Tool (tools expect JSON)
+    if (form.uploadCategory === 'Bot Tool') {
+      try {
+        JSON.parse(v);
+        setJsonError('');
+      } catch {
+        setJsonError('Invalid JSON — please check your syntax');
+      }
+    } else {
+      // Framework uploads accept code; no JSON validation
       setJsonError('');
-    } catch {
-      setJsonError('Invalid JSON — please check your syntax');
     }
   };
   const canSubmit = form.name && form.description && form.rawData && !jsonError;
@@ -380,7 +386,13 @@ export default function UploadPage({ user, onNavigate }) {
             }}
           >
             <label style={{ ...label, marginBottom: 0 }}>
-              Raw JSON Data <span style={{ color: C.red }}>*</span>
+              {form.uploadCategory === 'Bot Tool' ? (
+                <>
+                  Raw JSON Data <span style={{ color: C.red }}>*</span>
+                </>
+              ) : (
+                <>Code / Raw Data <span style={{ color: C.red }}>*</span></>
+              )}
             </label>
             {jsonError && <span style={{ color: C.red, fontSize: 12 }}>⚠ {jsonError}</span>}
           </div>
@@ -388,12 +400,14 @@ export default function UploadPage({ user, onNavigate }) {
             value={form.rawData}
             onChange={(e) => handleRaw(e.target.value)}
             placeholder={
-              '{\n  "name": "your-command",\n  "description": "...",\n  "options": []\n}'
+              form.uploadCategory === 'Bot Tool'
+                ? '{\n  "name": "your-command",\n  "description": "...",\n  "options": []\n}'
+                : '// Paste your framework code here, e.g. JavaScript, TypeScript or Python snippets.'
             }
             rows={10}
             style={{
               ...inp,
-              fontFamily: "'JetBrains Mono', monospace",
+              fontFamily: form.uploadCategory === 'Bot Tool' ? "'JetBrains Mono', monospace" : 'inherit',
               fontSize: 12,
               resize: 'vertical',
               border: `1px solid ${jsonError ? C.red : C.border}`,
