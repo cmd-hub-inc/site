@@ -16,7 +16,7 @@
   "dependencies": {
     
     "@prisma/client": "^5.6.0",
-    "@monaco-editor/react": "^5.1.1",
+    "@monaco-editor/react": "latest",
     "concurrently": "^8.2.0",
     "connect-pg-simple": "^8.0.0",
     "cors": "^2.8.5",
