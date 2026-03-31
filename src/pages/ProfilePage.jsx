@@ -26,8 +26,10 @@ export default function ProfilePage({ user, profileId, onViewCommand, onNavigate
   const totalFavs = userCmds.reduce((a, c) => a + (c.favourites || 0), 0);
 
   if (!viewUser) {
-    // If we're loading a remote profile, show a header loading placeholder
-    if (profileId) {
+    // If we're loading a remote profile or the client is logged in but viewUser isn't set yet,
+    // show a header loading placeholder. Only show the 'Not logged in' message when no
+    // profileId and no authenticated user.
+    if (profileId || user) {
       return (
         <div style={{ maxWidth: 960, margin: '0 auto', padding: '44px 24px' }}>
           <div
@@ -68,7 +70,6 @@ export default function ProfilePage({ user, profileId, onViewCommand, onNavigate
         </div>
       );
     }
-
     // Not viewing a profile and no auth
     return (
       <div style={{ textAlign: 'center', padding: '100px 24px' }}>
