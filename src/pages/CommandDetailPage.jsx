@@ -62,6 +62,7 @@ export default function CommandDetailPage({ cmd, onBack, user, loading = false }
   const [copied, setCopied] = useState(false);
   const [faved, setFaved] = useState(null);
   const [favCount, setFavCount] = useState(cmd.favourites || 0);
+  const [downloadCount, setDownloadCount] = useState(cmd.downloads || 0);
   const [userRating, setUserRating] = useState(0);
   const [hoverRating, setHoverRating] = useState(0);
   const [activeTab, setActiveTab] = useState('raw');
@@ -82,6 +83,18 @@ export default function CommandDetailPage({ cmd, onBack, user, loading = false }
     a.download = `${cmd.name}.json`;
     a.click();
     URL.revokeObjectURL(url);
+  };
+
+  // Optimistically record a download on the server and update UI
+  const recordDownload = async () => {
+    try {
+      setDownloadCount((n) => (n || 0) + 1);
+      await fetch(`${API_BASE}/api/commands/${encodeURIComponent(cmd.id)}/download`, {
+        method: 'POST',
+      });
+    } catch (e) {
+      console.error('recordDownload failed', e);
+    }
   };
   const dateStr = (s) =>
     new Date(s).toLocaleDateString('en-GB', { day: 'numeric', month: 'short', year: 'numeric' });
@@ -191,7 +204,10 @@ export default function CommandDetailPage({ cmd, onBack, user, loading = false }
           </div>
           <div style={{ display: 'flex', flexDirection: 'column', gap: 8, minWidth: 180 }}>
             <button
-              onClick={handleDownload}
+              onClick={() => {
+                handleDownload();
+                recordDownload();
+              }}
               style={{
                 background: C.blurple,
                 color: '#fff',
@@ -276,7 +292,7 @@ export default function CommandDetailPage({ cmd, onBack, user, loading = false }
             borderTop: `1px solid ${C.border}`,
           }}
         >
-          <StatPill icon={<Download size={14} />} value={cmd.downloads} label="downloads" />
+          <StatPill icon={<Download size={14} />} value={downloadCount} label="downloads" />
           <StatPill icon={<Eye size={14} />} value={cmd.views} label="views" />
           <StatPill icon={<Heart size={14} />} value={favCount} label="favourites" />
           <div style={{ marginLeft: 'auto', color: C.faint, fontSize: 12 }}>

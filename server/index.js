@@ -536,6 +536,22 @@ app.get('/api/commands/:id', requireDbReady, async (req, res) => {
   }
 });
 
+// Increment download counter for a command (fire on download)
+app.post('/api/commands/:id/download', requireDbReady, async (req, res) => {
+  const { id } = req.params;
+  try {
+    const updated = await prisma.command.update({
+      where: { id },
+      data: { downloads: { increment: 1 } },
+    });
+    if (!updated) return res.status(404).json({ error: 'Not found' });
+    return res.json({ ok: true, downloads: updated.downloads });
+  } catch (err) {
+    console.error('download increment error', err && err.message ? err.message : err);
+    return res.status(500).json({ error: 'failed' });
+  }
+});
+
 app.post('/api/commands', requireDbReady, requireAuth, async (req, res) => {
   try {
     const data = req.body;
