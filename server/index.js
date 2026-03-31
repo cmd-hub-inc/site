@@ -374,8 +374,23 @@ app.post('/api/logout', (req, res) => {
 });
 
 app.get('/api/commands', requireDbReady, async (req, res) => {
-  const cmds = await prisma.command.findMany({ include: { author: true } });
-  res.json(cmds);
+  try {
+    const cmds = await prisma.command.findMany({ include: { author: true } });
+    const ids = cmds.map((c) => c.id).filter(Boolean);
+    if (ids.length > 0) {
+      const rows = await prisma.$queryRaw`
+        SELECT id, "uploadCategory" FROM "Command" WHERE id = ANY(${ids})
+      `;
+      const map = {};
+      if (Array.isArray(rows)) rows.forEach((r) => (map[r.id || r.ID || Object.values(r)[0]] = r.uploadCategory || r.uploadcategory || r.UploadCategory));
+      const out = cmds.map((c) => ({ ...c, uploadCategory: map[c.id] || 'Framework' }));
+      return res.json(out);
+    }
+    return res.json(cmds);
+  } catch (err) {
+    console.error('list commands error', err && err.message ? err.message : err);
+    return res.status(500).json({ error: 'failed' });
+  }
 });
 
 // Toggle favourite for a command (requires auth)
@@ -440,11 +455,20 @@ app.get('/api/commands/:id/is-favourited', requireDbReady, requireAuth, async (r
 app.get('/api/users/:id/commands', requireDbReady, async (req, res) => {
   const { id } = req.params;
   try {
-    const cmds = await prisma.command.findMany({
-      where: { authorId: id },
-      include: { author: true },
-    });
-    return res.json(cmds);
+    const cmds = await prisma.command.findMany({ where: { authorId: id }, include: { author: true } });
+    try {
+      const ids = cmds.map((c) => c.id).filter(Boolean);
+      if (ids.length === 0) return res.json(cmds);
+      const urows = await prisma.$queryRaw`
+        SELECT id, "uploadCategory" FROM "Command" WHERE id = ANY(${ids})
+      `;
+      const map = {};
+      if (Array.isArray(urows)) urows.forEach((r) => (map[r.id] = r.uploadCategory || r.uploadcategory));
+      const out = cmds.map((c) => ({ ...c, uploadCategory: map[c.id] || 'Framework' }));
+      return res.json(out);
+    } catch (e) {
+      return res.json(cmds);
+    }
   } catch (err) {
     console.error('user commands error', err && err.message ? err.message : err);
     return res.status(500).json({ error: 'failed' });
@@ -476,11 +500,19 @@ app.get('/api/users/:id/favourites', requireDbReady, async (req, res) => {
       Array.isArray(rows) ? rows.map((r) => r.commandId || r.commandid || Object.values(r)[0]) : []
     ).filter(Boolean);
     if (ids.length === 0) return res.json([]);
-    const cmds = await prisma.command.findMany({
-      where: { id: { in: ids } },
-      include: { author: true },
-    });
-    return res.json(cmds);
+    const cmds = await prisma.command.findMany({ where: { id: { in: ids } }, include: { author: true } });
+    // attach uploadCategory
+    try {
+      const urows = await prisma.$queryRaw`
+        SELECT id, "uploadCategory" FROM "Command" WHERE id = ANY(${ids})
+      `;
+      const map = {};
+      if (Array.isArray(urows)) urows.forEach((r) => (map[r.id] = r.uploadCategory || r.uploadcategory));
+      const out = cmds.map((c) => ({ ...c, uploadCategory: map[c.id] || 'Framework' }));
+      return res.json(out);
+    } catch (e) {
+      return res.json(cmds);
+    }
   } catch (err) {
     console.error('user favourites error', err && err.message ? err.message : err);
     return res.status(500).json({ error: 'failed' });
@@ -498,11 +530,18 @@ app.get('/api/users/me/favourites', requireDbReady, requireAuth, async (req, res
       Array.isArray(rows) ? rows.map((r) => r.commandId || r.commandid || Object.values(r)[0]) : []
     ).filter(Boolean);
     if (ids.length === 0) return res.json([]);
-    const cmds = await prisma.command.findMany({
-      where: { id: { in: ids } },
-      include: { author: true },
-    });
-    return res.json(cmds);
+    const cmds = await prisma.command.findMany({ where: { id: { in: ids } }, include: { author: true } });
+    try {
+      const urows = await prisma.$queryRaw`
+        SELECT id, "uploadCategory" FROM "Command" WHERE id = ANY(${ids})
+      `;
+      const map = {};
+      if (Array.isArray(urows)) urows.forEach((r) => (map[r.id] = r.uploadCategory || r.uploadcategory));
+      const out = cmds.map((c) => ({ ...c, uploadCategory: map[c.id] || 'Framework' }));
+      return res.json(out);
+    } catch (e) {
+      return res.json(cmds);
+    }
   } catch (err) {
     console.error('me favourites error', err && err.message ? err.message : err);
     return res.status(500).json({ error: 'failed' });
@@ -555,13 +594,31 @@ app.get('/api/commands/:id', requireDbReady, async (req, res) => {
           SELECT value FROM "Rating" WHERE "userId" = ${sessionUser.id} AND "commandId" = ${id} LIMIT 1
         `;
         const myRating = Array.isArray(rows) && rows.length ? Number(rows[0].value) : null;
-        return res.json({ ...updated, myRating });
+        // fetch uploadCategory
+        try {
+          const urows = await prisma.$queryRaw`
+            SELECT "uploadCategory" FROM "Command" WHERE id = ${id} LIMIT 1
+          `;
+          const uploadCategory = Array.isArray(urows) && urows.length ? urows[0].uploadCategory || urows[0].uploadcategory : 'Framework';
+          return res.json({ ...updated, myRating, uploadCategory });
+        } catch (e) {
+          return res.json({ ...updated, myRating, uploadCategory: 'Framework' });
+        }
       } catch (e) {
         // ignore rating lookup errors
-        return res.json({ ...updated, myRating: null });
+        return res.json({ ...updated, myRating: null, uploadCategory: 'Framework' });
       }
     }
-    return res.json(updated);
+    // fetch uploadCategory for unauthenticated requests
+    try {
+      const urows = await prisma.$queryRaw`
+        SELECT "uploadCategory" FROM "Command" WHERE id = ${id} LIMIT 1
+      `;
+      const uploadCategory = Array.isArray(urows) && urows.length ? urows[0].uploadCategory || urows[0].uploadcategory : 'Framework';
+      return res.json({ ...updated, uploadCategory });
+    } catch (e) {
+      return res.json({ ...updated, uploadCategory: 'Framework' });
+    }
   } catch (err) {
     if (String(err.message || '').includes('No such'))
       return res.status(404).json({ error: 'Not found' });
@@ -657,8 +714,31 @@ app.post('/api/commands', requireDbReady, requireAuth, async (req, res) => {
     const data = req.body;
     // Use session user as authorId and ignore any client-supplied authorId
     const authorId = req.session.user.id;
-    const cmd = await prisma.command.create({ data: { ...data, authorId } });
-    res.status(201).json(cmd);
+    // Create command via Prisma but avoid passing unknown DB columns (uploadCategory)
+    const createData = { ...data };
+    delete createData.uploadCategory;
+    const cmd = await prisma.command.create({ data: { ...createData, authorId } });
+    // If client provided uploadCategory, persist it via raw SQL
+    if (data.uploadCategory) {
+      try {
+        await prisma.$executeRaw`
+          UPDATE "Command" SET "uploadCategory" = ${data.uploadCategory} WHERE id = ${cmd.id}
+        `;
+      } catch (e) {
+        // ignore
+      }
+    }
+    // fetch uploadCategory and attach to response
+    try {
+      const urows = await prisma.$queryRaw`
+        SELECT "uploadCategory" FROM "Command" WHERE id = ${cmd.id} LIMIT 1
+      `;
+      const uploadCategory = Array.isArray(urows) && urows.length ? urows[0].uploadCategory || urows[0].uploadcategory : 'Framework';
+      const withAuthor = await prisma.command.findUnique({ where: { id: cmd.id }, include: { author: true } });
+      return res.status(201).json({ ...withAuthor, uploadCategory });
+    } catch (e) {
+      return res.status(201).json(cmd);
+    }
   } catch (err) {
     res.status(400).json({ error: err.message });
   }

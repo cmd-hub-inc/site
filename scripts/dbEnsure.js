@@ -130,6 +130,7 @@ async function ensure() {
           views integer DEFAULT 0,
           changelog text,
           "rawData" text NOT NULL,
+          "uploadCategory" text DEFAULT 'Framework',
           "createdAt" timestamptz DEFAULT now(),
           "updatedAt" timestamptz DEFAULT now(),
           "authorId" text NOT NULL,
@@ -195,7 +196,8 @@ async function ensure() {
               }
 
               try {
-                await prisma.command.create({
+                // create via prisma then update uploadCategory (Prisma client may not know new column)
+                const created = await prisma.command.create({
                   data: {
                     id: m.id ? String(m.id) : undefined,
                     name: m.name,
@@ -216,6 +218,18 @@ async function ensure() {
                     authorId: authorId,
                   },
                 });
+                const uploadCat = m.uploadCategory || 'Framework';
+                try {
+                  await prisma.$executeRawUnsafe(
+                    `UPDATE "Command" SET "uploadCategory" = ${uploadCat ? `'${String(
+                      uploadCat,
+                    ).replace(/'/g, "''")}'` : "'Framework'"} WHERE id = '${String(
+                      created.id,
+                    ).replace(/'/g, "''")}'`,
+                  );
+                } catch (uerr) {
+                  // ignore update errors
+                }
               } catch (cerr) {
                 console.warn(
                   '[dbEnsure] Failed to create command during seed:',
