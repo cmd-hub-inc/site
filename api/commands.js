@@ -1,6 +1,7 @@
 import prisma from './_lib/prisma.js';
+import { requireAuthOrFail } from './_lib/utils.js';
 
-export default async function handler(req, res) {
+async function listCommands(req, res) {
   try {
     const cmds = await prisma.command.findMany({ include: { author: true } });
     const ids = cmds.map((c) => c.id).filter(Boolean);
@@ -53,4 +54,84 @@ export default async function handler(req, res) {
       return res.status(500).json({ error: 'failed' });
     }
   }
+}
+
+async function createCommand(req, res) {
+  const session = requireAuthOrFail(req, res);
+  if (!session) return;
+  try {
+    const data = req.body || {};
+    const authorId = session.id;
+    const createData = { ...data };
+    delete createData.uploadCategory;
+    let cmd = null;
+    try {
+      cmd = await prisma.command.create({ data: { ...createData, authorId } });
+    } catch (e) {
+      const msg = (e && e.message) || String(e);
+      if (msg.includes('uploadCategory') || msg.includes('does not exist')) {
+        try {
+          const esc = (v) => (v === null || v === undefined ? 'NULL' : `'${String(v).replace(/'/g, "''")}'`);
+          const tags = Array.isArray(data.tags) ? data.tags : [];
+          const tagsSql = tags.length > 0 ? `ARRAY[${tags.map((t) => `'${String(t).replace(/'/g, "''")}'`).join(',')}]::text[]` : `ARRAY[]::text[]`;
+          const id = data.id || cryptoRandomId();
+          const name = esc(data.name || id);
+          const description = esc(data.description || '');
+          const type = esc(data.type || '');
+          const framework = esc(data.framework || '');
+          const version = esc(data.version || '');
+          const githubUrl = esc(data.githubUrl || null);
+          const websiteUrl = esc(data.websiteUrl || null);
+          const changelog = esc(data.changelog || null);
+          const rawData = esc(data.rawData || '{}');
+          const insertSQL = `INSERT INTO "Command" (id, name, description, type, framework, version, tags, "githubUrl", "websiteUrl", downloads, rating, "ratingCount", favourites, views, changelog, "rawData", "createdAt", "updatedAt", "authorId") VALUES (${esc(id)}, ${name}, ${description}, ${type}, ${framework}, ${version}, ${tagsSql}, ${githubUrl}, ${websiteUrl}, 0, 0, 0, 0, 0, ${changelog}, ${rawData}, now(), now(), ${esc(authorId)}) RETURNING id`;
+          const inserted = await prisma.$queryRawUnsafe(insertSQL);
+          const insertedId = Array.isArray(inserted) && inserted.length ? (inserted[0].id || Object.values(inserted[0])[0]) : id;
+          try {
+            const withAuthor = await prisma.command.findUnique({ where: { id: insertedId }, include: { author: true } });
+            cmd = withAuthor || { id: insertedId, name: data.name, authorId };
+          } catch (fetchErr) {
+            cmd = { id: insertedId, name: data.name, authorId };
+          }
+        } catch (rawErr) {
+          console.error('raw insert fallback failed', rawErr && rawErr.message ? rawErr.message : rawErr);
+          return res.status(500).json({ error: 'failed_to_create_command' });
+        }
+      } else {
+        throw e;
+      }
+    }
+    // attach uploadCategory if present
+    if (data.uploadCategory) {
+      try {
+        await prisma.$executeRaw`
+          UPDATE "Command" SET "uploadCategory" = ${data.uploadCategory} WHERE id = ${cmd.id}
+        `;
+      } catch (ue) {}
+    }
+    try {
+      const urows = await prisma.$queryRaw`
+        SELECT "uploadCategory" FROM "Command" WHERE id = ${cmd.id} LIMIT 1
+      `;
+      const uploadCategory = Array.isArray(urows) && urows.length ? urows[0].uploadCategory || urows[0].uploadcategory : 'Framework';
+      const withAuthor = await prisma.command.findUnique({ where: { id: cmd.id }, include: { author: true } });
+      return res.status(201).json({ ...withAuthor, uploadCategory });
+    } catch (e) {
+      return res.status(201).json(cmd);
+    }
+  } catch (err) {
+    console.error('create command error', err && err.message ? err.message : err);
+    return res.status(500).json({ error: 'failed' });
+  }
+}
+
+function cryptoRandomId() {
+  return 'id-' + Math.random().toString(36).slice(2, 10);
+}
+
+export default async function handler(req, res) {
+  if (req.method === 'GET') return listCommands(req, res);
+  if (req.method === 'POST') return createCommand(req, res);
+  res.setHeader('Allow', 'GET, POST');
+  return res.status(405).end('Method Not Allowed');
 }
