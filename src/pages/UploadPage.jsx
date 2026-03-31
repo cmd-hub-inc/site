@@ -163,6 +163,7 @@ export default function UploadPage({ user, onNavigate }) {
     padding: '11px 14px',
     color: C.text,
     fontSize: 14,
+    boxSizing: 'border-box',
   };
   const label = {
     display: 'block',
@@ -196,9 +197,18 @@ export default function UploadPage({ user, onNavigate }) {
           border: `1px solid ${C.border}`,
           borderRadius: 16,
           padding: 30,
+          overflow: 'hidden',
         }}
       >
-        <div style={{ display: 'grid', gridTemplateColumns: '2fr 1fr', gap: 16, marginBottom: 20 }}>
+        <div
+          style={{
+            display: 'grid',
+            gridTemplateColumns: '1fr 160px',
+            gap: 16,
+            marginBottom: 20,
+            alignItems: 'start',
+          }}
+        >
           <div>
             <label style={label}>
               Command Name <span style={{ color: C.red }}>*</span>
@@ -221,7 +231,7 @@ export default function UploadPage({ user, onNavigate }) {
                 value={form.name}
                 onChange={(e) => set('name', e.target.value.replace(/\s/g, '-').toLowerCase())}
                 placeholder="command-name"
-                style={{ ...inp, paddingLeft: 26, fontFamily: "'JetBrains Mono', monospace" }}
+                style={{ ...inp, paddingLeft: 36, fontFamily: "'JetBrains Mono', monospace" }}
               />
             </div>
           </div>
@@ -231,7 +241,7 @@ export default function UploadPage({ user, onNavigate }) {
               value={form.version}
               onChange={(e) => set('version', e.target.value)}
               placeholder="v1.0.0"
-              style={inp}
+              style={{ ...inp, paddingLeft: 12 }}
             />
           </div>
         </div>
