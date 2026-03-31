@@ -255,7 +255,7 @@ export default function App() {
   }, [user, page]);
 
   return (
-    <div style={{ minHeight: '100vh', background: '#1e1f22' }}>
+    <div style={{ minHeight: '100vh', background: '#1e1f22', display: 'flex', flexDirection: 'column' }}>
       <Navbar
         page={page}
         user={user}
@@ -271,31 +271,32 @@ export default function App() {
           setUser(null);
         }}
       />
-
-      {page === 'home' && <HomePage onNavigate={navigate} onViewCommand={viewCommand} />}
-      {page === 'browse' && <BrowsePage initialTag={pageParams.tag} onViewCommand={viewCommand} />}
-      {page === 'creators' && <CreatorsPage onNavigate={navigate} />}
-      {page === 'upload' && <UploadPage user={user} onNavigate={navigate} />}
-      {page === 'profile' && (
-        <ProfilePage
-          user={user}
-          profileId={pageParams && pageParams.id}
-          onViewCommand={viewCommand}
-          onNavigate={navigate}
-        />
-      )}
-      {page === 'detail' && (
-        <CommandDetailPage
-          cmd={selectedCmd}
-          loading={!selectedCmd}
-          onBack={() => navigate('browse')}
-          user={user}
-        />
-      )}
-      {page === 'edit' && (
-        <EditCommandPage user={user} pageParams={pageParams} />
-      )}
-      {page === 'notfound' && <NotFound />}
+      <main style={{ flex: 1 }}>
+        {page === 'home' && <HomePage onNavigate={navigate} onViewCommand={viewCommand} />}
+        {page === 'browse' && <BrowsePage initialTag={pageParams.tag} onViewCommand={viewCommand} />}
+        {page === 'creators' && <CreatorsPage onNavigate={navigate} />}
+        {page === 'upload' && <UploadPage user={user} onNavigate={navigate} />}
+        {page === 'profile' && (
+          <ProfilePage
+            user={user}
+            profileId={pageParams && pageParams.id}
+            onViewCommand={viewCommand}
+            onNavigate={navigate}
+          />
+        )}
+        {page === 'detail' && (
+          <CommandDetailPage
+            cmd={selectedCmd}
+            loading={!selectedCmd}
+            onBack={() => navigate('browse')}
+            user={user}
+          />
+        )}
+        {page === 'edit' && (
+          <EditCommandPage user={user} pageParams={pageParams} />
+        )}
+        {page === 'notfound' && <NotFound />}
+      </main>
 
       <Footer onNavigate={navigate} />
     </div>

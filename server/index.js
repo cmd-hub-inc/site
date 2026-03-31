@@ -233,6 +233,7 @@ app.get('/api/auth/discord/callback', async (req, res) => {
     if (!code) return res.status(400).send('Missing code');
 
     const tokenResp = await fetch('https://discord.com/api/oauth2/token', {
+      method: 'POST',
       headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
       body: new URLSearchParams({
         client_id: DISCORD_CLIENT_ID,
@@ -603,6 +604,104 @@ app.get('/api/users/:id/favourites', requireDbReady, async (req, res) => {
     }
   } catch (err) {
     console.error('user favourites error', err && err.message ? err.message : err);
+    return res.status(500).json({ error: 'failed' });
+  }
+});
+
+// List users with pagination and optional filters (tag, framework, q)
+app.get('/api/users', requireDbReady, async (req, res) => {
+  try {
+    const page = Math.max(1, Number(req.query.page) || 1);
+    const limit = Math.min(100, Number(req.query.limit) || 20);
+    const offset = (page - 1) * limit;
+    // Simple, safe aggregation per user (no complex filters yet)
+    const sql = `
+      SELECT u.id, u.username, u.avatar,
+        (SELECT COUNT(*) FROM "Command" c WHERE c."authorId" = u.id) AS commands,
+        (SELECT COALESCE(SUM(downloads),0) FROM "Command" c WHERE c."authorId" = u.id) AS downloads,
+        (SELECT COALESCE(ROUND(AVG(NULLIF(rating,0))::numeric,2),0) FROM "Command" c WHERE c."authorId" = u.id) AS avg_rating
+      FROM "User" u
+      ORDER BY commands DESC NULLS LAST
+      LIMIT ${limit} OFFSET ${offset}
+    `;
+    // Log SQL for debugging when this endpoint errors in dev
+    console.log('[api] users list SQL:', sql.replace(/\s+/g, ' ').trim());
+    let rows = [];
+    try {
+      rows = await prisma.$queryRawUnsafe(sql);
+    } catch (queryErr) {
+      console.warn('[api] prisma.$queryRawUnsafe failed for /api/users, falling back to Prisma client findMany', queryErr && queryErr.message ? queryErr.message : queryErr);
+      // fallback: simpler query via Prisma client (may be less performant)
+      try {
+        rows = await prisma.user.findMany({
+          select: { id: true, username: true, avatar: true },
+          skip: offset,
+          take: limit,
+        });
+        // map to expected shape
+        rows = (rows || []).map((r) => ({ id: r.id, username: r.username, avatar: r.avatar, commands: 0, downloads: 0, avg_rating: 0 }));
+      } catch (clientErr) {
+        console.error('[api] fallback findMany also failed for /api/users', clientErr && clientErr.stack ? clientErr.stack : clientErr);
+        throw clientErr;
+      }
+    }
+
+    const countRes = await prisma.$queryRawUnsafe('SELECT COUNT(*) AS cnt FROM "User"');
+    const total = Array.isArray(countRes) && countRes.length ? Number(countRes[0].cnt || 0) : 0;
+
+    // Normalize DB driver types (e.g., BigInt) to JSON-serializable values
+    const normalized = (Array.isArray(rows) ? rows : []).map((r) => {
+      const obj = {};
+      for (const [k, v] of Object.entries(r || {})) {
+        if (typeof v === 'bigint') obj[k] = Number(v);
+        else obj[k] = v;
+      }
+      return obj;
+    });
+
+    return res.json({ users: normalized, page, limit, total });
+  } catch (err) {
+    const detail = err && (err.stack || err.message || String(err));
+    console.error('users list error', detail);
+    // Return error details in dev to aid debugging (remove in production)
+    return res.status(500).json({ error: 'failed', detail });
+  }
+});
+
+// GET user profile with stats and top uploads
+app.get('/api/users/:id', requireDbReady, async (req, res) => {
+  try {
+    const { id } = req.params;
+    const userRows = await prisma.$queryRaw`
+      SELECT id, username, avatar FROM "User" WHERE id = ${id} LIMIT 1
+    `;
+    const user = Array.isArray(userRows) && userRows.length ? userRows[0] : null;
+    if (!user) return res.status(404).json({ error: 'not_found' });
+
+    // follower/following counts
+    let followers = 0;
+    let following = 0;
+    try {
+      const f1 = await prisma.$queryRaw`
+        SELECT COUNT(*) AS cnt FROM "Follower" WHERE "followeeId" = ${id}
+      `;
+      const f2 = await prisma.$queryRaw`
+        SELECT COUNT(*) AS cnt FROM "Follower" WHERE "followerId" = ${id}
+      `;
+      followers = Array.isArray(f1) && f1.length ? Number(f1[0].cnt || 0) : 0;
+      following = Array.isArray(f2) && f2.length ? Number(f2[0].cnt || 0) : 0;
+    } catch (e) {
+      // ignore
+    }
+
+    // top uploads (by downloads)
+    const top = await prisma.$queryRaw`
+      SELECT c.* FROM "Command" c WHERE c."authorId" = ${id} ORDER BY c.downloads DESC NULLS LAST LIMIT 8
+    `;
+
+    return res.json({ user: { id: user.id, username: user.username, avatar: user.avatar, followers, following }, top: Array.isArray(top) ? top : [] });
+  } catch (err) {
+    console.error('user profile error', err && err.message ? err.message : err);
     return res.status(500).json({ error: 'failed' });
   }
 });

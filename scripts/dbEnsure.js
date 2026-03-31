@@ -170,6 +170,18 @@ async function ensure() {
         )
       `);
 
+      // Create Follower table for follow/unfollow feature
+      await prisma.$executeRawUnsafe(`
+        CREATE TABLE IF NOT EXISTS "Follower" (
+          "followerId" text NOT NULL,
+          "followeeId" text NOT NULL,
+          "createdAt" timestamptz DEFAULT now(),
+          PRIMARY KEY ("followerId", "followeeId"),
+          CONSTRAINT fk_follow_follower FOREIGN KEY ("followerId") REFERENCES "User"(id) ON DELETE CASCADE,
+          CONSTRAINT fk_follow_followee FOREIGN KEY ("followeeId") REFERENCES "User"(id) ON DELETE CASCADE
+        )
+      `);
+
       // Create Rating table for per-user ratings
       await prisma.$executeRawUnsafe(`
         CREATE TABLE IF NOT EXISTS "Rating" (
