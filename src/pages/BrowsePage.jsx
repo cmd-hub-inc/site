@@ -277,7 +277,7 @@ export default function BrowsePage({ initialTag, onViewCommand }) {
       )}
 
       {/* Most Downloaded section placed immediately below the search controls */}
-      {commands && commands.length > 0 && (
+      {commands && commands.length > 0 && !search && selectedTags.length === 0 && !selectedFW && !selectedType && (
         <div style={{ marginBottom: 18 }}>
           <div
             style={{
