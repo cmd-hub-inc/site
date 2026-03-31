@@ -11,6 +11,7 @@ import NotFound from './pages/NotFound';
 import CreatorsPage from './pages/CreatorsPage';
 import Footer from './components/Footer';
 import { MOCK_USER } from './constants';
+import { Analytics } from "@vercel/analytics/next"
 
 export default function App() {
   const [page, setPage] = useState(() => {
@@ -95,7 +96,7 @@ export default function App() {
     }
   };
 
-  const API_BASE = import.meta.env.DEV ? '' : import.meta.env.VITE_API_BASE || '';
+  const API_BASE = import.meta.env.VITE_API_BASE ?? (import.meta.env.DEV ? '' : '/api/proxy');
 
   useEffect(() => {
     // Poll /ready before asking server for current user (avoids 503 during startup)

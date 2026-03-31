@@ -6,7 +6,7 @@ import { MOCK_COMMANDS } from '../data/mockCommands';
 import CountUp from '../components/CountUp';
 
 export default function HomePage({ onNavigate, onViewCommand }) {
-  const API_BASE = import.meta.env.DEV ? '' : import.meta.env.VITE_API_BASE || '';
+  const API_BASE = import.meta.env.VITE_API_BASE ?? (import.meta.env.DEV ? '' : '/api/proxy');
 
   const totalDownloads = MOCK_COMMANDS.reduce((a, c) => a + c.downloads, 0);
   const [featured, setFeatured] = useState([...MOCK_COMMANDS].slice(0, 3));

@@ -3,7 +3,7 @@ import { C, FRAMEWORKS, CMD_TYPES, ALL_TAGS } from '../constants';
 
 export default function EditCommandPage({ user, pageParams }) {
   const id = pageParams && pageParams.id;
-  const API_BASE = import.meta.env.DEV ? '' : import.meta.env.VITE_API_BASE || '';
+  const API_BASE = import.meta.env.VITE_API_BASE ?? (import.meta.env.DEV ? '' : '/api/proxy');
   const [cmd, setCmd] = useState(null);
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);

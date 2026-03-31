@@ -13,7 +13,7 @@ export default function BrowsePage({ initialTag, onViewCommand }) {
   const [sort, setSort] = useState('downloads');
   const [showFilters, setShowFilters] = useState(false);
 
-  const API_BASE = import.meta.env.DEV ? '' : import.meta.env.VITE_API_BASE || '';
+  const API_BASE = import.meta.env.VITE_API_BASE ?? (import.meta.env.DEV ? '' : '/api/proxy');
   const [commands, setCommands] = useState([]);
   const [loadingCommands, setLoadingCommands] = useState(true);
 
