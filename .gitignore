@@ -42,3 +42,21 @@ coverage-final.json
 # Optional lock files for other package managers
 # pnpm
 .pnpm-debug.log*
+
+# Additional common ignores
+# Yarn PnP
+.pnp.cjs
+.pnp.js
+
+# Parcel
+.parcel-cache/
+
+# Turbo / monorepo build cache
+.turbo/
+
+# Prisma generated artifacts
+.prisma/
+
+# Optional environment files
+.env.production
+.env.test
