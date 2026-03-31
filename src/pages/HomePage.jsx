@@ -9,6 +9,14 @@ export default function HomePage({ onNavigate, onViewCommand }) {
   const API_BASE = import.meta.env.VITE_API_BASE ?? (import.meta.env.DEV ? '' : '/api/proxy');
 
   const [featured, setFeatured] = useState(null);
+  const [commandsList, setCommandsList] = useState(null);
+  const [derived, setDerived] = useState({
+    latest: null,
+    creators: null,
+    frameworks: null,
+    tags: null,
+    recent: null,
+  });
   const [stats, setStats] = useState(null);
 
   useEffect(() => {
@@ -28,8 +36,51 @@ export default function HomePage({ onNavigate, onViewCommand }) {
         const r2 = await fetch(`${API_BASE}/api/commands`);
         if (r2.ok) {
           const cmds = await r2.json();
-          const sorted = cmds.sort((a, b) => (b.downloads || 0) - (a.downloads || 0)).slice(0, 3);
+          if (!cancelled) setCommandsList(cmds);
+
+          const sorted = cmds.slice().sort((a, b) => (b.downloads || 0) - (a.downloads || 0)).slice(0, 3);
           if (!cancelled && Array.isArray(sorted) && sorted.length) setFeatured(sorted);
+
+          // derive latest uploads
+          const latest = cmds
+            .slice()
+            .sort((a, b) => new Date(b.createdAt) - new Date(a.createdAt))
+            .slice(0, 4);
+
+          // top creators
+          const creatorMap = cmds.reduce((acc, c) => {
+            const name = (c.author && c.author.username) || 'Unknown';
+            acc[name] = (acc[name] || 0) + 1;
+            return acc;
+          }, {});
+          const creators = Object.keys(creatorMap)
+            .map((k) => ({ name: k, count: creatorMap[k] }))
+            .sort((a, b) => b.count - a.count)
+            .slice(0, 6);
+
+          // frameworks counts
+          const fwMap = cmds.reduce((acc, c) => {
+            const fw = c.framework || 'Other';
+            acc[fw] = (acc[fw] || 0) + 1;
+            return acc;
+          }, {});
+          const frameworks = Object.keys(fwMap)
+            .map((k) => ({ name: k, count: fwMap[k] }))
+            .sort((a, b) => b.count - a.count);
+
+          // trending tags
+          const tagMap = cmds.reduce((acc, c) => {
+            (c.tags || []).forEach((t) => (acc[t] = (acc[t] || 0) + 1));
+            return acc;
+          }, {});
+          const tags = Object.keys(tagMap)
+            .map((k) => ({ tag: k, count: tagMap[k] }))
+            .sort((a, b) => b.count - a.count)
+            .slice(0, 12);
+
+          const recent = latest.slice(0, 6);
+
+          if (!cancelled) setDerived({ latest, creators, frameworks, tags, recent });
         }
         // leave as null (show skeleton) if response not ok
       } catch (e) {
@@ -207,6 +258,91 @@ export default function HomePage({ onNavigate, onViewCommand }) {
             : featured.map((cmd) => (
                 <CommandCard key={cmd.id} cmd={cmd} onClick={onViewCommand} />
               ))}
+        </div>
+      </div>
+
+      <div style={{ maxWidth: 960, margin: '0 auto', padding: '0 24px 72px' }}>
+        <h2 style={{ fontFamily: "'Syne', sans-serif", fontSize: 22, fontWeight: 800, color: C.white }}>
+          🔔 Latest Uploads
+        </h2>
+        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(280px, 1fr))', gap: 16 }}>
+          {derived.latest == null
+            ? [0, 1, 2, 3].map((i) => <CommandCard key={i} loading />)
+            : derived.latest.map((cmd) => (
+                <CommandCard key={cmd.id} cmd={cmd} onClick={onViewCommand} />
+              ))}
+        </div>
+
+        <div style={{ display: 'grid', gridTemplateColumns: '2fr 1fr', gap: 20, marginTop: 28 }}>
+          <div>
+            <h3 style={{ fontSize: 18, color: C.white, marginBottom: 8 }}>Top Creators</h3>
+            <div style={{ background: C.surface, border: `1px solid ${C.border}`, borderRadius: 12, padding: 12 }}>
+              {derived.creators == null ? (
+                [0, 1, 2, 3].map((i) => <div key={i} className="skeleton" style={{ height: 18, marginBottom: 8, borderRadius: 6 }} />)
+              ) : (
+                derived.creators.map((c) => (
+                  <div key={c.name} style={{ display: 'flex', justifyContent: 'space-between', padding: '8px 6px' }}>
+                    <div style={{ color: C.white }}>{c.name}</div>
+                    <div style={{ color: C.muted }}>{c.count} uploads</div>
+                  </div>
+                ))
+              )}
+            </div>
+          </div>
+
+          <div>
+            <h3 style={{ fontSize: 18, color: C.white, marginBottom: 8 }}>Browse by Framework</h3>
+            <div style={{ background: C.surface, border: `1px solid ${C.border}`, borderRadius: 12, padding: 12 }}>
+              {derived.frameworks == null ? (
+                [0, 1, 2, 3].map((i) => <div key={i} className="skeleton" style={{ height: 18, marginBottom: 8, borderRadius: 6 }} />)
+              ) : (
+                <div style={{ display: 'flex', flexWrap: 'wrap', gap: 8 }}>
+                  {derived.frameworks.slice(0, 12).map((f) => (
+                    <button key={f.name} style={{ background: C.surface2, border: `1px solid ${C.border}`, borderRadius: 999, padding: '6px 10px', cursor: 'pointer' }}>
+                      {f.name} ({f.count})
+                    </button>
+                  ))}
+                </div>
+              )}
+            </div>
+          </div>
+        </div>
+
+        <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 20, marginTop: 28 }}>
+          <div>
+            <h3 style={{ fontSize: 18, color: C.white, marginBottom: 8 }}>Trending Tags</h3>
+            <div style={{ background: C.surface, border: `1px solid ${C.border}`, borderRadius: 12, padding: 12 }}>
+              {derived.tags == null ? (
+                <div>
+                  {[0, 1, 2, 3, 4].map((i) => (
+                    <div key={i} className="skeleton" style={{ height: 14, marginBottom: 8, borderRadius: 6 }} />
+                  ))}
+                </div>
+              ) : (
+                <div style={{ display: 'flex', flexWrap: 'wrap', gap: 8 }}>
+                  {derived.tags.map((t) => (
+                    <div key={t.tag} style={{ background: C.surface2, padding: '6px 10px', borderRadius: 999 }}>{t.tag} ({t.count})</div>
+                  ))}
+                </div>
+              )}
+            </div>
+          </div>
+
+          <div>
+            <h3 style={{ fontSize: 18, color: C.white, marginBottom: 8 }}>Recent Activity</h3>
+            <div style={{ background: C.surface, border: `1px solid ${C.border}`, borderRadius: 12, padding: 12 }}>
+              {derived.recent == null ? (
+                [0, 1, 2, 3].map((i) => <div key={i} className="skeleton" style={{ height: 14, marginBottom: 8, borderRadius: 6 }} />)
+              ) : (
+                derived.recent.map((r) => (
+                  <div key={r.id} style={{ padding: '8px 6px', borderBottom: `1px dashed ${C.border}` }}>
+                    <div style={{ color: C.white, fontWeight: 700 }}>/ {r.name}</div>
+                    <div style={{ color: C.muted, fontSize: 12 }}>{r.author?.username || 'Unknown'} • {r.createdAt}</div>
+                  </div>
+                ))
+              )}
+            </div>
+          </div>
         </div>
       </div>
     </div>
