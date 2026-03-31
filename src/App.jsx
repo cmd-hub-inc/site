@@ -17,6 +17,7 @@ export default function App() {
     try {
       const pathname = typeof window !== 'undefined' ? window.location.pathname || '' : '';
       if (pathname.startsWith('/browse')) return 'browse';
+      if (pathname.startsWith('/creators')) return 'creators';
       if (pathname.startsWith('/upload')) return 'upload';
       if (pathname.startsWith('/profile')) return 'profile';
       if (pathname.startsWith('/command/')) return 'detail';
@@ -42,6 +43,7 @@ export default function App() {
     try {
       let newPath = '/';
       if (p === 'browse') newPath = '/browse';
+      else if (p === 'creators') newPath = '/creators';
       else if (p === 'upload') newPath = '/upload';
       else if (p === 'profile') {
         // if no id provided and we have an authenticated `user`, canonicalize to use their id
@@ -56,7 +58,7 @@ export default function App() {
       }
       window.history.pushState({}, '', newPath);
     } catch (e) {
-      // ignore
+      // ignore history push failures
     }
 
     // If navigating to edit, fetch command in background to hydrate editor
@@ -77,13 +79,9 @@ export default function App() {
     } catch (e) {}
   };
 
-  const requiresAuth = (p) => p === 'upload' || p === 'edit';
-
   const viewCommand = (cmd) => {
-    // cmd can be either an id string or full command object
     if (!cmd) return;
     if (typeof cmd === 'string') {
-      // navigate to detail and fetch later in popstate/fetch logic
       navigate('detail', { id: cmd });
     } else {
       setSelectedCmd(cmd);
@@ -278,6 +276,11 @@ export default function App() {
         // fallback: map path to pages
         if (pathname.startsWith('/browse')) {
           setPage('browse');
+          setSelectedCmd(null);
+          return;
+        }
+        if (pathname.startsWith('/creators')) {
+          setPage('creators');
           setSelectedCmd(null);
           return;
         }
