@@ -3,6 +3,7 @@ import { Zap, ChevronRight } from 'lucide-react';
 import CommandCard from '../components/CommandCard';
 import { C } from '../constants';
 import { MOCK_COMMANDS } from '../data/mockCommands';
+import CountUp from '../components/CountUp';
 
 export default function HomePage({ onNavigate, onViewCommand }) {
   const API_BASE = import.meta.env.DEV ? '' : import.meta.env.VITE_API_BASE || '';
@@ -155,7 +156,7 @@ export default function HomePage({ onNavigate, onViewCommand }) {
                 color: s.color,
               }}
             >
-              {s.value}
+              <CountUp value={s.value} duration={900} />
             </div>
             <div style={{ color: C.muted, fontSize: 13, marginTop: 6 }}>{s.label}</div>
           </div>

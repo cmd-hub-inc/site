@@ -3,6 +3,7 @@ import { User, Package } from 'lucide-react';
 import { C } from '../constants';
 import CommandCard from '../components/CommandCard';
 import { MOCK_COMMANDS } from '../data/mockCommands';
+import CountUp from '../components/CountUp';
 
 export default function ProfilePage({ user, onViewCommand, onNavigate }) {
   if (!user)
@@ -263,7 +264,7 @@ export default function ProfilePage({ user, onViewCommand, onNavigate }) {
                       style={{ width: 64, height: 22, borderRadius: 6, margin: '0 auto' }}
                     />
                   ) : (
-                    s.value
+                    <CountUp value={s.value} duration={900} />
                   )}
                 </div>
                 <div style={{ color: C.muted, fontSize: 12 }}>{s.label}</div>
