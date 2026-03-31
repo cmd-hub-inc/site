@@ -519,9 +519,21 @@ app.get('/api/stats', requireDbReady, async (req, res) => {
 
 app.get('/api/commands/:id', requireDbReady, async (req, res) => {
   const { id } = req.params;
-  const cmd = await prisma.command.findUnique({ where: { id }, include: { author: true } });
-  if (!cmd) return res.status(404).json({ error: 'Not found' });
-  res.json(cmd);
+  try {
+    // Atomically increment the views counter and return the updated record
+    const updated = await prisma.command.update({
+      where: { id },
+      data: { views: { increment: 1 } },
+      include: { author: true },
+    });
+    if (!updated) return res.status(404).json({ error: 'Not found' });
+    return res.json(updated);
+  } catch (err) {
+    if (String(err.message || '').includes('No such'))
+      return res.status(404).json({ error: 'Not found' });
+    console.error('get command error', err && err.message ? err.message : err);
+    return res.status(500).json({ error: 'failed' });
+  }
 });
 
 app.post('/api/commands', requireDbReady, requireAuth, async (req, res) => {
