@@ -8,7 +8,7 @@ import CountUp from '../components/CountUp';
 export default function HomePage({ onNavigate, onViewCommand }) {
   const API_BASE = import.meta.env.VITE_API_BASE ?? (import.meta.env.DEV ? '' : '/api/proxy');
 
-  const [featured, setFeatured] = useState([...MOCK_COMMANDS].slice(0, 3));
+  const [featured, setFeatured] = useState(null);
   const [stats, setStats] = useState(null);
 
   useEffect(() => {
@@ -31,8 +31,9 @@ export default function HomePage({ onNavigate, onViewCommand }) {
           const sorted = cmds.sort((a, b) => (b.downloads || 0) - (a.downloads || 0)).slice(0, 3);
           if (!cancelled && Array.isArray(sorted) && sorted.length) setFeatured(sorted);
         }
+        // leave as null (show skeleton) if response not ok
       } catch (e) {
-        // ignore
+        // leave featured as null so skeleton shows when fetch fails
       }
     })();
     return () => {
@@ -201,9 +202,11 @@ export default function HomePage({ onNavigate, onViewCommand }) {
             gap: 16,
           }}
         >
-          {featured.map((cmd) => (
-            <CommandCard key={cmd.id} cmd={cmd} onClick={onViewCommand} />
-          ))}
+          {featured == null
+            ? [0, 1, 2].map((i) => <CommandCard key={i} loading />)
+            : featured.map((cmd) => (
+                <CommandCard key={cmd.id} cmd={cmd} onClick={onViewCommand} />
+              ))}
         </div>
       </div>
     </div>
