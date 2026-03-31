@@ -20,7 +20,7 @@ app.use(express.json())
 
 const PgSession = connectPgSimple(session)
 app.use(session({
-  store: new PgSession({ conString: process.env.DATABASE_URL, ttl: 7 * 24 * 60 * 60, pruneSessionInterval: 24 * 60 * 60 }),
+  store: new PgSession({ conString: process.env.DATABASE_URL, ttl: 7 * 24 * 60 * 60, pruneSessionInterval: 24 * 60 * 60, createTableIfMissing: true }),
   secret: SESSION_SECRET,
   resave: false,
   saveUninitialized: false,
@@ -85,11 +85,27 @@ app.get('/api/auth/discord/callback', async (req, res) => {
     const avatar = discordUser.avatar ? `https://cdn.discordapp.com/avatars/${discordId}/${discordUser.avatar}.png` : null
 
     // Upsert user in DB using discord id as primary key, persist avatar
-    const user = await prisma.user.upsert({
-      where: { id: discordId },
-      create: { id: discordId, username, avatar },
-      update: { username, avatar },
-    })
+    let user
+    try {
+      user = await prisma.user.upsert({
+        where: { id: discordId },
+        create: { id: discordId, username, avatar },
+        update: { username, avatar },
+      })
+    } catch (e) {
+      // If Prisma client hasn't been migrated to include `avatar`, retry without it
+      const msg = e && e.message ? String(e.message) : ''
+      if (msg.includes('Unknown argument `avatar`') || msg.includes('Unknown arg') || msg.includes('avatar')) {
+        console.warn('Prisma schema likely missing `avatar` field; retrying upsert without avatar')
+        user = await prisma.user.upsert({
+          where: { id: discordId },
+          create: { id: discordId, username },
+          update: { username },
+        })
+      } else {
+        throw e
+      }
+    }
 
     // Store user in session and redirect back to client
     req.session.user = { id: user.id, username: user.username, avatar: user.avatar }
