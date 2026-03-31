@@ -8,13 +8,8 @@ import CountUp from '../components/CountUp';
 export default function HomePage({ onNavigate, onViewCommand }) {
   const API_BASE = import.meta.env.VITE_API_BASE ?? (import.meta.env.DEV ? '' : '/api/proxy');
 
-  const totalDownloads = MOCK_COMMANDS.reduce((a, c) => a + c.downloads, 0);
   const [featured, setFeatured] = useState([...MOCK_COMMANDS].slice(0, 3));
-  const [stats, setStats] = useState({
-    commands: MOCK_COMMANDS.length,
-    downloads: totalDownloads,
-    frameworks: 6,
-  });
+  const [stats, setStats] = useState(null);
 
   useEffect(() => {
     let cancelled = false;
@@ -134,9 +129,9 @@ export default function HomePage({ onNavigate, onViewCommand }) {
         }}
       >
         {[
-          { label: 'Commands', value: stats.commands, color: C.blurple },
-          { label: 'Downloads', value: stats.downloads, color: C.green },
-          { label: 'Frameworks', value: stats.frameworks, color: C.yellow },
+          { label: 'Commands', value: stats?.commands ?? null, color: C.blurple },
+          { label: 'Downloads', value: stats?.downloads ?? null, color: C.green },
+          { label: 'Frameworks', value: stats?.frameworks ?? null, color: C.yellow },
         ].map((s) => (
           <div
             key={s.label}

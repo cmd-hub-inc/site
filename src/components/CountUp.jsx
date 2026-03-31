@@ -4,12 +4,18 @@ function easeOutCubic(t) {
   return 1 - Math.pow(1 - t, 3);
 }
 
-export default function CountUp({ value = 0, duration = 900, format }) {
-  const [display, setDisplay] = useState(Math.floor(value));
-  const fromRef = useRef(Math.floor(value));
+export default function CountUp({ value = null, duration = 900, format }) {
+  const [display, setDisplay] = useState(() => (value == null ? null : Math.floor(value)));
+  const fromRef = useRef(value == null ? 0 : Math.floor(value));
   const rafRef = useRef(null);
 
   useEffect(() => {
+    if (value == null) {
+      fromRef.current = 0;
+      setDisplay(null);
+      return;
+    }
+
     const from = fromRef.current || 0;
     const to = Math.floor(value || 0);
     if (from === to) return setDisplay(to);
@@ -26,6 +32,7 @@ export default function CountUp({ value = 0, duration = 900, format }) {
     return () => rafRef.current && cancelAnimationFrame(rafRef.current);
   }, [value, duration]);
 
+  if (display == null) return <>—</>;
   if (format && typeof format === 'function') return <>{format(display)}</>;
   return <>{new Intl.NumberFormat().format(display)}</>;
 }
