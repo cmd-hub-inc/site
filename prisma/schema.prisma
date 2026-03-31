@@ -21,6 +21,7 @@ model Command {
   description String
   type        String
   framework   String
+  uploadCategory String  @default("Framework")
   version     String
   tags        String[] @default([])
   githubUrl   String?
@@ -36,4 +37,17 @@ model Command {
   updatedAt   DateTime @updatedAt
   authorId    String
   author      User     @relation(fields: [authorId], references: [id])
+  ratings     Rating[]
+}
+
+model Rating {
+  userId    String
+  commandId String
+  value     Int
+  createdAt DateTime @default(now())
+
+  user    User    @relation(fields: [userId], references: [id])
+  command Command @relation(fields: [commandId], references: [id])
+
+  @@id([userId, commandId])
 }
