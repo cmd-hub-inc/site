@@ -13,28 +13,17 @@ export default function ProfilePage({ user, profileId, onViewCommand, onNavigate
       : null
     : user || null;
   const [viewUser, setViewUser] = useState(initialViewUser);
-  // if viewing someone else's profile, we'll fetch their public profile
-  React.useEffect(() => {
-    let cancelled = false;
-    (async () => {
-      if (!profileId) return;
-      const API_BASE = import.meta.env.DEV ? '' : import.meta.env.VITE_API_BASE || '';
-      try {
-        const r = await fetch(`${API_BASE}/api/users/${encodeURIComponent(profileId)}`);
-        if (r.ok) {
-          const data = await r.json();
-          // Normalize API shape: some responses return { user: {...}, top: [...] }
-          const normalized = data && data.user ? data.user : data;
-          if (!cancelled) setViewUser(normalized);
-        }
-      } catch (e) {
-        // ignore
-      }
-    })();
-    return () => {
-      cancelled = true;
-    };
-  }, [profileId]);
+  
+  // Note: hooks below must run on every render (move before conditional returns)
+  const API_BASE = import.meta.env.DEV ? '' : import.meta.env.VITE_API_BASE || '';
+  // Normalize viewUser: some API responses return { user: {...}, top: [...] }
+  const displayUser = viewUser && viewUser.user ? viewUser.user : viewUser;
+  const [userCmds, setUserCmds] = useState([]);
+  const [favCmds, setFavCmds] = useState([]);
+  const [loadingUserCmds, setLoadingUserCmds] = useState(true);
+  const [loadingFavCmds, setLoadingFavCmds] = useState(true);
+  const totalDownloads = userCmds.reduce((a, c) => a + (c.downloads || 0), 0);
+  const totalFavs = userCmds.reduce((a, c) => a + (c.favourites || 0), 0);
 
   if (!viewUser)
     return (
@@ -174,33 +163,41 @@ export default function ProfilePage({ user, profileId, onViewCommand, onNavigate
       </div>
     );
 
-  const API_BASE = import.meta.env.DEV ? '' : import.meta.env.VITE_API_BASE || '';
-  // Normalize viewUser: some API responses return { user: {...}, top: [...] }
-  const displayUser = viewUser && viewUser.user ? viewUser.user : viewUser;
-  const [userCmds, setUserCmds] = useState([]);
-  const [favCmds, setFavCmds] = useState([]);
-  const [loadingUserCmds, setLoadingUserCmds] = useState(true);
-  const [loadingFavCmds, setLoadingFavCmds] = useState(true);
-  const totalDownloads = userCmds.reduce((a, c) => a + (c.downloads || 0), 0);
-  const totalFavs = userCmds.reduce((a, c) => a + (c.favourites || 0), 0);
-
   useEffect(() => {
     let cancelled = false;
     // If there's a profileId and it's not the current user, fetch that profile
+    (async () => {
+      if (!profileId) return;
+      if (user && String(user.id) === String(profileId)) {
+        // viewing our own profile — ensure viewUser is current user
+        setViewUser(user);
+        return;
+      }
+      try {
+        const r = await fetch(`${API_BASE}/api/users/${encodeURIComponent(profileId)}`);
+        if (r.ok) {
+          const data = await r.json();
+          const normalized = data && data.user ? data.user : data;
+          if (!cancelled) setViewUser(normalized);
+        }
+      } catch (e) {
+        // ignore
+      }
+    })();
+
+    return () => {
+      cancelled = true;
+    };
+  }, [profileId, user]);
+
+  useEffect(() => {
+    let cancelled = false;
     if (!profileId) return;
-    if (user && String(user.id) === String(profileId)) {
-      // viewing our own profile — ensure viewUser is current user
-      setViewUser(user);
-      return () => {
-        cancelled = true;
-      };
-    }
     (async () => {
       setLoadingUserCmds(true);
       try {
-        const r = await fetch(`${API_BASE}/api/users/${encodeURIComponent(
-          viewUser.id,
-        )}/commands`);
+        const id = viewUser && viewUser.id ? viewUser.id : profileId;
+        const r = await fetch(`${API_BASE}/api/users/${encodeURIComponent(id)}/commands`);
         if (r.ok) {
           const cmds = await r.json();
           if (!cancelled) setUserCmds(cmds);
@@ -215,9 +212,8 @@ export default function ProfilePage({ user, profileId, onViewCommand, onNavigate
 
       setLoadingFavCmds(true);
       try {
-        const r2 = await fetch(`${API_BASE}/api/users/${encodeURIComponent(
-          viewUser.id,
-        )}/favourites`);
+        const id = viewUser && viewUser.id ? viewUser.id : profileId;
+        const r2 = await fetch(`${API_BASE}/api/users/${encodeURIComponent(id)}/favourites`);
         if (r2.ok) {
           const f = await r2.json();
           if (!cancelled) setFavCmds(f);
@@ -230,17 +226,11 @@ export default function ProfilePage({ user, profileId, onViewCommand, onNavigate
         if (!cancelled) setLoadingFavCmds(false);
       }
     })();
+
     return () => {
       cancelled = true;
     };
-  }, [profileId, user]);
-
-  // When not viewing a specific profileId, ensure viewUser reflects the current auth user
-  useEffect(() => {
-    if (!profileId) {
-      setViewUser(user || null);
-    }
-  }, [user, profileId]);
+  }, [profileId, user, viewUser]);
 
   return (
     <div style={{ maxWidth: 960, margin: '0 auto', padding: '44px 24px' }}>
