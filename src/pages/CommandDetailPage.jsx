@@ -65,6 +65,8 @@ export default function CommandDetailPage({ cmd, onBack, user, loading = false }
   const [downloadCount, setDownloadCount] = useState(cmd.downloads || 0);
   const [userRating, setUserRating] = useState(0);
   const [hoverRating, setHoverRating] = useState(0);
+  const [aggRating, setAggRating] = useState(cmd.rating || 0);
+  const [aggRatingCount, setAggRatingCount] = useState(cmd.ratingCount || 0);
   const [activeTab, setActiveTab] = useState('raw');
   const API_BASE = import.meta.env.DEV ? '' : import.meta.env.VITE_API_BASE || '';
 
@@ -122,6 +124,40 @@ export default function CommandDetailPage({ cmd, onBack, user, loading = false }
       mounted = false;
     };
   }, [cmd.id, user]);
+
+  // fetch current user's rating (or use cmd.myRating if provided)
+  React.useEffect(() => {
+    let mounted = true;
+    (async () => {
+      if (!user) return;
+      // prefer server-provided myRating on the command object
+      if (cmd && cmd.myRating != null) {
+        if (mounted) setUserRating(Number(cmd.myRating) || 0);
+        return;
+      }
+      try {
+        const r = await fetch(`${API_BASE}/api/commands/${encodeURIComponent(cmd.id)}/my-rating`, {
+          credentials: 'include',
+        });
+        if (r.ok) {
+          const j = await r.json();
+          if (mounted) setUserRating(Number(j.rating) || 0);
+        }
+      } catch (e) {
+        // ignore
+      }
+    })();
+    return () => {
+      mounted = false;
+    };
+  }, [cmd.id, user]);
+
+  // keep aggregate rating in sync if cmd prop changes
+  React.useEffect(() => {
+    setAggRating(cmd.rating || 0);
+    setAggRatingCount(cmd.ratingCount || 0);
+    if (cmd && cmd.myRating != null) setUserRating(Number(cmd.myRating) || 0);
+  }, [cmd.id, cmd.rating, cmd.ratingCount, cmd.myRating]);
 
   return (
     <div style={{ maxWidth: 920, margin: '0 auto', padding: '44px 24px' }}>
@@ -294,6 +330,7 @@ export default function CommandDetailPage({ cmd, onBack, user, loading = false }
         >
           <StatPill icon={<Download size={14} />} value={downloadCount} label="downloads" />
           <StatPill icon={<Eye size={14} />} value={cmd.views} label="views" />
+          <StatPill icon={<Star size={14} color={C.yellow} />} value={aggRating ? Number(aggRating).toFixed(1) : '0.0'} label="rating" />
           <StatPill icon={<Heart size={14} />} value={favCount} label="favourites" />
           <div style={{ marginLeft: 'auto', color: C.faint, fontSize: 12 }}>
             Updated {dateStr(cmd.updatedAt)} · Created {dateStr(cmd.createdAt)}
@@ -518,7 +555,31 @@ export default function CommandDetailPage({ cmd, onBack, user, loading = false }
             {[1, 2, 3, 4, 5].map((n) => (
               <button
                 key={n}
-                onClick={() => setUserRating(n)}
+                onClick={async () => {
+                  const prev = userRating || 0;
+                  setUserRating(n);
+                  try {
+                    const r = await fetch(
+                      `${API_BASE}/api/commands/${encodeURIComponent(cmd.id)}/rate`,
+                      {
+                        method: 'POST',
+                        credentials: 'include',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify({ rating: n }),
+                      },
+                    );
+                    if (r.ok) {
+                      const j = await r.json();
+                      if (j.rating != null) setAggRating(Number(j.rating));
+                      if (j.ratingCount != null) setAggRatingCount(Number(j.ratingCount));
+                    } else {
+                      setUserRating(prev);
+                    }
+                  } catch (e) {
+                    console.error('rate failed', e);
+                    setUserRating(prev);
+                  }
+                }}
                 onMouseEnter={() => setHoverRating(n)}
                 onMouseLeave={() => setHoverRating(0)}
                 style={{

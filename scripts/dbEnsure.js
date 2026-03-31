@@ -9,7 +9,7 @@ const prisma = new PrismaClient();
 async function ensure() {
   console.log(`[dbEnsure] Checking database tables...`);
   try {
-    const needed = ['User', 'Command', 'Favourite'];
+    const needed = ['User', 'Command', 'Favourite', 'Rating'];
     console.log(`[dbEnsure] Querying information_schema for tables: ${needed.join(', ')}`);
     const rows = await prisma.$queryRaw`
       SELECT table_name FROM information_schema.tables
@@ -146,6 +146,19 @@ async function ensure() {
           PRIMARY KEY ("userId", "commandId"),
           CONSTRAINT fk_fav_user FOREIGN KEY ("userId") REFERENCES "User"(id) ON DELETE CASCADE,
           CONSTRAINT fk_fav_command FOREIGN KEY ("commandId") REFERENCES "Command"(id) ON DELETE CASCADE
+        )
+      `);
+
+      // Create Rating table for per-user ratings
+      await prisma.$executeRawUnsafe(`
+        CREATE TABLE IF NOT EXISTS "Rating" (
+          "userId" text NOT NULL,
+          "commandId" text NOT NULL,
+          value integer NOT NULL,
+          "createdAt" timestamptz DEFAULT now(),
+          PRIMARY KEY ("userId", "commandId"),
+          CONSTRAINT fk_rating_user FOREIGN KEY ("userId") REFERENCES "User"(id) ON DELETE CASCADE,
+          CONSTRAINT fk_rating_command FOREIGN KEY ("commandId") REFERENCES "Command"(id) ON DELETE CASCADE
         )
       `);
 

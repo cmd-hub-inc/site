@@ -527,11 +527,91 @@ app.get('/api/commands/:id', requireDbReady, async (req, res) => {
       include: { author: true },
     });
     if (!updated) return res.status(404).json({ error: 'Not found' });
+    // If user is authenticated include their personal rating for UI convenience
+    const sessionUser = req.session && req.session.user;
+    if (sessionUser && sessionUser.id) {
+      try {
+        const rows = await prisma.$queryRaw`
+          SELECT value FROM "Rating" WHERE "userId" = ${sessionUser.id} AND "commandId" = ${id} LIMIT 1
+        `;
+        const myRating = Array.isArray(rows) && rows.length ? Number(rows[0].value) : null;
+        return res.json({ ...updated, myRating });
+      } catch (e) {
+        // ignore rating lookup errors
+        return res.json({ ...updated, myRating: null });
+      }
+    }
     return res.json(updated);
   } catch (err) {
     if (String(err.message || '').includes('No such'))
       return res.status(404).json({ error: 'Not found' });
     console.error('get command error', err && err.message ? err.message : err);
+    return res.status(500).json({ error: 'failed' });
+  }
+});
+
+// Get current authenticated user's rating for a command
+app.get(
+  '/api/commands/:id/my-rating',
+  requireDbReady,
+  requireAuth,
+  async (req, res) => {
+    const { id } = req.params;
+    const userId = req.session.user.id;
+    try {
+      const rows = await prisma.$queryRaw`
+        SELECT value FROM "Rating" WHERE "userId" = ${userId} AND "commandId" = ${id} LIMIT 1
+      `;
+      const myRating = Array.isArray(rows) && rows.length ? Number(rows[0].value) : null;
+      return res.json({ rating: myRating });
+    } catch (err) {
+      console.error('my-rating error', err && err.message ? err.message : err);
+      return res.status(500).json({ error: 'failed' });
+    }
+  },
+);
+
+// Upsert a user's rating for a command and update aggregate on Command
+app.post('/api/commands/:id/rate', requireDbReady, requireAuth, async (req, res) => {
+  const { id } = req.params;
+  const userId = req.session.user.id;
+  const { rating } = req.body;
+  const r = Number(rating);
+  if (!Number.isFinite(r) || r < 1 || r > 5) return res.status(400).json({ error: 'invalid_rating' });
+  try {
+    await prisma.$transaction(async (tx) => {
+      // Lock existing rating if present
+      const prevRows = await tx.$queryRaw`
+        SELECT value FROM "Rating" WHERE "userId" = ${userId} AND "commandId" = ${id} LIMIT 1 FOR UPDATE
+      `;
+      if (Array.isArray(prevRows) && prevRows.length) {
+        const prev = Number(prevRows[0].value);
+        // update rating row
+        await tx.$executeRaw`
+          UPDATE "Rating" SET value = ${r}, "createdAt" = now() WHERE "userId" = ${userId} AND "commandId" = ${id}
+        `;
+        // adjust Command aggregate (keep same ratingCount)
+        await tx.$executeRaw`
+          UPDATE "Command" SET rating = CASE WHEN "ratingCount" > 0 THEN ((rating * "ratingCount") - ${prev} + ${r})::double precision / "ratingCount" ELSE ${r} END WHERE id = ${id}
+        `;
+      } else {
+        // insert new rating
+        await tx.$executeRaw`
+          INSERT INTO "Rating" ("userId","commandId",value) VALUES (${userId}, ${id}, ${r})
+        `;
+        // update Command aggregate and increment count
+        await tx.$executeRaw`
+          UPDATE "Command" SET rating = ((rating * "ratingCount") + ${r})::double precision / ("ratingCount" + 1), "ratingCount" = "ratingCount" + 1 WHERE id = ${id}
+        `;
+      }
+    });
+
+    // return updated aggregate
+    const cmd = await prisma.command.findUnique({ where: { id } });
+    if (!cmd) return res.status(404).json({ error: 'Not found' });
+    return res.json({ ok: true, rating: cmd.rating, ratingCount: cmd.ratingCount, myRating: r });
+  } catch (err) {
+    console.error('rate error', err && err.message ? err.message : err);
     return res.status(500).json({ error: 'failed' });
   }
 });
