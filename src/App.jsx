@@ -7,6 +7,7 @@ import ProfilePage from './pages/ProfilePage';
 import CommandDetailPage from './pages/CommandDetailPage';
 import EditCommandPage from './pages/EditCommandPage';
 import NotFound from './pages/NotFound';
+import CreatorsPage from './pages/CreatorsPage';
 import Footer from './components/Footer';
 import { MOCK_USER } from './constants';
 
@@ -273,6 +274,7 @@ export default function App() {
 
       {page === 'home' && <HomePage onNavigate={navigate} onViewCommand={viewCommand} />}
       {page === 'browse' && <BrowsePage initialTag={pageParams.tag} onViewCommand={viewCommand} />}
+      {page === 'creators' && <CreatorsPage onNavigate={navigate} />}
       {page === 'upload' && <UploadPage user={user} onNavigate={navigate} />}
       {page === 'profile' && (
         <ProfilePage

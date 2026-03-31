@@ -1,5 +1,5 @@
 import React from 'react';
-import { Home, Grid, Upload, LogOut } from 'lucide-react';
+import { Home, Grid, Upload, LogOut, Users } from 'lucide-react';
 import { Code2 } from 'lucide-react';
 import { C } from '../constants';
 
@@ -84,6 +84,7 @@ export default function Navbar({ page, user, onNavigate, onLogin, onLogout }) {
       <div style={{ display: 'flex', gap: 2, flex: 1 }}>
         {navBtn('home', 'Home', <Home size={15} />)}
         {navBtn('browse', 'Browse', <Grid size={15} />)}
+        {navBtn('creators', 'Creators', <Users size={15} />)}
         {navBtn('upload', 'Upload', <Upload size={15} />)}
       </div>
 
