@@ -11,15 +11,39 @@ export default function CreatorsPage({ onViewCreator, onNavigate }) {
   useEffect(() => {
     let cancelled = false;
     (async () => {
+      // Preflight /api/ready to avoid long skeletons when backend isn't ready
+      try {
+        let ready = false;
+        for (let i = 0; i < 6 && !cancelled; i++) {
+          try {
+            const rr = await fetch(`${API_BASE}/api/ready`);
+            if (rr.ok) {
+              ready = true;
+              break;
+            }
+          } catch (e) {}
+          await new Promise((r) => setTimeout(r, 200));
+        }
+        if (!ready) {
+          if (!cancelled) setLoading(false);
+          return;
+        }
+      } catch (e) {}
+
       try {
         const r = await fetch(`${API_BASE}/api/users?page=${page}&limit=20`);
-        if (!r.ok) return setCreators([]);
+        if (!r.ok) {
+          console.warn('[creators] fetch /api/users returned', r.status);
+          if (!cancelled) setCreators([]);
+          return;
+        }
         const j = await r.json();
         if (!cancelled) {
           setCreators(j.users || []);
           setTotal(j.total || 0);
         }
       } catch (e) {
+        console.warn('[creators] fetch error', e && e.message ? e.message : e);
         if (!cancelled) setCreators([]);
       } finally {
         if (!cancelled) setLoading(false);

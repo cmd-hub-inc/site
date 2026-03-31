@@ -212,7 +212,7 @@ export default function App() {
     };
   }, []);
 
-  const requiresAuth = (p) => p === 'upload' || p === 'edit';
+
 
   // Handle browser back/forward for shareable links
   useEffect(() => {
@@ -312,7 +312,7 @@ export default function App() {
 
   // If user is known to be not authenticated, redirect protected pages to 404
   useEffect(() => {
-    if (user === null && requiresAuth(page)) {
+    if (user === null && (page === 'upload' || page === 'edit')) {
       setPage('notfound');
       setSelectedCmd(null);
     }
