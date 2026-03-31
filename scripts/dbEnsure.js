@@ -33,9 +33,10 @@ async function ensure() {
     // Try to push schema first (safe for dev); if migrations exist prefer migrate deploy
     try {
       console.log('[dbEnsure] Running `prisma db push`...')
-      execSync(`${prismaCmd} db push`, { stdio: 'inherit' })
-      console.log('[dbEnsure] Running `prisma generate`...')
-      execSync(`${prismaCmd} generate`, { stdio: 'inherit' })
+        const execOpts = { stdio: 'inherit', env: { ...process.env, CI: 'true' } }
+        execSync(`${prismaCmd} db push`, execOpts)
+        console.log('[dbEnsure] Running `prisma generate`...')
+        execSync(`${prismaCmd} generate`, execOpts)
       console.log('[dbEnsure] Prisma db push completed.')
     } catch (err) {
       const msg = err && err.message ? String(err.message) : ''
@@ -49,8 +50,9 @@ async function ensure() {
 
       console.log('[dbEnsure] Attempting `prisma migrate deploy` as fallback...')
       try {
-        execSync(`${prismaCmd} migrate deploy`, { stdio: 'inherit' })
-        execSync(`${prismaCmd} generate`, { stdio: 'inherit' })
+        const execOpts = { stdio: 'inherit', env: { ...process.env, CI: 'true' } }
+        execSync(`${prismaCmd} migrate deploy`, execOpts)
+        execSync(`${prismaCmd} generate`, execOpts)
         console.log('[dbEnsure] Prisma migrate deploy completed.')
       } catch (err2) {
         console.error('[dbEnsure] Prisma migrations failed:', err2 && err2.message ? err2.message : err2)
