@@ -200,7 +200,9 @@ export default function UploadPage({ user, onNavigate }) {
       >
         <div style={{ display: 'grid', gridTemplateColumns: '2fr 1fr', gap: 16, marginBottom: 20 }}>
           <div>
-            <label style={label}>Command Name *</label>
+            <label style={label}>
+              Command Name <span style={{ color: C.red }}>*</span>
+            </label>
             <div style={{ position: 'relative' }}>
               <span
                 style={{
@@ -234,7 +236,9 @@ export default function UploadPage({ user, onNavigate }) {
           </div>
         </div>
         <div style={{ marginBottom: 20 }}>
-          <label style={label}>Description *</label>
+          <label style={label}>
+            Description <span style={{ color: C.red }}>*</span>
+          </label>
           <textarea
             value={form.description}
             onChange={(e) => set('description', e.target.value)}
@@ -316,7 +320,9 @@ export default function UploadPage({ user, onNavigate }) {
               marginBottom: 7,
             }}
           >
-            <label style={{ ...label, marginBottom: 0 }}>Raw JSON Data *</label>
+            <label style={{ ...label, marginBottom: 0 }}>
+              Raw JSON Data <span style={{ color: C.red }}>*</span>
+            </label>
             {jsonError && <span style={{ color: C.red, fontSize: 12 }}>⚠ {jsonError}</span>}
           </div>
           <textarea
