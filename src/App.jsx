@@ -9,7 +9,18 @@ import Footer from './components/Footer';
 import { MOCK_USER } from './constants';
 
 export default function App() {
-  const [page, setPage] = useState('home');
+  const [page, setPage] = useState(() => {
+    try {
+      const pathname = typeof window !== 'undefined' ? window.location.pathname || '' : '';
+      if (pathname.startsWith('/browse')) return 'browse';
+      if (pathname.startsWith('/upload')) return 'upload';
+      if (pathname.startsWith('/profile')) return 'profile';
+      if (pathname.startsWith('/command/')) return 'detail';
+    } catch (e) {
+      // ignore and fallback to home
+    }
+    return 'home';
+  });
   const [pageParams, setPageParams] = useState({});
   const [user, setUser] = useState(null);
   const [selectedCmd, setSelectedCmd] = useState(null);
