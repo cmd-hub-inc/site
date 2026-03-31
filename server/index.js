@@ -4,8 +4,8 @@ import dotenv from 'dotenv'
 import session from 'express-session'
 import connectPgSimple from 'connect-pg-simple'
 import { randomUUID } from 'crypto'
-import { spawn } from 'child_process'
 import path from 'path'
+import ensure from '../scripts/dbEnsure.js'
 // Note: `ioredis` is imported dynamically below so the server can run without it installed.
 import { PrismaClient } from '@prisma/client'
 
@@ -59,31 +59,8 @@ function requireAuth(req, res, next) {
 
 app.get('/api/health', (req, res) => res.json({ ok: true }))
 
-// Readiness flag: false until DB ensure child process completes successfully
+// Readiness flag: false until DB ensure completes successfully
 let dbReady = false
-
-// Spawn the project's dbEnsure script as a separate process to avoid blocking the server
-function runDbEnsureChild() {
-  try {
-    console.log('[start] Spawning dbEnsure child process...')
-    const scriptPath = path.resolve(process.cwd(), 'scripts', 'dbEnsure.js')
-    const child = spawn(process.execPath, [scriptPath], { stdio: 'inherit' })
-    child.on('close', (code) => {
-      if (code === 0) {
-        dbReady = true
-        console.log('[start] dbEnsure child exited successfully; server marked as ready.')
-      } else {
-        console.error(`[start] dbEnsure child exited with code ${code}; server will remain unhealthy.`)
-      }
-    })
-    child.on('error', (err) => console.error('[start] Failed to spawn dbEnsure child', err && err.message ? err.message : err))
-  } catch (e) {
-    console.error('[start] Error while starting dbEnsure child', e && e.message ? e.message : e)
-  }
-}
-
-// Start DB ensure child process in background
-runDbEnsureChild()
 
 // readiness endpoint for external health checks
 app.get('/ready', (req, res) => {
@@ -318,7 +295,21 @@ app.post('/api/commands', requireDbReady, requireAuth, async (req, res) => {
   }
 })
 
-// Start listening immediately; DB ensure runs in background and readiness exposed on /ready
-app.listen(PORT, () => {
-  console.log(`Server running on http://localhost:${PORT}`)
-})
+// Ensure DB schema exists before accepting requests
+async function startServer() {
+  try {
+    console.log('[start] Ensuring database schema is present (this may take a while)...')
+    await ensure()
+    dbReady = true
+    console.log('[start] Database ensure completed; server marked as ready.')
+  } catch (e) {
+    console.error('[start] Database ensure failed:', e && e.message ? e.message : e)
+    // keep dbReady=false so DB-dependent routes remain blocked
+  }
+
+  app.listen(PORT, () => {
+    console.log(`Server running on http://localhost:${PORT}`)
+  })
+}
+
+startServer()
