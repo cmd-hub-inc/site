@@ -13,9 +13,9 @@ The format is based on "Keep a Changelog" and this project follows Semantic Vers
 - Initial project scaffold: index.html, `src/` (CmdHub.jsx, main.jsx), build config, and README.
 - Basic Vite + React setup.
 
-
 ---
 
 Notes:
+
 - Move entries from `Unreleased` to a new version section when releasing.
 - Use categories: Added, Changed, Fixed, Deprecated, Removed, Security when appropriate.

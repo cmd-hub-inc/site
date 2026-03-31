@@ -1,12 +1,54 @@
-:root{
-  --bg:#1e1f22;
-  --surface:#2b2d31;
-  --text:#DBDEE1;
-  --muted:#949BA4;
-  --blurple:#5865F2;
+:root {
+  --bg: #1e1f22;
+  --surface: #2b2d31;
+  --text: #dbdee1;
+  --muted: #949ba4;
+  --blurple: #5865f2;
 }
-html,body,#root{height:100%}
-body{background:var(--bg);color:var(--text);font-family:'DM Sans',sans-serif;margin:0}
-a{color:inherit}
+html,
+body,
+#root {
+  height: 100%;
+}
+body {
+  background: var(--bg);
+  color: var(--text);
+  font-family: 'DM Sans', sans-serif;
+  margin: 0;
+}
+a {
+  color: inherit;
+}
 
-.container{max-width:1100px;margin:0 auto;padding:24px}
+.container {
+  max-width: 1100px;
+  margin: 0 auto;
+  padding: 24px;
+}
+
+/* Skeleton shimmer styles */
+.skeleton {
+  position: relative;
+  overflow: hidden;
+  background: linear-gradient(
+    90deg,
+    rgba(255, 255, 255, 0.02) 0%,
+    rgba(255, 255, 255, 0.06) 50%,
+    rgba(255, 255, 255, 0.02) 100%
+  );
+  background-size: 200% 100%;
+  animation: shimmer 1.2s linear infinite;
+}
+.skeleton-line {
+  background: rgba(255, 255, 255, 0.03);
+  border-radius: 6px;
+}
+
+@keyframes shimmer {
+  0% {
+    background-position: 200% 0;
+  }
+  100% {
+    background-position: -200% 0;
+  }
+}
