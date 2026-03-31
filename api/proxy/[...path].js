@@ -2,7 +2,22 @@
 // Usage: fetch('/api/proxy/path/to/resource') from the browser
 
 export default async function handler(req, res) {
-  const targetBase = process.env.PROXY_TARGET || 'http://cmd-hub.devvyy.xyz';
+  const targetBase = process.env.PROXY_TARGET || 'http://cmd-hub.devvyyxyz';
+
+  // Prevent proxy loops: if PROXY_TARGET points back to this deployment, abort early
+  try {
+    const t = new URL(targetBase);
+    const reqHost = req.headers && req.headers.host;
+    if (reqHost && (t.host === reqHost || t.hostname === reqHost)) {
+      res.statusCode = 502;
+      res.end(
+        'Bad Gateway: PROXY_TARGET is misconfigured (points to this deployment), causing a proxy loop. Set PROXY_TARGET to your external backend.'
+      );
+      return;
+    }
+  } catch (e) {
+    // ignore URL parse errors; fetch will surface helpful error
+  }
 
   try {
     // Build target URL by removing the /api/proxy prefix

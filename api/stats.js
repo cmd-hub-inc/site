@@ -7,7 +7,19 @@ export default async function handler(req, res) {
     return res.end('Method Not Allowed');
   }
 
-  const target = 'http://cmd-hub.devvyy.xyz/api/stats';
+  const targetBase = process.env.PROXY_TARGET || 'http://cmd-hub.devvyyxyz';
+
+  // Guard against PROXY_TARGET pointing to this deployment
+  try {
+    const t = new URL(targetBase);
+    const reqHost = req.headers && req.headers.host;
+    if (reqHost && (t.host === reqHost || t.hostname === reqHost)) {
+      res.statusCode = 502;
+      return res.end('Bad Gateway: PROXY_TARGET misconfigured (points to this deployment) — configure external backend.');
+    }
+  } catch (e) {}
+
+  const target = `${targetBase}/api/stats`;
   try {
     const backendRes = await fetch(target, { headers: { accept: 'application/json' } });
     const body = await backendRes.text();
