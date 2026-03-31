@@ -19,6 +19,26 @@ async function ensure() {
     const missing = needed.filter((n) => !existing.includes(n));
     if (missing.length === 0) {
       console.log('[dbEnsure] All required tables exist.');
+      // Ensure required columns exist (in case schema changed without migration)
+      try {
+        const colRows = await prisma.$queryRaw`
+          SELECT column_name FROM information_schema.columns
+          WHERE table_schema = 'public' AND table_name = 'Command' AND column_name = 'uploadCategory'
+        `;
+        const hasUploadCategory = Array.isArray(colRows) && colRows.length > 0;
+        if (!hasUploadCategory) {
+          console.log('[dbEnsure] Detected missing column "uploadCategory" on Command — adding it.');
+          try {
+            await prisma.$executeRawUnsafe(`ALTER TABLE "Command" ADD COLUMN IF NOT EXISTS "uploadCategory" text DEFAULT 'Framework'`);
+            console.log('[dbEnsure] Added uploadCategory column to Command.');
+          } catch (acol) {
+            console.warn('[dbEnsure] Failed to add uploadCategory column:', acol && acol.message ? acol.message : acol);
+          }
+        }
+      } catch (colErr) {
+        console.warn('[dbEnsure] Failed to check/add Command.uploadCategory column:', colErr && colErr.message ? colErr.message : colErr);
+      }
+
       // If commands table exists but is empty, seed mock data for dev convenience
       try {
         const cmdCount = await prisma.command.count();

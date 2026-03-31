@@ -100,7 +100,7 @@ export default function App() {
               );
               if (r.status === 200) {
                 const body = await r.json();
-                setUser(body.user);
+                setUser(body && body.user !== undefined ? body.user : body);
                 // remove pendingToken from URL
                 params.delete('pendingToken');
                 const url = new URL(window.location.href);
@@ -154,8 +154,8 @@ export default function App() {
         try {
           const resp = await fetch(`${API_BASE}/api/me`, { credentials: 'include' });
           if (resp.ok) {
-            const u = await resp.json();
-            setUser(u);
+            const body = await resp.json();
+            setUser(body && body.user !== undefined ? body.user : body);
           } else {
             setUser(null);
           }

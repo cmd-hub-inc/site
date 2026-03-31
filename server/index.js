@@ -233,7 +233,6 @@ app.get('/api/auth/discord/callback', async (req, res) => {
     if (!code) return res.status(400).send('Missing code');
 
     const tokenResp = await fetch('https://discord.com/api/oauth2/token', {
-      method: 'POST',
       headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
       body: new URLSearchParams({
         client_id: DISCORD_CLIENT_ID,
@@ -349,46 +348,74 @@ app.get('/api/auth/complete', async (req, res) => {
 app.get('/api/me', requireDbReady, async (req, res) => {
   try {
     const s = req.session && req.session.user;
-    if (!s) return res.status(401).json({ error: 'Not authenticated' });
-    const user = await prisma.user.findUnique({ where: { id: s.id } });
-    if (!user) return res.status(401).json({ error: 'Invalid user' });
-    // sanitize username: strip trailing '#0' if present
-    const username = user.username && user.username.endsWith('#0') ? user.username.replace(/#0$/, '') : user.username;
-    const adminList = process.env.ADMIN_IDS ? String(process.env.ADMIN_IDS).split(',').map((s) => s.trim()) : [];
-    const isAdmin = adminList.includes(user.id);
-    res.json({ id: user.id, username, avatar: user.avatar, isAdmin });
+    if (!s) return res.json({ user: null });
+    const adminList = (process.env.ADMIN_IDS || '').split(',').map((x) => x.trim()).filter(Boolean);
+    const isAdmin = adminList.includes(String(s.id));
+    try {
+      const user = await prisma.user.findUnique({ where: { id: s.id } });
+      return res.json({ user: user ? { id: user.id, username: user.username, avatar: user.avatar } : s, isAdmin });
+    } catch (e) {
+      return res.json({ user: s, isAdmin });
+    }
   } catch (err) {
-    console.error('me error', err);
-    res.status(401).json({ error: 'Not authenticated' });
+    console.error('me endpoint error', err && err.message ? err.message : err);
+    return res.status(500).json({ error: 'failed' });
   }
 });
-
-// Logout: clear the token cookie
-app.post('/api/logout', (req, res) => {
-  req.session.destroy((err) => {
-    if (err) {
-      console.error('logout destroy error', err);
-      return res.status(500).json({ error: 'Failed to logout' });
-    }
-    res.clearCookie('connect.sid');
-    res.json({ ok: true });
-  });
-});
-
 app.get('/api/commands', requireDbReady, async (req, res) => {
   try {
-    const cmds = await prisma.command.findMany({ include: { author: true } });
-    const ids = cmds.map((c) => c.id).filter(Boolean);
-    if (ids.length > 0) {
-      const rows = await prisma.$queryRaw`
-        SELECT id, "uploadCategory" FROM "Command" WHERE id = ANY(${ids})
-      `;
-      const map = {};
-      if (Array.isArray(rows)) rows.forEach((r) => (map[r.id || r.ID || Object.values(r)[0]] = r.uploadCategory || r.uploadcategory || r.UploadCategory));
-      const out = cmds.map((c) => ({ ...c, uploadCategory: map[c.id] || 'Framework' }));
-      return res.json(out);
+    try {
+      const cmds = await prisma.command.findMany({ include: { author: true } });
+      const ids = cmds.map((c) => c.id).filter(Boolean);
+      if (ids.length > 0) {
+        const rows = await prisma.$queryRaw`
+          SELECT id, "uploadCategory" FROM "Command" WHERE id = ANY(${ids})
+        `;
+        const map = {};
+        if (Array.isArray(rows)) rows.forEach((r) => (map[r.id || r.ID || Object.values(r)[0]] = r.uploadCategory || r.uploadcategory || r.UploadCategory));
+        const out = cmds.map((c) => ({ ...c, uploadCategory: map[c.id] || 'Framework' }));
+        return res.json(out);
+      }
+      return res.json(cmds);
+    } catch (prismaErr) {
+      console.warn('[api] Prisma findMany failed, falling back to raw SQL:', prismaErr && prismaErr.message ? prismaErr.message : prismaErr);
+      try {
+        const rows = await prisma.$queryRaw`
+          SELECT c.*, u.id as author_id, u.username as author_username, u.avatar as author_avatar
+          FROM "Command" c
+          LEFT JOIN "User" u ON c."authorId" = u.id
+          ORDER BY c."createdAt" DESC
+        `;
+        const out = (Array.isArray(rows) ? rows : []).map((r) => {
+          return {
+            id: r.id,
+            name: r.name,
+            description: r.description,
+            type: r.type,
+            framework: r.framework,
+            version: r.version,
+            tags: r.tags || [],
+            githubUrl: r.githubUrl || r.GithubUrl || r.githuburl || null,
+            websiteUrl: r.websiteUrl || r.websiteurl || null,
+            downloads: Number(r.downloads || 0),
+            rating: Number(r.rating || 0),
+            ratingCount: Number(r.ratingCount || r.ratingcount || 0),
+            favourites: Number(r.favourites || 0),
+            views: Number(r.views || 0),
+            changelog: r.changelog || null,
+            rawData: r.rawData || r.rawdata || '{}',
+            createdAt: r.createdAt || r.createdat,
+            updatedAt: r.updatedAt || r.updatedat,
+            author: { id: r.author_id, username: r.author_username, avatar: r.author_avatar },
+            uploadCategory: r.uploadCategory || r.uploadcategory || 'Framework',
+          };
+        });
+        return res.json(out);
+      } catch (rawErr) {
+        console.error('raw SQL fallback failed for /api/commands', rawErr && rawErr.message ? rawErr.message : rawErr);
+        return res.status(500).json({ error: 'failed' });
+      }
     }
-    return res.json(cmds);
   } catch (err) {
     console.error('list commands error', err && err.message ? err.message : err);
     return res.status(500).json({ error: 'failed' });
@@ -457,19 +484,57 @@ app.get('/api/commands/:id/is-favourited', requireDbReady, requireAuth, async (r
 app.get('/api/users/:id/commands', requireDbReady, async (req, res) => {
   const { id } = req.params;
   try {
-    const cmds = await prisma.command.findMany({ where: { authorId: id }, include: { author: true } });
     try {
-      const ids = cmds.map((c) => c.id).filter(Boolean);
-      if (ids.length === 0) return res.json(cmds);
-      const urows = await prisma.$queryRaw`
-        SELECT id, "uploadCategory" FROM "Command" WHERE id = ANY(${ids})
-      `;
-      const map = {};
-      if (Array.isArray(urows)) urows.forEach((r) => (map[r.id] = r.uploadCategory || r.uploadcategory));
-      const out = cmds.map((c) => ({ ...c, uploadCategory: map[c.id] || 'Framework' }));
-      return res.json(out);
-    } catch (e) {
-      return res.json(cmds);
+      const cmds = await prisma.command.findMany({ where: { authorId: id }, include: { author: true } });
+      try {
+        const ids = cmds.map((c) => c.id).filter(Boolean);
+        if (ids.length === 0) return res.json(cmds);
+        const urows = await prisma.$queryRaw`
+          SELECT id, "uploadCategory" FROM "Command" WHERE id = ANY(${ids})
+        `;
+        const map = {};
+        if (Array.isArray(urows)) urows.forEach((r) => (map[r.id] = r.uploadCategory || r.uploadcategory));
+        const out = cmds.map((c) => ({ ...c, uploadCategory: map[c.id] || 'Framework' }));
+        return res.json(out);
+      } catch (e) {
+        return res.json(cmds);
+      }
+    } catch (prismaErr) {
+      console.warn('[api] Prisma findMany failed for user commands, falling back to raw SQL:', prismaErr && prismaErr.message ? prismaErr.message : prismaErr);
+      try {
+        const rows = await prisma.$queryRaw`
+          SELECT c.*, u.id as author_id, u.username as author_username, u.avatar as author_avatar
+          FROM "Command" c LEFT JOIN "User" u ON c."authorId" = u.id
+          WHERE c."authorId" = ${id}
+          ORDER BY c."createdAt" DESC
+        `;
+        const out = (Array.isArray(rows) ? rows : []).map((r) => ({
+          id: r.id,
+          name: r.name,
+          description: r.description,
+          type: r.type,
+          framework: r.framework,
+          version: r.version,
+          tags: r.tags || [],
+          githubUrl: r.githubUrl || null,
+          websiteUrl: r.websiteUrl || null,
+          downloads: Number(r.downloads || 0),
+          rating: Number(r.rating || 0),
+          ratingCount: Number(r.ratingCount || 0),
+          favourites: Number(r.favourites || 0),
+          views: Number(r.views || 0),
+          changelog: r.changelog || null,
+          rawData: r.rawData || '{}',
+          createdAt: r.createdAt,
+          updatedAt: r.updatedAt,
+          author: { id: r.author_id, username: r.author_username, avatar: r.author_avatar },
+          uploadCategory: r.uploadCategory || r.uploadcategory || 'Framework',
+        }));
+        return res.json(out);
+      } catch (rawErr) {
+        console.error('raw SQL fallback failed for /api/users/:id/commands', rawErr && rawErr.message ? rawErr.message : rawErr);
+        return res.status(500).json({ error: 'failed' });
+      }
     }
   } catch (err) {
     console.error('user commands error', err && err.message ? err.message : err);
@@ -581,12 +646,31 @@ app.get('/api/stats', requireDbReady, async (req, res) => {
 app.get('/api/commands/:id', requireDbReady, async (req, res) => {
   const { id } = req.params;
   try {
-    // Atomically increment the views counter and return the updated record
-    const updated = await prisma.command.update({
-      where: { id },
-      data: { views: { increment: 1 } },
-      include: { author: true },
-    });
+    let updated;
+    try {
+      // Atomically increment the views counter and return the updated record
+      updated = await prisma.command.update({
+        where: { id },
+        data: { views: { increment: 1 } },
+        include: { author: true },
+      });
+    } catch (prismaErr) {
+      console.warn('[api] Prisma update failed for views, falling back to raw SQL:', prismaErr && prismaErr.message ? prismaErr.message : prismaErr);
+      try {
+        const rows = await prisma.$queryRaw`
+          UPDATE "Command" SET views = COALESCE(views,0) + 1 WHERE id = ${id} RETURNING *
+        `;
+        const row = Array.isArray(rows) && rows.length ? rows[0] : null;
+        if (!row) return res.status(404).json({ error: 'Not found' });
+        const auth = await prisma.$queryRaw`
+          SELECT id, username, avatar FROM "User" WHERE id = ${row.authorId} LIMIT 1
+        `;
+        updated = { ...row, author: auth && auth[0] ? { id: auth[0].id, username: auth[0].username, avatar: auth[0].avatar } : null };
+      } catch (rawErr) {
+        console.error('raw SQL fallback failed for increment views', rawErr && rawErr.message ? rawErr.message : rawErr);
+        return res.status(500).json({ error: 'failed' });
+      }
+    }
     if (!updated) return res.status(404).json({ error: 'Not found' });
     // If user is authenticated include their personal rating for UI convenience
     const sessionUser = req.session && req.session.user;
@@ -719,18 +803,61 @@ app.post('/api/commands', requireDbReady, requireAuth, async (req, res) => {
     // Create command via Prisma but avoid passing unknown DB columns (uploadCategory)
     const createData = { ...data };
     delete createData.uploadCategory;
-    const cmd = await prisma.command.create({ data: { ...createData, authorId } });
-    // If client provided uploadCategory, persist it via raw SQL
+    let cmd = null;
+    try {
+      cmd = await prisma.command.create({ data: { ...createData, authorId } });
+    } catch (e) {
+      const msg = (e && e.message) || String(e);
+      // If Prisma complains that `uploadCategory` column doesn't exist, fall back to raw INSERT
+      if (msg.includes('uploadCategory') || msg.includes('does not exist')) {
+        try {
+          // Build safe SQL-literal helpers
+          const esc = (v) => (v === null || v === undefined ? 'NULL' : `'${String(v).replace(/'/g, "''")}'`);
+          const tags = Array.isArray(data.tags) ? data.tags : [];
+          const tagsSql = tags.length > 0 ? `ARRAY[${tags.map((t) => `'${String(t).replace(/'/g, "''")}'`).join(',')}]::text[]` : `ARRAY[]::text[]`;
+          const id = data.id || randomUUID();
+          const name = esc(data.name || id);
+          const description = esc(data.description || '');
+          const type = esc(data.type || '');
+          const framework = esc(data.framework || '');
+          const version = esc(data.version || '');
+          const githubUrl = esc(data.githubUrl || null);
+          const websiteUrl = esc(data.websiteUrl || null);
+          const changelog = esc(data.changelog || null);
+          const rawData = esc(data.rawData || '{}');
+
+          const insertSQL = `INSERT INTO "Command" (id, name, description, type, framework, version, tags, "githubUrl", "websiteUrl", downloads, rating, "ratingCount", favourites, views, changelog, "rawData", "createdAt", "updatedAt", "authorId") VALUES (${esc(id)}, ${name}, ${description}, ${type}, ${framework}, ${version}, ${tagsSql}, ${githubUrl}, ${websiteUrl}, 0, 0, 0, 0, 0, ${changelog}, ${rawData}, now(), now(), ${esc(authorId)}) RETURNING id`;
+          const inserted = await prisma.$queryRawUnsafe(insertSQL);
+          // inserted may be an array of rows or a single row depending on adapter
+          const insertedId = Array.isArray(inserted) && inserted.length ? (inserted[0].id || Object.values(inserted[0])[0]) : id;
+          // Try to fetch via Prisma; if that fails, return minimal object
+          try {
+            const withAuthor = await prisma.command.findUnique({ where: { id: insertedId }, include: { author: true } });
+            cmd = withAuthor || { id: insertedId, name: data.name, authorId };
+          } catch (fetchErr) {
+            cmd = { id: insertedId, name: data.name, authorId };
+          }
+        } catch (rawErr) {
+          console.error('raw insert fallback failed', rawErr && rawErr.message ? rawErr.message : rawErr);
+          return res.status(500).json({ error: 'failed_to_create_command' });
+        }
+      } else {
+        throw e;
+      }
+    }
+
+    // If client provided uploadCategory, persist it via raw SQL (best-effort)
     if (data.uploadCategory) {
       try {
         await prisma.$executeRaw`
           UPDATE "Command" SET "uploadCategory" = ${data.uploadCategory} WHERE id = ${cmd.id}
         `;
-      } catch (e) {
-        // ignore
+      } catch (ue) {
+        // ignore if DB doesn't have column
       }
     }
-    // fetch uploadCategory and attach to response
+
+    // fetch uploadCategory and attach to response if possible
     try {
       const urows = await prisma.$queryRaw`
         SELECT "uploadCategory" FROM "Command" WHERE id = ${cmd.id} LIMIT 1
