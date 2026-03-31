@@ -6,7 +6,13 @@ import { MOCK_COMMANDS } from '../data/mockCommands';
 import CountUp from '../components/CountUp';
 
 export default function ProfilePage({ user, profileId, onViewCommand, onNavigate }) {
-  const [viewUser, setViewUser] = useState(user || null);
+  // If viewing a specific profileId that isn't the current user, start null (loading)
+  const initialViewUser = profileId
+    ? user && String(user.id) === String(profileId)
+      ? user
+      : null
+    : user || null;
+  const [viewUser, setViewUser] = useState(initialViewUser);
   // if viewing someone else's profile, we'll fetch their public profile
   React.useEffect(() => {
     let cancelled = false;
@@ -180,7 +186,15 @@ export default function ProfilePage({ user, profileId, onViewCommand, onNavigate
 
   useEffect(() => {
     let cancelled = false;
-    if (!viewUser) return;
+    // If there's a profileId and it's not the current user, fetch that profile
+    if (!profileId) return;
+    if (user && String(user.id) === String(profileId)) {
+      // viewing our own profile — ensure viewUser is current user
+      setViewUser(user);
+      return () => {
+        cancelled = true;
+      };
+    }
     (async () => {
       setLoadingUserCmds(true);
       try {
@@ -219,7 +233,14 @@ export default function ProfilePage({ user, profileId, onViewCommand, onNavigate
     return () => {
       cancelled = true;
     };
-  }, [viewUser]);
+  }, [profileId, user]);
+
+  // When not viewing a specific profileId, ensure viewUser reflects the current auth user
+  useEffect(() => {
+    if (!profileId) {
+      setViewUser(user || null);
+    }
+  }, [user, profileId]);
 
   return (
     <div style={{ maxWidth: 960, margin: '0 auto', padding: '44px 24px' }}>
@@ -330,20 +351,22 @@ export default function ProfilePage({ user, profileId, onViewCommand, onNavigate
         >
           Uploaded Commands
         </h2>
-        <button
-          onClick={() => onNavigate('upload')}
-          style={{
-            background: C.blurple,
-            color: '#fff',
-            border: 'none',
-            borderRadius: 8,
-            padding: '8px 18px',
-            fontSize: 13,
-            fontWeight: 700,
-          }}
-        >
-          Upload New
-        </button>
+        {displayUser && user && String(displayUser.id) === String(user.id) && (
+          <button
+            onClick={() => onNavigate('upload')}
+            style={{
+              background: C.blurple,
+              color: '#fff',
+              border: 'none',
+              borderRadius: 8,
+              padding: '8px 18px',
+              fontSize: 13,
+              fontWeight: 700,
+            }}
+          >
+            Upload New
+          </button>
+        )}
       </div>
       {loadingUserCmds ? (
         <div

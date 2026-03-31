@@ -624,8 +624,10 @@ app.get('/api/users', requireDbReady, async (req, res) => {
       ORDER BY commands DESC NULLS LAST
       LIMIT ${limit} OFFSET ${offset}
     `;
-    // Log SQL for debugging when this endpoint errors in dev
-    console.log('[api] users list SQL:', sql.replace(/\s+/g, ' ').trim());
+    // Log SQL for debugging when this endpoint errors in dev (opt-in via DEBUG_SQL=true)
+    if (String(process.env.DEBUG_SQL).toLowerCase() === 'true') {
+      console.log('[api] users list SQL:', sql.replace(/\s+/g, ' ').trim());
+    }
     let rows = [];
     try {
       rows = await prisma.$queryRawUnsafe(sql);
