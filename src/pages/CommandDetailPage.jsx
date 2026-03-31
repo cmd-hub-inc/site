@@ -19,7 +19,7 @@ import { StatPill } from '../components/Stars';
 
 export default function CommandDetailPage({ cmd, onBack, user }) {
   const [copied, setCopied] = useState(false);
-  const [faved, setFaved] = useState(false);
+  const [faved, setFaved] = useState(null);
   const [favCount, setFavCount] = useState(cmd.favourites || 0);
   const [userRating, setUserRating] = useState(0);
   const [hoverRating, setHoverRating] = useState(0);
@@ -187,8 +187,10 @@ export default function CommandDetailPage({ cmd, onBack, user }) {
                 </>
               )}
             </button>
-            {user &&
-              (faved === null ? (
+            {user === undefined ? (
+              <div className="skeleton" style={{ minWidth: 160, height: 38, borderRadius: 8 }} />
+            ) : user ? (
+              faved === null ? (
                 <div className="skeleton" style={{ minWidth: 160, height: 38, borderRadius: 8 }} />
               ) : (
                 <button
@@ -219,7 +221,8 @@ export default function CommandDetailPage({ cmd, onBack, user }) {
                 >
                   {<Heart size={15} />} {faved ? 'Favourited' : 'Favourite'}
                 </button>
-              ))}
+              )
+            ) : null}
           </div>
         </div>
         <div
@@ -421,7 +424,18 @@ export default function CommandDetailPage({ cmd, onBack, user }) {
         </div>
       </div>
 
-      {user ? (
+      {user === undefined ? (
+        <div
+          className="skeleton"
+          style={{
+            background: C.surface,
+            border: `1px solid ${C.border}`,
+            borderRadius: 12,
+            padding: 22,
+            minHeight: 84,
+          }}
+        />
+      ) : user ? (
         <div
           style={{
             background: C.surface,

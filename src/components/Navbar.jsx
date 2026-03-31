@@ -87,7 +87,12 @@ export default function Navbar({ page, user, onNavigate, onLogin, onLogout }) {
         {navBtn('upload', 'Upload', <Upload size={15} />)}
       </div>
 
-      {user ? (
+      {user === undefined ? (
+        <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+          <div className="skeleton" style={{ width: 28, height: 28, borderRadius: '50%' }} />
+          <div className="skeleton" style={{ width: 80, height: 12, borderRadius: 6 }} />
+        </div>
+      ) : user ? (
         <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
           <button
             onClick={() => onNavigate('profile')}

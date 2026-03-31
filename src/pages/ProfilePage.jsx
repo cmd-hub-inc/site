@@ -30,6 +30,118 @@ export default function ProfilePage({ user, onViewCommand, onNavigate }) {
         </p>
       </div>
     );
+  // Show a skeleton while user auth state is loading
+  if (user === undefined)
+    return (
+      <div style={{ maxWidth: 960, margin: '0 auto', padding: '44px 24px' }}>
+        <div
+          style={{
+            background: C.surface,
+            border: `1px solid ${C.border}`,
+            borderRadius: 16,
+            padding: 30,
+            marginBottom: 26,
+          }}
+        >
+          <div style={{ display: 'flex', gap: 22, alignItems: 'center', flexWrap: 'wrap' }}>
+            <div className="skeleton" style={{ width: 76, height: 76, borderRadius: '50%' }} />
+            <div style={{ flex: 1 }}>
+              <div
+                className="skeleton"
+                style={{ width: 220, height: 24, borderRadius: 6, marginBottom: 8 }}
+              />
+              <div className="skeleton" style={{ width: 120, height: 14, borderRadius: 6 }} />
+            </div>
+            <div style={{ display: 'flex', gap: 28 }}>
+              {[1, 2, 3].map((i) => (
+                <div key={i} style={{ textAlign: 'center' }}>
+                  <div className="skeleton" style={{ width: 64, height: 22, borderRadius: 6 }} />
+                  <div style={{ color: C.muted, fontSize: 12 }}>&nbsp;</div>
+                </div>
+              ))}
+            </div>
+          </div>
+        </div>
+
+        <div
+          style={{
+            display: 'flex',
+            justifyContent: 'space-between',
+            alignItems: 'center',
+            marginBottom: 18,
+          }}
+        >
+          <h2
+            style={{
+              fontFamily: "'Syne', sans-serif",
+              fontSize: 20,
+              fontWeight: 800,
+              color: C.white,
+              margin: 0,
+            }}
+          >
+            Uploaded Commands
+          </h2>
+        </div>
+        <div
+          style={{
+            display: 'grid',
+            gridTemplateColumns: 'repeat(auto-fill, minmax(290px, 1fr))',
+            gap: 16,
+          }}
+        >
+          {[1, 2, 3].map((i) => (
+            <div key={i}>
+              <div style={{ padding: 0 }}>
+                <div
+                  className="skeleton"
+                  style={{ width: '100%', height: 140, borderRadius: 12 }}
+                />
+              </div>
+            </div>
+          ))}
+        </div>
+
+        <div style={{ marginTop: 32 }}>
+          <div
+            style={{
+              display: 'flex',
+              justifyContent: 'space-between',
+              alignItems: 'center',
+              marginBottom: 18,
+            }}
+          >
+            <h2
+              style={{
+                fontFamily: "'Syne', sans-serif",
+                fontSize: 20,
+                fontWeight: 800,
+                color: C.white,
+                margin: 0,
+              }}
+            >
+              Favourited Commands
+            </h2>
+          </div>
+          <div
+            style={{
+              display: 'grid',
+              gridTemplateColumns: 'repeat(auto-fill, minmax(290px, 1fr))',
+              gap: 16,
+            }}
+          >
+            {[1, 2].map((i) => (
+              <div key={i}>
+                <div
+                  className="skeleton"
+                  style={{ width: '100%', height: 120, borderRadius: 12 }}
+                />
+              </div>
+            ))}
+          </div>
+        </div>
+      </div>
+    );
 
   const API_BASE = import.meta.env.DEV ? '' : import.meta.env.VITE_API_BASE || '';
   const [userCmds, setUserCmds] = useState([]);

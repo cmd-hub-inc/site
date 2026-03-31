@@ -22,7 +22,8 @@ export default function App() {
     return 'home';
   });
   const [pageParams, setPageParams] = useState({});
-  const [user, setUser] = useState(null);
+  // `undefined` = loading, `null` = not authenticated, object = authenticated
+  const [user, setUser] = useState(undefined);
   const [selectedCmd, setSelectedCmd] = useState(null);
 
   const navigate = (p, params = {}) => {
@@ -138,10 +139,16 @@ export default function App() {
           // ignore
         }
 
-        const resp = await fetch(`${API_BASE}/api/me`, { credentials: 'include' });
-        if (resp.ok) {
-          const u = await resp.json();
-          setUser(u);
+        try {
+          const resp = await fetch(`${API_BASE}/api/me`, { credentials: 'include' });
+          if (resp.ok) {
+            const u = await resp.json();
+            setUser(u);
+          } else {
+            setUser(null);
+          }
+        } catch (e) {
+          setUser(null);
         }
       } catch (e) {
         // ignore
