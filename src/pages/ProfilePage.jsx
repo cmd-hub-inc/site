@@ -221,12 +221,39 @@ export default function ProfilePage({ user, profileId, onViewCommand, onNavigate
         return;
       }
       try {
-        const r = await fetch(`${API_BASE}/api/users/${encodeURIComponent(profileId)}`);
-        if (r.ok) {
-          const data = await r.json();
+        let resp = null;
+        // retry loop for transient 202/503 responses (db not ready yet)
+        for (let attempt = 0; attempt < 8 && !cancelled; attempt++) {
+          try {
+            resp = await fetch(`${API_BASE}/api/users/${encodeURIComponent(profileId)}`);
+          } catch (e) {
+            resp = null;
+          }
+          if (!resp) {
+            await new Promise((r) => setTimeout(r, 400));
+            continue;
+          }
+          if (resp.ok) break;
+          if (resp.status === 202 || resp.status === 503) {
+            // transient; wait and retry
+            await new Promise((r) => setTimeout(r, 500));
+            continue;
+          }
+          // non-retryable status (404, 400, etc.)
+          break;
+        }
+
+        if (cancelled) return;
+        if (resp && resp.ok) {
+          const data = await resp.json();
           const normalized = data && data.user ? data.user : data;
           if (!cancelled) setViewUser(normalized);
+        } else if (resp && resp.status === 404) {
+          // show a minimal not-found object to avoid infinite skeleton; parent can decide to render notfound page
+          if (!cancelled)
+            setViewUser({ id: profileId, username: 'Unknown user', avatar: null, followers: 0, following: 0 });
         }
+        // otherwise leave viewUser as null (still loading) — will be retried on subsequent mounts
       } catch (e) {
         // ignore
       }
