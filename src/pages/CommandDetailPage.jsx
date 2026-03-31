@@ -321,7 +321,17 @@ export default function CommandDetailPage({ cmd, onBack, user, loading = false }
                 color: '#fff',
               }}
             >
-              {cmd.author.username[0].toUpperCase()}
+              {cmd.author && cmd.author.avatar ? (
+                <img
+                  src={cmd.author.avatar}
+                  alt={cmd.author.username}
+                  style={{ width: 40, height: 40, borderRadius: '50%', objectFit: 'cover' }}
+                />
+              ) : cmd.author && cmd.author.username ? (
+                cmd.author.username[0].toUpperCase()
+              ) : (
+                '?'
+              )}
             </div>
             <div>
               <div style={{ color: C.text, fontWeight: 600 }}>{cmd.author.username}</div>
