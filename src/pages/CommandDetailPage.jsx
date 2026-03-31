@@ -359,7 +359,21 @@ export default function CommandDetailPage({ cmd, onBack, user, loading = false }
           >
             Creator
           </div>
-          <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
+          <div
+            role="button"
+            onClick={() => {
+              try {
+                const path = `/profile/${encodeURIComponent(cmd.author.id)}`;
+                window.history.pushState({}, '', path);
+                // trigger popstate so App notices the route change
+                window.dispatchEvent(new PopStateEvent('popstate'));
+              } catch (e) {
+                // fallback to a full navigation
+                window.location.href = `/profile/${encodeURIComponent(cmd.author.id)}`;
+              }
+            }}
+            style={{ display: 'flex', alignItems: 'center', gap: 12, cursor: 'pointer' }}
+          >
             <div
               style={{
                 width: 40,
