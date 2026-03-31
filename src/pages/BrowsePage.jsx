@@ -304,8 +304,11 @@ export default function BrowsePage({ initialTag, onViewCommand }) {
         </div>
       )}
 
-      <div style={{ color: C.muted, fontSize: 13, marginBottom: 18 }}>
-        {filtered.length} command{filtered.length !== 1 ? 's' : ''} found
+      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'baseline', marginBottom: 10 }}>
+        <div>
+          <div style={{ fontSize: 18, fontWeight: 800, color: C.white, marginBottom: 4 }}>All commands</div>
+          <div style={{ color: C.muted, fontSize: 13 }}>{filtered.length} command{filtered.length !== 1 ? 's' : ''} found</div>
+        </div>
       </div>
 
       {filtered.length > 0 ? (
