@@ -11,8 +11,7 @@ import NotFound from './pages/NotFound';
 import CreatorsPage from './pages/CreatorsPage';
 import Footer from './components/Footer';
 import { MOCK_USER } from './constants';
-import { Analytics } from "@vercel/analytics/next";
-import { SpeedInsights } from "@vercel/speed-insights/next";
+// Removed Next.js-specific Vercel integrations (not compatible with Vite/react)
 
 export default function App() {
   const [page, setPage] = useState(() => {
@@ -368,8 +367,6 @@ export default function App() {
       </main>
 
       <Footer onNavigate={navigate} />
-      <Analytics />
-      <SpeedInsights />
     </div>
   );
 }
