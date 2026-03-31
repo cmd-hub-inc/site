@@ -6,6 +6,7 @@ import UploadPage from './pages/UploadPage';
 import ProfilePage from './pages/ProfilePage';
 import CommandDetailPage from './pages/CommandDetailPage';
 import EditCommandPage from './pages/EditCommandPage';
+import NotFound from './pages/NotFound';
 import Footer from './components/Footer';
 import { MOCK_USER } from './constants';
 
@@ -48,6 +49,8 @@ export default function App() {
       // ignore
     }
   };
+
+  const requiresAuth = (p) => p === 'upload' || p === 'edit';
 
   const viewCommand = (cmd) => {
     // cmd can be either an id string or full command object
@@ -242,6 +245,14 @@ export default function App() {
     };
   }, []);
 
+  // If user is known to be not authenticated, redirect protected pages to 404
+  useEffect(() => {
+    if (user === null && requiresAuth(page)) {
+      setPage('notfound');
+      setSelectedCmd(null);
+    }
+  }, [user, page]);
+
   return (
     <div style={{ minHeight: '100vh', background: '#1e1f22' }}>
       <Navbar
@@ -282,6 +293,7 @@ export default function App() {
       {page === 'edit' && (
         <EditCommandPage user={user} pageParams={pageParams} />
       )}
+      {page === 'notfound' && <NotFound />}
 
       <Footer onNavigate={navigate} />
     </div>

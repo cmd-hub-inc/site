@@ -362,6 +362,27 @@ app.get('/api/me', requireDbReady, async (req, res) => {
     return res.status(500).json({ error: 'failed' });
   }
 });
+
+// Logout endpoint: destroys session
+app.post('/api/logout', async (req, res) => {
+  try {
+    if (req.session) {
+      req.session.destroy((err) => {
+        if (err) {
+          console.warn('session destroy error', err && err.message ? err.message : err);
+        }
+      });
+    }
+    // Clear cookie
+    try {
+      res.clearCookie && res.clearCookie('connect.sid');
+    } catch (e) {}
+    return res.json({ ok: true });
+  } catch (err) {
+    console.error('logout error', err && err.message ? err.message : err);
+    return res.status(500).json({ error: 'failed' });
+  }
+});
 app.get('/api/commands', requireDbReady, async (req, res) => {
   try {
     try {
