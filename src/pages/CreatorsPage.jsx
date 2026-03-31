@@ -28,7 +28,49 @@ export default function CreatorsPage({ onViewCreator, onNavigate }) {
     return () => (cancelled = true);
   }, [page]);
 
-  if (loading) return <div style={{ padding: 24, color: C.text }}>Loading creators...</div>;
+  if (loading)
+    return (
+      <div style={{ maxWidth: 980, margin: '40px auto', padding: 18 }}>
+        <div
+          style={{
+            background: C.surface,
+            border: `1px solid ${C.border}`,
+            borderRadius: 12,
+            padding: 28,
+            textAlign: 'center',
+          }}
+        >
+          <h2 style={{ color: C.white, margin: '0 0 8px' }}>Creators</h2>
+          <div style={{ color: C.muted, marginBottom: 18 }}>Browse authors and view their uploads</div>
+
+          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill,minmax(240px,1fr))', gap: 12 }}>
+            {[...Array(6)].map((_, i) => (
+              <div
+                key={`skel-${i}`}
+                style={{
+                  background: 'rgba(255,255,255,0.02)',
+                  borderRadius: 10,
+                  padding: 12,
+                  display: 'flex',
+                  gap: 12,
+                  alignItems: 'center',
+                  minHeight: 64,
+                }}
+              >
+                <div className="skeleton" style={{ width: 48, height: 48, borderRadius: 8 }} />
+                <div style={{ flex: 1 }}>
+                  <div className="skeleton" style={{ width: '40%', height: 14, borderRadius: 6, marginBottom: 8 }} />
+                  <div className="skeleton" style={{ width: '30%', height: 12, borderRadius: 6 }} />
+                </div>
+                <div style={{ width: 100 }}>
+                  <div className="skeleton" style={{ width: '100%', height: 34, borderRadius: 8 }} />
+                </div>
+              </div>
+            ))}
+          </div>
+        </div>
+      </div>
+    );
   if (!creators || creators.length === 0)
     return <div style={{ padding: 24, color: C.muted }}>No creators found yet.</div>;
 
