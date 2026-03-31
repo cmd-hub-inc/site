@@ -1,8 +1,8 @@
 import express from 'express'
 import cors from 'cors'
 import dotenv from 'dotenv'
-import cookieParser from 'cookie-parser'
-import jwt from 'jsonwebtoken'
+import session from 'express-session'
+import connectPgSimple from 'connect-pg-simple'
 import { PrismaClient } from '@prisma/client'
 
 dotenv.config()
@@ -12,11 +12,26 @@ const PORT = process.env.PORT || 4000
 const DISCORD_CLIENT_ID = process.env.DISCORD_CLIENT_ID
 const DISCORD_CLIENT_SECRET = process.env.DISCORD_CLIENT_SECRET
 const CLIENT_URL = process.env.CLIENT_URL || 'http://localhost:5173'
-const JWT_SECRET = process.env.JWT_SECRET || 'dev_secret_change_me'
+const SESSION_SECRET = process.env.SESSION_SECRET || 'dev_secret_change_me'
+const isProd = process.env.NODE_ENV === 'production'
 
 app.use(cors({ origin: CLIENT_URL, credentials: true }))
 app.use(express.json())
-app.use(cookieParser())
+
+const PgSession = connectPgSimple(session)
+app.use(session({
+  store: new PgSession({ conString: process.env.DATABASE_URL, ttl: 7 * 24 * 60 * 60, pruneSessionInterval: 24 * 60 * 60 }),
+  secret: SESSION_SECRET,
+  resave: false,
+  saveUninitialized: false,
+  cookie: { maxAge: 7 * 24 * 60 * 60 * 1000, secure: isProd, sameSite: 'lax' }
+}))
+
+// Simple auth middleware for routes that require a logged-in user
+function requireAuth(req, res, next) {
+  if (req.session && req.session.user) return next()
+  return res.status(401).json({ error: 'Not authenticated' })
+}
 
 app.get('/api/health', (req, res) => res.json({ ok: true }))
 
@@ -67,21 +82,21 @@ app.get('/api/auth/discord/callback', async (req, res) => {
     const discordUser = await userResp.json()
     const discordId = discordUser.id
     const username = `${discordUser.username}#${discordUser.discriminator}`
+    const avatar = discordUser.avatar ? `https://cdn.discordapp.com/avatars/${discordId}/${discordUser.avatar}.png` : null
 
-    // Upsert user in DB using discord id as primary key
+    // Upsert user in DB using discord id as primary key, persist avatar
     const user = await prisma.user.upsert({
       where: { id: discordId },
-      create: { id: discordId, username },
-      update: { username },
+      create: { id: discordId, username, avatar },
+      update: { username, avatar },
     })
 
-    // Create JWT and set as httpOnly cookie for session
-    const token = jwt.sign({ id: user.id, username: user.username }, JWT_SECRET, { expiresIn: '7d' })
-    const isProd = process.env.NODE_ENV === 'production'
-    res.cookie('token', token, { httpOnly: true, secure: isProd, sameSite: 'lax', maxAge: 7 * 24 * 60 * 60 * 1000 })
-
-    // Redirect back to client (no user info in query)
-    res.redirect(CLIENT_URL)
+    // Store user in session and redirect back to client
+    req.session.user = { id: user.id, username: user.username, avatar: user.avatar }
+    req.session.save(err => {
+      if (err) console.error('session save error', err)
+      res.redirect(CLIENT_URL)
+    })
   } catch (err) {
     console.error(err)
     res.status(500).send('OAuth error')
@@ -91,12 +106,11 @@ app.get('/api/auth/discord/callback', async (req, res) => {
 // Return current authenticated user based on JWT cookie
 app.get('/api/me', async (req, res) => {
   try {
-    const token = req.cookies && req.cookies.token
-    if (!token) return res.status(401).json({ error: 'Not authenticated' })
-    const payload = jwt.verify(token, JWT_SECRET)
-    const user = await prisma.user.findUnique({ where: { id: payload.id } })
+    const s = req.session && req.session.user
+    if (!s) return res.status(401).json({ error: 'Not authenticated' })
+    const user = await prisma.user.findUnique({ where: { id: s.id } })
     if (!user) return res.status(401).json({ error: 'Invalid user' })
-    res.json({ id: user.id, username: user.username })
+    res.json({ id: user.id, username: user.username, avatar: user.avatar })
   } catch (err) {
     console.error('me error', err)
     res.status(401).json({ error: 'Not authenticated' })
@@ -105,8 +119,14 @@ app.get('/api/me', async (req, res) => {
 
 // Logout: clear the token cookie
 app.post('/api/logout', (req, res) => {
-  res.clearCookie('token')
-  res.json({ ok: true })
+  req.session.destroy(err => {
+    if (err) {
+      console.error('logout destroy error', err)
+      return res.status(500).json({ error: 'Failed to logout' })
+    }
+    res.clearCookie('connect.sid')
+    res.json({ ok: true })
+  })
 })
 
 app.get('/api/commands', async (req, res) => {
@@ -121,11 +141,12 @@ app.get('/api/commands/:id', async (req, res) => {
   res.json(cmd)
 })
 
-app.post('/api/commands', async (req, res) => {
+app.post('/api/commands', requireAuth, async (req, res) => {
   try {
     const data = req.body
-    // For simplicity, require authorId in request. In future add auth.
-    const cmd = await prisma.command.create({ data })
+    // Use session user as authorId and ignore any client-supplied authorId
+    const authorId = req.session.user.id
+    const cmd = await prisma.command.create({ data: { ...data, authorId } })
     res.status(201).json(cmd)
   } catch (err) {
     res.status(400).json({ error: err.message })
