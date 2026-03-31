@@ -26,7 +26,9 @@ export default function BrowsePage({ initialTag, onViewCommand }) {
   useEffect(() => {
     let cancelled = false;
     (async () => {
-      const maxAttempts = 30;
+      // Reduce retry attempts and backoff so skeleton doesn't show for too long
+      const maxAttempts = 6;
+      const backoff = 250; // ms
       for (let i = 0; i < maxAttempts && !cancelled; i++) {
         try {
           const r = await fetch(`${API_BASE}/api/commands`);
@@ -36,12 +38,12 @@ export default function BrowsePage({ initialTag, onViewCommand }) {
             break;
           }
           if (r.status === 503) {
-            await new Promise((r) => setTimeout(r, 1000));
+            await new Promise((r) => setTimeout(r, backoff));
             continue;
           }
           break;
         } catch (e) {
-          await new Promise((r) => setTimeout(r, 1000));
+          await new Promise((r) => setTimeout(r, backoff));
         }
       }
       if (!cancelled) setLoadingCommands(false);
