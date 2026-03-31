@@ -69,10 +69,10 @@ export default function BrowsePage({ initialTag, onViewCommand }) {
   return (
     <div style={{ maxWidth: 1100, margin: '0 auto', padding: '44px 24px' }}>
       <h1 style={{ fontFamily: "'Syne', sans-serif", fontSize: 30, fontWeight: 800, color: C.white, marginBottom: 28 }}>Browse Commands</h1>
-      <div style={{ display: 'flex', gap: 10, marginBottom:14, flexWrap: 'wrap' }}>
-        <div style={{ flex:1, minWidth:200, position:'relative' }}>
-          <Search size={15} style={{ position: 'absolute', left:12, top:'50%', transform:'translateY(-50%)', color: C.muted }} />
-          <input value={search} onChange={e=>setSearch(e.target.value)} placeholder='Search commands…' style={{ ...inp, paddingLeft:36, width:'100%' }} />
+      <div style={{ display: 'flex', gap: 10, marginBottom:14, flexWrap: 'wrap', alignItems: 'center' }}>
+        <div style={{ flex: '1 1 0%', minWidth:200, display:'flex', alignItems:'center', gap:8 }}>
+          <div style={{ paddingLeft:12, paddingRight:6, color: C.muted, display:'flex', alignItems:'center' }}><Search size={15} /></div>
+          <input value={search} onChange={e=>setSearch(e.target.value)} placeholder='Search commands…' style={{ ...inp, paddingLeft:8, width:'100%', boxSizing:'border-box' }} />
         </div>
         <select value={sort} onChange={e=>setSort(e.target.value)} style={{ ...inp, cursor:'pointer' }}>
           <option value='downloads'>Most Downloaded</option>
