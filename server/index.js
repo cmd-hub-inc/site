@@ -354,7 +354,9 @@ app.get('/api/me', requireDbReady, async (req, res) => {
     if (!user) return res.status(401).json({ error: 'Invalid user' });
     // sanitize username: strip trailing '#0' if present
     const username = user.username && user.username.endsWith('#0') ? user.username.replace(/#0$/, '') : user.username;
-    res.json({ id: user.id, username, avatar: user.avatar });
+    const adminList = process.env.ADMIN_IDS ? String(process.env.ADMIN_IDS).split(',').map((s) => s.trim()) : [];
+    const isAdmin = adminList.includes(user.id);
+    res.json({ id: user.id, username, avatar: user.avatar, isAdmin });
   } catch (err) {
     console.error('me error', err);
     res.status(401).json({ error: 'Not authenticated' });
@@ -741,6 +743,57 @@ app.post('/api/commands', requireDbReady, requireAuth, async (req, res) => {
     }
   } catch (err) {
     res.status(400).json({ error: err.message });
+  }
+});
+
+// Update an existing command (only creator or admins)
+app.put('/api/commands/:id', requireDbReady, requireAuth, async (req, res) => {
+  const { id } = req.params;
+  const sessionUser = req.session && req.session.user;
+  const adminList = process.env.ADMIN_IDS ? String(process.env.ADMIN_IDS).split(',').map((s) => s.trim()) : [];
+  const isAdmin = sessionUser && adminList.includes(sessionUser.id);
+  try {
+    const existing = await prisma.command.findUnique({ where: { id } });
+    if (!existing) return res.status(404).json({ error: 'Not found' });
+    if (!(sessionUser && (sessionUser.id === existing.authorId || isAdmin))) {
+      return res.status(403).json({ error: 'forbidden' });
+    }
+
+    const body = req.body || {};
+    // Only allow updating a safe subset of fields
+    const updatable = {};
+    const fields = [
+      'name',
+      'description',
+      'type',
+      'framework',
+      'version',
+      'tags',
+      'githubUrl',
+      'websiteUrl',
+      'changelog',
+      'rawData',
+      'uploadCategory',
+    ];
+    for (const f of fields) {
+      if (Object.prototype.hasOwnProperty.call(body, f)) updatable[f] = body[f];
+    }
+
+    // normalize tags if string
+    if (updatable.tags && typeof updatable.tags === 'string') {
+      try {
+        updatable.tags = updatable.tags.split(',').map((t) => t.trim()).filter(Boolean);
+      } catch (e) {
+        updatable.tags = [];
+      }
+    }
+
+    const updated = await prisma.command.update({ where: { id }, data: { ...updatable } });
+    const withAuthor = await prisma.command.findUnique({ where: { id }, include: { author: true } });
+    return res.json(withAuthor);
+  } catch (err) {
+    console.error('update command error', err && err.message ? err.message : err);
+    return res.status(500).json({ error: 'failed' });
   }
 });
 

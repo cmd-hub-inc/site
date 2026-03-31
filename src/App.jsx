@@ -5,6 +5,7 @@ import BrowsePage from './pages/BrowsePage';
 import UploadPage from './pages/UploadPage';
 import ProfilePage from './pages/ProfilePage';
 import CommandDetailPage from './pages/CommandDetailPage';
+import EditCommandPage from './pages/EditCommandPage';
 import Footer from './components/Footer';
 import { MOCK_USER } from './constants';
 
@@ -120,9 +121,15 @@ export default function App() {
         // If URL path looks like a command link, fetch and show that command
         try {
           const pathname = window.location.pathname || '';
+          const editMatch = pathname.match(/^\/command\/(.+)\/edit$/);
           const cmdMatch = pathname.match(/^\/command\/(.+)$/);
           const profMatch = pathname.match(/^\/profile\/(.+)$/);
-          if (cmdMatch) {
+
+          if (editMatch) {
+            const id = decodeURIComponent(editMatch[1]);
+            setPage('edit');
+            setPageParams({ id });
+          } else if (cmdMatch) {
             const id = decodeURIComponent(cmdMatch[1]);
             try {
               const rc = await fetch(`${API_BASE}/api/commands/${encodeURIComponent(id)}`);
@@ -169,31 +176,42 @@ export default function App() {
     let mounted = true;
     const onPop = async () => {
       if (!mounted) return;
-        try {
-          const pathname = window.location.pathname || '';
-          const cmdMatch = pathname.match(/^\/command\/(.+)$/);
-          const profMatch = pathname.match(/^\/profile\/(.+)$/);
-          if (cmdMatch) {
-            const id = decodeURIComponent(cmdMatch[1]);
-            try {
-              const rc = await fetch(`${API_BASE}/api/commands/${encodeURIComponent(id)}`);
-              if (rc.ok) {
-                const cmd = await rc.json();
-                setSelectedCmd(cmd);
-                setPage('detail');
-                return;
-              }
-            } catch (e) {
-              // ignore
+      try {
+        const pathname = window.location.pathname || '';
+        const editMatch = pathname.match(/^\/command\/(.+)\/edit$/);
+        const cmdMatch = pathname.match(/^\/command\/(.+)$/);
+        const profMatch = pathname.match(/^\/profile\/(.+)$/);
+
+        if (editMatch) {
+          const id = decodeURIComponent(editMatch[1]);
+          setPage('edit');
+          setPageParams({ id });
+          return;
+        }
+
+        if (cmdMatch) {
+          const id = decodeURIComponent(cmdMatch[1]);
+          try {
+            const rc = await fetch(`${API_BASE}/api/commands/${encodeURIComponent(id)}`);
+            if (rc.ok) {
+              const cmd = await rc.json();
+              setSelectedCmd(cmd);
+              setPage('detail');
+              return;
             }
+          } catch (e) {
+            // ignore
           }
-          if (profMatch) {
-            const id = decodeURIComponent(profMatch[1]);
-            setPage('profile');
-            setPageParams({ id });
-            setSelectedCmd(null);
-            return;
-          }
+        }
+
+        if (profMatch) {
+          const id = decodeURIComponent(profMatch[1]);
+          setPage('profile');
+          setPageParams({ id });
+          setSelectedCmd(null);
+          return;
+        }
+
         // fallback: map path to pages
         if (pathname.startsWith('/browse')) {
           setPage('browse');
@@ -260,6 +278,9 @@ export default function App() {
           onBack={() => navigate('browse')}
           user={user}
         />
+      )}
+      {page === 'edit' && (
+        <EditCommandPage user={user} pageParams={pageParams} />
       )}
 
       <Footer onNavigate={navigate} />
