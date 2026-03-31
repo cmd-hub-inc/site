@@ -167,6 +167,8 @@ export default function ProfilePage({ user, profileId, onViewCommand, onNavigate
     );
 
   const API_BASE = import.meta.env.DEV ? '' : import.meta.env.VITE_API_BASE || '';
+  // Normalize viewUser: some API responses return { user: {...}, top: [...] }
+  const displayUser = viewUser && viewUser.user ? viewUser.user : viewUser;
   const [userCmds, setUserCmds] = useState([]);
   const [favCmds, setFavCmds] = useState([]);
   const [loadingUserCmds, setLoadingUserCmds] = useState(true);
@@ -215,7 +217,7 @@ export default function ProfilePage({ user, profileId, onViewCommand, onNavigate
     return () => {
       cancelled = true;
     };
-  }, [user]);
+  }, [viewUser]);
 
   return (
     <div style={{ maxWidth: 960, margin: '0 auto', padding: '44px 24px' }}>
@@ -243,14 +245,14 @@ export default function ProfilePage({ user, profileId, onViewCommand, onNavigate
               color: '#fff',
             }}
           >
-            {user.avatar ? (
+            {displayUser && displayUser.avatar ? (
               <img
-                src={user.avatar}
-                alt={user.username}
+                src={displayUser.avatar}
+                alt={displayUser.username}
                 style={{ width: 76, height: 76, borderRadius: '50%', objectFit: 'cover' }}
               />
             ) : (
-              user.username[0].toUpperCase()
+              (displayUser && displayUser.username ? displayUser.username[0].toUpperCase() : '')
             )}
           </div>
           <div style={{ flex: 1 }}>
@@ -263,7 +265,7 @@ export default function ProfilePage({ user, profileId, onViewCommand, onNavigate
                 margin: '0 0 4px',
               }}
             >
-              {user.username}
+              {displayUser ? displayUser.username : ''}
             </h1>
             <div
               style={{
