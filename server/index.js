@@ -28,7 +28,25 @@ const CLIENT_URL = process.env.CLIENT_URL || 'http://localhost:5173';
 const SESSION_SECRET = process.env.SESSION_SECRET || 'dev_secret_change_me';
 const isProd = process.env.NODE_ENV === 'production';
 
-app.use(cors({ origin: CLIENT_URL, credentials: true }));
+// Configure CORS to allow multiple frontends and echo the request origin
+const allowedOrigins = [
+  process.env.CLIENT_URL,
+  process.env.FRONTEND_URL,
+  process.env.VERCEL_URL ? `https://${process.env.VERCEL_URL}` : undefined,
+  ...(process.env.ALLOWED_ORIGINS ? process.env.ALLOWED_ORIGINS.split(',') : []),
+].filter(Boolean);
+
+app.use(
+  cors({
+    origin: (origin, cb) => {
+      // allow non-browser requests (e.g. curl, server-to-server) when origin is undefined
+      if (!origin) return cb(null, true);
+      if (allowedOrigins.includes(origin)) return cb(null, true);
+      return cb(new Error('Not allowed by CORS'));
+    },
+    credentials: true,
+  }),
+);
 app.use(express.json());
 
 // Initialize session store with PG-backed store in production, fallback to in-memory in dev
