@@ -1,0 +1,12 @@
+node_modules
+dist
+build
+coverage
+.vscode
+.DS_Store
+public
+*.min.js
+*.lock
+.idea
+/*.png
+/*.jpg
