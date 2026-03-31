@@ -11,6 +11,7 @@ export default function UploadPage({ user, onNavigate }) {
     type: 'Slash',
     framework: 'Discord.js',
     version: 'v1.0.0',
+    uploadCategory: 'Framework',
     tags: [],
     githubUrl: '',
     websiteUrl: '',
@@ -191,6 +192,25 @@ export default function UploadPage({ user, onNavigate }) {
       <p style={{ color: C.muted, marginBottom: 32, fontSize: 15 }}>
         Share your command raw data with the CmdHub community.
       </p>
+      <div style={{ display: 'flex', gap: 8, marginBottom: 18 }}>
+        {['Framework', 'Bot Tool'].map((opt) => (
+          <button
+            key={opt}
+            onClick={() => set('uploadCategory', opt)}
+            style={{
+              background: form.uploadCategory === opt ? C.blurple : 'transparent',
+              color: form.uploadCategory === opt ? '#fff' : C.muted,
+              border: `1px solid ${form.uploadCategory === opt ? C.blurple : C.border}`,
+              padding: '8px 12px',
+              borderRadius: 8,
+              cursor: 'pointer',
+              fontWeight: 700,
+            }}
+          >
+            {opt}
+          </button>
+        ))}
+      </div>
       <div
         style={{
           background: C.surface,
@@ -243,6 +263,35 @@ export default function UploadPage({ user, onNavigate }) {
               placeholder="v1.0.0"
               style={{ ...inp, paddingLeft: 12 }}
             />
+          </div>
+        </div>
+        <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 16, marginBottom: 20 }}>
+          <div>
+            <label style={label}>{form.uploadCategory === 'Framework' ? 'Framework' : 'Tool'}</label>
+            <select
+              value={form.framework}
+              onChange={(e) => set('framework', e.target.value)}
+              style={{ ...inp, cursor: 'pointer' }}
+            >
+              {form.uploadCategory === 'Framework'
+                ? FRAMEWORKS.map((f) => <option key={f}>{f}</option>)
+                : FRAMEWORKS.filter((f) => f.toLowerCase().includes('bot') || f.toLowerCase().includes('maker')).map((f) => (
+                    <option key={f}>{f}</option>
+                  ))}
+            </select>
+          </div>
+          <div>
+            <label style={label}>Command Type</label>
+            <select
+              value={form.type}
+              onChange={(e) => set('type', e.target.value)}
+              style={{ ...inp, cursor: 'pointer' }}
+            >
+              {CMD_TYPES.map((t) => (
+                <option key={t}>{t}</option>
+              ))}
+              {form.uploadCategory === 'Bot Tool' && <option key="Tool">Tool</option>}
+            </select>
           </div>
         </div>
         <div style={{ marginBottom: 20 }}>
