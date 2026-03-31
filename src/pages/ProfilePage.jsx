@@ -25,7 +25,51 @@ export default function ProfilePage({ user, profileId, onViewCommand, onNavigate
   const totalDownloads = userCmds.reduce((a, c) => a + (c.downloads || 0), 0);
   const totalFavs = userCmds.reduce((a, c) => a + (c.favourites || 0), 0);
 
-  if (!viewUser)
+  if (!viewUser) {
+    // If we're loading a remote profile, show a header loading placeholder
+    if (profileId) {
+      return (
+        <div style={{ maxWidth: 960, margin: '0 auto', padding: '44px 24px' }}>
+          <div
+            style={{
+              background: C.surface,
+              border: `1px solid ${C.border}`,
+              borderRadius: 16,
+              padding: 30,
+              marginBottom: 26,
+            }}
+          >
+            <div style={{ display: 'flex', gap: 22, alignItems: 'center', flexWrap: 'wrap' }}>
+              <div className="skeleton" style={{ width: 76, height: 76, borderRadius: '50%' }} />
+              <div style={{ flex: 1 }}>
+                <div className="skeleton" style={{ width: 220, height: 24, borderRadius: 6, marginBottom: 8 }} />
+                <div className="skeleton" style={{ width: 120, height: 14, borderRadius: 6 }} />
+              </div>
+              <div style={{ display: 'flex', gap: 28 }}>
+                {[1, 2, 3].map((i) => (
+                  <div key={i} style={{ textAlign: 'center' }}>
+                    <div className="skeleton" style={{ width: 64, height: 22, borderRadius: 6 }} />
+                    <div style={{ color: C.muted, fontSize: 12 }}>&nbsp;</div>
+                  </div>
+                ))}
+              </div>
+            </div>
+          </div>
+
+          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(290px, 1fr))', gap: 16 }}>
+            {[1, 2, 3].map((i) => (
+              <div key={i}>
+                <div style={{ padding: 0 }}>
+                  <div className="skeleton" style={{ width: '100%', height: 140, borderRadius: 12 }} />
+                </div>
+              </div>
+            ))}
+          </div>
+        </div>
+      );
+    }
+
+    // Not viewing a profile and no auth
     return (
       <div style={{ textAlign: 'center', padding: '100px 24px' }}>
         <div
@@ -50,6 +94,7 @@ export default function ProfilePage({ user, profileId, onViewCommand, onNavigate
         </p>
       </div>
     );
+  }
   // Show a skeleton while user auth state is loading
   if (user === undefined)
     return (
