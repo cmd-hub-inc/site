@@ -312,32 +312,7 @@ export default function UploadPage({ user, onNavigate }) {
             style={{ ...inp, resize: 'vertical' }}
           />
         </div>
-        <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 16, marginBottom: 20 }}>
-          <div>
-            <label style={label}>Command Type</label>
-            <select
-              value={form.type}
-              onChange={(e) => set('type', e.target.value)}
-              style={{ ...inp, cursor: 'pointer' }}
-            >
-              {CMD_TYPES.map((t) => (
-                <option key={t}>{t}</option>
-              ))}
-            </select>
-          </div>
-          <div>
-            <label style={label}>Framework</label>
-            <select
-              value={form.framework}
-              onChange={(e) => set('framework', e.target.value)}
-              style={{ ...inp, cursor: 'pointer' }}
-            >
-              {FRAMEWORKS.map((f) => (
-                <option key={f}>{f}</option>
-              ))}
-            </select>
-          </div>
-        </div>
+        {/* Category-specific controls are shown above; removed duplicate controls here */}
         <div style={{ marginBottom: 20 }}>
           <label style={label}>Tags</label>
           <div style={{ display: 'flex', flexWrap: 'wrap', gap: 6 }}>
