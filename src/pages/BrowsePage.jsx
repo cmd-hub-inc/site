@@ -26,7 +26,30 @@ export default function BrowsePage({ initialTag, onViewCommand }) {
   useEffect(() => {
     let cancelled = false;
     (async () => {
-      // Reduce retry attempts and backoff so skeleton doesn't show for too long
+      // Preflight /api/ready before attempting to fetch commands
+      const readyAttempts = 8;
+      const readyBackoff = 200; // ms
+      let ready = false;
+      for (let i = 0; i < readyAttempts && !cancelled; i++) {
+        try {
+          const r = await fetch(`${API_BASE}/api/ready`);
+          if (r.ok) {
+            ready = true;
+            break;
+          }
+        } catch (e) {
+          // ignore
+        }
+        await new Promise((r) => setTimeout(r, readyBackoff));
+      }
+
+      if (!ready) {
+        // DB not ready — stop loading skeleton sooner
+        if (!cancelled) setLoadingCommands(false);
+        return;
+      }
+
+      // Now fetch commands with a few short retries
       const maxAttempts = 6;
       const backoff = 250; // ms
       for (let i = 0; i < maxAttempts && !cancelled; i++) {
