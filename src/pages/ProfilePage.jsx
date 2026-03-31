@@ -1,0 +1,36 @@
+import React from 'react'
+import { User, Package } from 'lucide-react'
+import { C } from '../constants'
+import CommandCard from '../components/CommandCard'
+import { MOCK_COMMANDS } from '../data/mockCommands'
+
+export default function ProfilePage({ user, onViewCommand, onNavigate }) {
+  if (!user) return (
+    <div style={{ textAlign: 'center', padding: '100px 24px' }}>
+      <div style={{ width:72, height:72, borderRadius:'50%', background:'rgba(255,255,255,0.05)', display:'flex', alignItems:'center', justifyContent:'center', margin:'0 auto 20px' }}><User size={28} color={C.faint} /></div>
+      <h2 style={{ fontFamily: "'Syne', sans-serif", color:C.white, marginBottom:8 }}>Not logged in</h2>
+      <p style={{ color:C.muted }}>Log in with Discord to view your profile and uploaded commands.</p>
+    </div>
+  )
+
+  const userCmds = MOCK_COMMANDS.filter(c => c.author.id === user.id)
+  const totalDownloads = userCmds.reduce((a,c)=>a+c.downloads, 0)
+  const totalFavs = userCmds.reduce((a,c)=>a+c.favourites, 0)
+
+  return (
+    <div style={{ maxWidth:960, margin:'0 auto', padding:'44px 24px' }}>
+      <div style={{ background:C.surface, border:`1px solid ${C.border}`, borderRadius:16, padding:30, marginBottom:26 }}>
+        <div style={{ display:'flex', gap:22, alignItems:'center', flexWrap:'wrap' }}>
+          <div style={{ width:76, height:76, borderRadius:'50%', background:`linear-gradient(135deg, ${C.blurple}, #7289da)`, display:'flex', alignItems:'center', justifyContent:'center', fontSize:34, fontWeight:800, color:'#fff' }}>{user.username[0].toUpperCase()}</div>
+          <div style={{ flex:1 }}><h1 style={{ fontFamily: "'Syne', sans-serif", fontSize:26, fontWeight:800, color:C.white, margin:'0 0 4px' }}>{user.username}</h1><div style={{ color:C.muted, fontSize:13, display:'flex', alignItems:'center', gap:6 }}>Discord Verified Member</div></div>
+          <div style={{ display:'flex', gap:28 }}>{[{label:'Commands', value:userCmds.length},{label:'Downloads', value:totalDownloads},{label:'Favourites', value:totalFavs}].map(s=> (<div key={s.label} style={{ textAlign:'center' }}><div style={{ fontFamily:"'Syne', sans-serif", fontSize:26, fontWeight:800, color:C.white }}>{s.value}</div><div style={{ color:C.muted, fontSize:12 }}>{s.label}</div></div>))}</div>
+        </div>
+      </div>
+      <div style={{ display:'flex', justifyContent:'space-between', alignItems:'center', marginBottom:18 }}>
+        <h2 style={{ fontFamily: "'Syne', sans-serif", fontSize:20, fontWeight:800, color:C.white, margin:0 }}>Uploaded Commands</h2>
+        <button onClick={()=>onNavigate('upload')} style={{ background:C.blurple, color:'#fff', border:'none', borderRadius:8, padding:'8px 18px', fontSize:13, fontWeight:700 }}>Upload New</button>
+      </div>
+      {userCmds.length===0 ? (<div style={{ background:C.surface, border:`1px solid ${C.border}`, borderRadius:14, padding:'60px 20px', textAlign:'center', color:C.muted }}><Package size={36} style={{ marginBottom:14, opacity:0.25, display:'block', margin:'0 auto 14px' }} /><p style={{ margin:0, fontSize:16 }}>No commands uploaded yet</p><p style={{ fontSize:13, marginTop:8 }}>Be the first to share your work with the community</p><button onClick={()=>onNavigate('upload')} style={{ marginTop:20, background:C.blurple, color:'#fff', border:'none', borderRadius:8, padding:'10px 22px', fontSize:14, fontWeight:600 }}>Upload your first command</button></div>) : (<div style={{ display:'grid', gridTemplateColumns:'repeat(auto-fill, minmax(290px, 1fr))', gap:16 }}>{userCmds.map(cmd => <CommandCard key={cmd.id} cmd={cmd} onClick={onViewCommand} />)}</div>)}
+    </div>
+  )
+}
