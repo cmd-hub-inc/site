@@ -14,8 +14,38 @@ export default function App() {
   const [user, setUser] = useState(null)
   const [selectedCmd, setSelectedCmd] = useState(null)
 
-  const navigate = (p, params = {}) => { setPage(p); setPageParams(params); setSelectedCmd(null); try { window.scrollTo(0,0) } catch {} }
-  const viewCommand = (cmd) => { setSelectedCmd(cmd); setPage('detail'); try { window.scrollTo(0,0) } catch {} }
+  const navigate = (p, params = {}) => {
+    setPage(p)
+    setPageParams(params)
+    if (p !== 'detail') setSelectedCmd(null)
+    try { window.scrollTo(0,0) } catch {}
+
+    // update URL for shareable links
+    try {
+      let newPath = '/'
+      if (p === 'browse') newPath = '/browse'
+      else if (p === 'upload') newPath = '/upload'
+      else if (p === 'profile') newPath = '/profile'
+      else if (p === 'detail' && params && params.id) newPath = `/command/${encodeURIComponent(params.id)}`
+      window.history.pushState({}, '', newPath)
+    } catch (e) {
+      // ignore
+    }
+  }
+
+  const viewCommand = (cmd) => {
+    // cmd can be either an id string or full command object
+    if (!cmd) return
+    if (typeof cmd === 'string') {
+      // navigate to detail and fetch later in popstate/fetch logic
+      navigate('detail', { id: cmd })
+    } else {
+      setSelectedCmd(cmd)
+      setPage('detail')
+      try { window.scrollTo(0,0) } catch {}
+      try { window.history.pushState({}, '', `/command/${encodeURIComponent(cmd.id)}`) } catch (e) {}
+    }
+  }
 
   const API_BASE = import.meta.env.DEV ? '' : (import.meta.env.VITE_API_BASE || '')
 
@@ -37,7 +67,7 @@ export default function App() {
         }
 
         if (cancelled) return
-            // If URL contains pendingToken, try to complete auth flow first
+          // If URL contains pendingToken, try to complete auth flow first
             const params = new URLSearchParams(window.location.search)
             const pendingToken = params.get('pendingToken')
             if (pendingToken) {
@@ -65,6 +95,28 @@ export default function App() {
               }
             }
 
+            // If URL path looks like a command link, fetch and show that command
+            try {
+              const pathname = window.location.pathname || ''
+              const match = pathname.match(/^\/command\/(.+)$/)
+              if (match) {
+                const id = decodeURIComponent(match[1])
+                try {
+                  const rc = await fetch(`${API_BASE}/api/commands/${encodeURIComponent(id)}`)
+                  if (rc.ok) {
+                    const cmd = await rc.json()
+                    setSelectedCmd(cmd)
+                    setPage('detail')
+                    // still try to fetch user afterwards
+                  }
+                } catch (e) {
+                  // ignore
+                }
+              }
+            } catch (e) {
+              // ignore
+            }
+
             const resp = await fetch(`${API_BASE}/api/me`, { credentials: 'include' })
             if (resp.ok) {
               const u = await resp.json()
@@ -75,6 +127,55 @@ export default function App() {
       }
     })()
     return () => { cancelled = true }
+  }, [])
+
+  // Handle browser back/forward for shareable links
+  useEffect(() => {
+    let mounted = true
+    const onPop = async () => {
+      if (!mounted) return
+      try {
+        const pathname = window.location.pathname || ''
+        const match = pathname.match(/^\/command\/(.+)$/)
+        if (match) {
+          const id = decodeURIComponent(match[1])
+          try {
+            const rc = await fetch(`${API_BASE}/api/commands/${encodeURIComponent(id)}`)
+            if (rc.ok) {
+              const cmd = await rc.json()
+              setSelectedCmd(cmd)
+              setPage('detail')
+              return
+            }
+          } catch (e) {
+            // ignore
+          }
+        }
+        // fallback: map path to pages
+        if (pathname.startsWith('/browse')) {
+          setPage('browse')
+          setSelectedCmd(null)
+          return
+        }
+        if (pathname.startsWith('/upload')) {
+          setPage('upload')
+          setSelectedCmd(null)
+          return
+        }
+        if (pathname.startsWith('/profile')) {
+          setPage('profile')
+          setSelectedCmd(null)
+          return
+        }
+        // default home
+        setPage('home')
+        setSelectedCmd(null)
+      } catch (e) {
+        // ignore
+      }
+    }
+    window.addEventListener('popstate', onPop)
+    return () => { mounted = false; window.removeEventListener('popstate', onPop) }
   }, [])
 
   return (
