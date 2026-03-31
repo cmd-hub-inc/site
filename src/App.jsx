@@ -212,6 +212,8 @@ export default function App() {
     };
   }, []);
 
+  const requiresAuth = (p) => p === 'upload' || p === 'edit';
+
   // Handle browser back/forward for shareable links
   useEffect(() => {
     let mounted = true;
