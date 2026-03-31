@@ -1,12 +1,42 @@
-import React from 'react'
+import React, { useEffect, useState } from 'react'
 import { Zap, ChevronRight } from 'lucide-react'
 import CommandCard from '../components/CommandCard'
 import { C } from '../constants'
 import { MOCK_COMMANDS } from '../data/mockCommands'
 
 export default function HomePage({ onNavigate, onViewCommand }) {
-  const featured = [...MOCK_COMMANDS].slice(0,3)
+  const API_BASE = import.meta.env.DEV ? '' : (import.meta.env.VITE_API_BASE || '')
+
   const totalDownloads = MOCK_COMMANDS.reduce((a,c) => a + c.downloads, 0)
+  const [featured, setFeatured] = useState([...MOCK_COMMANDS].slice(0,3))
+  const [stats, setStats] = useState({ commands: MOCK_COMMANDS.length, downloads: totalDownloads, frameworks: 6 })
+
+  useEffect(() => {
+    let cancelled = false
+    ;(async () => {
+      try {
+        const r = await fetch(`${API_BASE}/api/stats`)
+        if (r.ok) {
+          const j = await r.json()
+          if (!cancelled) setStats(j)
+        }
+      } catch (e) {
+        // ignore
+      }
+
+      try {
+        const r2 = await fetch(`${API_BASE}/api/commands`)
+        if (r2.ok) {
+          const cmds = await r2.json()
+          const sorted = cmds.sort((a, b) => (b.downloads || 0) - (a.downloads || 0)).slice(0, 3)
+          if (!cancelled && Array.isArray(sorted) && sorted.length) setFeatured(sorted)
+        }
+      } catch (e) {
+        // ignore
+      }
+    })()
+    return () => { cancelled = true }
+  }, [])
 
   return (
     <div>
@@ -23,7 +53,7 @@ export default function HomePage({ onNavigate, onViewCommand }) {
       </div>
 
       <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3,1fr)', gap: 14, maxWidth: 620, margin: '0 auto 72px', padding: '0 24px' }}>
-        {[{label:'Commands', value: MOCK_COMMANDS.length, color: C.blurple},{label:'Downloads', value: totalDownloads, color: C.green},{label:'Frameworks', value: 6, color: C.yellow}].map(s => (
+        {[{label:'Commands', value: stats.commands, color: C.blurple},{label:'Downloads', value: stats.downloads, color: C.green},{label:'Frameworks', value: stats.frameworks, color: C.yellow}].map(s => (
           <div key={s.label} style={{ background: C.surface, border: `1px solid ${C.border}`, borderRadius: 14, padding: '22px 16px', textAlign: 'center' }}>
             <div style={{ fontFamily: "'Syne', sans-serif", fontSize: 34, fontWeight: 800, color: s.color }}>{s.value}</div>
             <div style={{ color: C.muted, fontSize: 13, marginTop: 6 }}>{s.label}</div>
