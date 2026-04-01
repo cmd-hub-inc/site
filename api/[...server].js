@@ -60,10 +60,14 @@ export default async function handler(req, res) {
     };
   }
 
-  // Disable caching for API responses to prevent 304 empty body issues
-  res.setHeader('cache-control', 'no-store, no-cache, must-revalidate, proxy-revalidate');
+  // Aggressively disable caching and ETags to prevent 304 responses
+  res.setHeader('cache-control', 'no-store, no-cache, no-transform, must-revalidate, private');
   res.setHeader('pragma', 'no-cache');
   res.setHeader('expires', '0');
+  res.setHeader('etag', ''); // Clear any ETag
+  res.setHeader('last-modified', ''); // Clear Last-Modified
+  res.removeHeader('etag');
+  res.removeHeader('last-modified');
 
   const { pathname } = parse(req.url || '/');
   const matched = matchHandler(pathname || '/');
