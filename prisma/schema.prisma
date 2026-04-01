@@ -132,3 +132,17 @@ model Share {
   @@index([platform])
   @@index([createdAt])
 }
+
+model Event {
+  id        String   @id @default(uuid())
+  commandId String
+  type      String   // "view" or "download"
+  userId    String?
+  createdAt DateTime @default(now())
+
+  @@index([commandId])
+  @@index([userId])
+  @@index([type])
+  @@index([createdAt])
+  @@index([commandId, type, createdAt])
+}

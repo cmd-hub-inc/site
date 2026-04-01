@@ -445,7 +445,6 @@ export default function ProfilePage({ user, profileId, onViewCommand, onNavigate
           command={{ name: displayUser.username }}
           shareUrl={`${window.location.origin}/profile/${displayUser.id}`}
           user={user}
-          title="Share this profile"
           theme={{ surface: C.surface, border: C.border, text: C.text, muted: C.muted }}
         />
       )}

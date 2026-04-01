@@ -13,6 +13,7 @@ const CommandDetailPage = lazy(() => import('./pages/CommandDetailPage'));
 const EditCommandPage = lazy(() => import('./pages/EditCommandPage'));
 const NotFound = lazy(() => import('./pages/NotFound'));
 const CreatorsPage = lazy(() => import('./pages/CreatorsPage'));
+const DashboardPage = lazy(() => import('./pages/DashboardPage'));
 
 // Loading component for lazy-loaded pages
 function PageLoadingSpinner() {
@@ -30,6 +31,7 @@ export default function App() {
       if (pathname === '/' || pathname === '') return 'home';
       if (pathname.startsWith('/browse')) return 'browse';
       if (pathname.startsWith('/creators')) return 'creators';
+      if (pathname.startsWith('/dashboard')) return 'dashboard';
       if (pathname.startsWith('/upload')) return 'upload';
       if (pathname.startsWith('/profile')) return 'profile';
       if (pathname.startsWith('/command/')) return 'detail';
@@ -58,6 +60,7 @@ export default function App() {
       let newPath = '/';
       if (p === 'browse') newPath = '/browse';
       else if (p === 'creators') newPath = '/creators';
+      else if (p === 'dashboard') newPath = '/dashboard';
       else if (p === 'upload') newPath = '/upload';
       else if (p === 'profile') {
         // if no id provided and we have an authenticated `user`, canonicalize to use their id
@@ -311,6 +314,11 @@ export default function App() {
           setSelectedCmd(null);
           return;
         }
+        if (pathname.startsWith('/dashboard')) {
+          setPage('dashboard');
+          setSelectedCmd(null);
+          return;
+        }
         if (pathname.startsWith('/upload')) {
           setPage('upload');
           setSelectedCmd(null);
@@ -338,7 +346,7 @@ export default function App() {
 
   // If user is known to be not authenticated, redirect protected pages to 404
   useEffect(() => {
-    if (user === null && (page === 'upload' || page === 'edit')) {
+    if (user === null && (page === 'upload' || page === 'edit' || page === 'dashboard')) {
       setPage('notfound');
       setSelectedCmd(null);
     }
@@ -395,6 +403,7 @@ export default function App() {
               />
             )}
             {page === 'edit' && <EditCommandPage user={user} pageParams={pageParams} />}
+            {page === 'dashboard' && <DashboardPage user={user} onNavigate={navigate} />}
             {page === 'notfound' && <NotFound />}
           </Suspense>
         </ErrorBoundary>

@@ -1260,6 +1260,199 @@ app.put('/api/commands/:id', requireDbReady, requireAuth, async (req, res) => {
   }
 });
 
+// Get creator analytics
+app.get('/api/analytics/creator', requireDbReady, requireAuth, async (req, res) => {
+  const { period = '30days' } = req.query;
+  const sessionUser = req.session && req.session.user;
+  
+  if (!sessionUser || !sessionUser.id) {
+    return res.status(401).json({ error: 'Unauthorized' });
+  }
+
+  try {
+    // Determine date range
+    let daysBack = 30;
+    if (period === '7days') daysBack = 7;
+    else if (period === 'alltime') daysBack = 36500; // ~100 years
+    
+    const cutoffDate = new Date();
+    cutoffDate.setDate(cutoffDate.getDate() - daysBack);
+
+    // Get all commands for this creator
+    const commands = await prisma.command.findMany({
+      where: { authorId: sessionUser.id },
+      include: { 
+        ratings: { where: { createdAt: { gte: cutoffDate } } },
+        favorites: { where: { createdAt: { gte: cutoffDate } } },
+      }
+    });
+
+    if (!commands.length) {
+      return res.json({
+        stats: {
+          totalViews: 0,
+          totalDownloads: 0,
+          totalFavorites: 0,
+          totalShares: 0,
+          totalRatings: 0,
+          uniqueUsers: 0,
+          averageRating: 0,
+          peakHour: null,
+          peakDayOfWeek: null,
+        },
+        commands: [],
+        topPerformers: [],
+      });
+    }
+
+    const commandIds = commands.map(c => c.id);
+
+    // Get shares for this period (may not exist if migration hasn't run)
+    let shares = [];
+    try {
+      shares = await prisma.share.findMany({
+        where: {
+          commandId: { in: commandIds },
+          createdAt: { gte: cutoffDate }
+        }
+      });
+    } catch (e) {
+      console.log('Share table not available, skipping share analytics');
+      shares = [];
+    }
+
+    // Calculate aggregate stats
+    const totalFavorites = commands.reduce((sum, cmd) => sum + cmd.favorites.length, 0);
+    const totalShares = shares.length;
+    const totalRatings = commands.reduce((sum, cmd) => sum + cmd.ratings.length, 0);
+
+    // Calculate unique users
+    const uniqueUserIds = new Set();
+    commands.forEach(cmd => {
+      cmd.favorites.forEach(fav => uniqueUserIds.add(fav.userId));
+      cmd.ratings.forEach(rating => uniqueUserIds.add(rating.userId));
+    });
+    shares.forEach(share => {
+      if (share.userId) uniqueUserIds.add(share.userId);
+    });
+
+    // Calculate average rating
+    const allRatings = commands.flatMap(cmd => cmd.ratings);
+    const averageRating = allRatings.length > 0
+      ? (allRatings.reduce((sum, r) => sum + r.value, 0) / allRatings.length)
+      : 0;
+
+    // Calculate peak hour and peak day of week
+    const peakHour = calculatePeakHour(commands, shares);
+    const peakDayOfWeek = calculatePeakDayOfWeek(commands, shares);
+
+    // Build per-command analytics
+    const commandAnalytics = commands.map(cmd => {
+      const cmdShares = shares.filter(s => s.commandId === cmd.id);
+      const cmdFavs = cmd.favorites;
+      const cmdRatings = cmd.ratings;
+
+      const cmdAvgRating = cmdRatings.length > 0
+        ? cmdRatings.reduce((sum, r) => sum + r.value, 0) / cmdRatings.length
+        : 0;
+
+      return {
+        id: cmd.id,
+        name: cmd.name,
+        description: cmd.description,
+        views: cmd.views || 0,
+        downloads: cmd.downloads || 0,
+        favorites: cmdFavs.length,
+        shares: cmdShares.length,
+        ratings: cmdRatings.length,
+        averageRating: Math.round(cmdAvgRating * 100) / 100,
+        engagement: (cmd.views || 0) + (cmd.downloads || 0) + cmdFavs.length + cmdShares.length + cmdRatings.length,
+      };
+    });
+
+    // Sort for top performers
+    const topPerformers = [...commandAnalytics]
+      .sort((a, b) => b.engagement - a.engagement)
+      .slice(0, 5);
+
+    return res.json({
+      stats: {
+        totalViews: commands.reduce((sum, cmd) => sum + (cmd.views || 0), 0),
+        totalDownloads: commands.reduce((sum, cmd) => sum + (cmd.downloads || 0), 0),
+        totalFavorites,
+        totalShares,
+        totalRatings,
+        uniqueUsers: uniqueUserIds.size,
+        averageRating: Math.round(averageRating * 100) / 100,
+        peakHour,
+        peakDayOfWeek,
+      },
+      commands: commandAnalytics,
+      topPerformers,
+    });
+  } catch (error) {
+    console.error('Analytics error:', error && error.message ? error.message : error);
+    console.error('Full error:', error);
+    res.status(500).json({ error: 'Failed to fetch analytics', details: error && error.message ? error.message : String(error) });
+  }
+});
+
+// Helper: Calculate peak hour
+function calculatePeakHour(commands, shares) {
+  const hours = {};
+  
+  // Count shares by hour
+  shares.forEach(share => {
+    const hour = new Date(share.createdAt).getHours();
+    hours[hour] = (hours[hour] || 0) + 1;
+  });
+
+  // Count favorites by hour
+  commands.forEach(cmd => {
+    cmd.favorites.forEach(fav => {
+      const hour = new Date(fav.createdAt).getHours();
+      hours[hour] = (hours[hour] || 0) + 1;
+    });
+    cmd.ratings.forEach(rating => {
+      const hour = new Date(rating.createdAt).getHours();
+      hours[hour] = (hours[hour] || 0) + 1;
+    });
+  });
+
+  if (Object.keys(hours).length === 0) return null;
+
+  const peakHour = Object.entries(hours).sort((a, b) => b[1] - a[1])[0][0];
+  return `${peakHour}:00 - ${(Number(peakHour) + 1) % 24}:00`;
+}
+
+// Helper: Calculate peak day of week
+function calculatePeakDayOfWeek(commands, shares) {
+  const days = { Mon: 0, Tue: 0, Wed: 0, Thu: 0, Fri: 0, Sat: 0, Sun: 0 };
+  const dayNames = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'];
+
+  shares.forEach(share => {
+    const dayOfWeek = new Date(share.createdAt).getDay();
+    const dayName = dayNames[dayOfWeek];
+    days[dayName]++;
+  });
+
+  commands.forEach(cmd => {
+    cmd.favorites.forEach(fav => {
+      const dayOfWeek = new Date(fav.createdAt).getDay();
+      const dayName = dayNames[dayOfWeek];
+      days[dayName]++;
+    });
+    cmd.ratings.forEach(rating => {
+      const dayOfWeek = new Date(rating.createdAt).getDay();
+      const dayName = dayNames[dayOfWeek];
+      days[dayName]++;
+    });
+  });
+
+  const peakDay = Object.entries(days).sort((a, b) => b[1] - a[1])[0][0];
+  return peakDay;
+}
+
 // Start server immediately; dbEnsure runs in background (db-dependent routes will return 503 until ready)
 
 // Schedule periodic tasks

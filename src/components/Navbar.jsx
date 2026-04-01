@@ -1,5 +1,5 @@
 import React from 'react';
-import { Home, Grid, Upload, LogOut, Users } from 'lucide-react';
+import { Home, Grid, Upload, LogOut, Users, BarChart3 } from 'lucide-react';
 import { Code2 } from 'lucide-react';
 import { C } from '../constants';
 
@@ -95,6 +95,26 @@ export default function Navbar({ page, user, onNavigate, onLogin, onLogout }) {
         </div>
       ) : user ? (
         <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+          <button
+            onClick={() => onNavigate('dashboard')}
+            title="Creator Dashboard"
+            style={{
+              background: page === 'dashboard' ? C.blurpleDim : 'none',
+              border: 'none',
+              cursor: 'pointer',
+              borderRadius: 8,
+              padding: '6px 14px',
+              display: 'flex',
+              alignItems: 'center',
+              gap: 6,
+              color: page === 'dashboard' ? C.blurple : C.muted,
+              fontSize: 14,
+              fontWeight: page === 'dashboard' ? 600 : 400,
+            }}
+          >
+            <BarChart3 size={15} />
+            Dashboard
+          </button>
           <button
             onClick={() => onNavigate('profile', { id: user && user.id ? user.id : undefined })}
             style={{
