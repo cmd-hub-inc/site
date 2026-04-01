@@ -3,6 +3,7 @@ import Navbar from './components/Navbar';
 import ErrorBoundary from './components/ErrorBoundary';
 import Footer from './components/Footer';
 import { MOCK_USER } from './constants';
+import { getReturnTo, clearReturnTo, saveReturnTo } from './lib/authHelpers';
 
 // Code splitting: lazy load page components
 const HomePage = lazy(() => import('./pages/HomePage'));
@@ -42,6 +43,7 @@ export default function App() {
       return 'notfound';
     }
   });
+  console.info('[client] initial page', page, 'path=', typeof window !== 'undefined' ? window.location.pathname : '');
   const [pageParams, setPageParams] = useState({});
   // `undefined` = loading, `null` = not authenticated, object = authenticated
   const [user, setUser] = useState(undefined);
@@ -119,6 +121,7 @@ export default function App() {
     let cancelled = false;
     const pollInterval = 1000;
     const maxAttempts = 30;
+    // Start a background poll for `/api/ready` but do not block initialization.
     (async () => {
       try {
         for (let i = 0; i < maxAttempts && !cancelled; i++) {
@@ -130,8 +133,14 @@ export default function App() {
           }
           await new Promise((r) => setTimeout(r, pollInterval));
         }
+      } catch (e) {
+        // ignore
+      }
+    })();
 
-        if (cancelled) return;
+    // Continue with the rest of initialization immediately (do not wait for /api/ready)
+    (async () => {
+      try {
         // If URL contains pendingToken, try to complete auth flow first
         const params = new URLSearchParams(window.location.search);
         const pendingToken = params.get('pendingToken');
@@ -151,6 +160,18 @@ export default function App() {
                 const url = new URL(window.location.href);
                 url.search = params.toString();
                 window.history.replaceState({}, document.title, url.toString());
+                
+                // Check if there's a destination to return to after login
+                const returnTo = getReturnTo();
+                if (returnTo && !cancelled) {
+                  clearReturnTo();
+                  try {
+                    window.history.pushState({}, '', returnTo);
+                    window.location.reload();
+                  } catch (e) {
+                    // ignore reload errors
+                  }
+                }
                 return;
               }
               if (r.status === 202) {
@@ -344,14 +365,6 @@ export default function App() {
     };
   }, []);
 
-  // If user is known to be not authenticated, redirect protected pages to 404
-  useEffect(() => {
-    if (user === null && (page === 'upload' || page === 'edit' || page === 'dashboard')) {
-      setPage('notfound');
-      setSelectedCmd(null);
-    }
-  }, [user, page]);
-
   return (
     <div
       style={{
@@ -366,6 +379,16 @@ export default function App() {
         user={user}
         onNavigate={navigate}
         onLogin={() => {
+          // Save the current page as the return destination
+          if (page === 'upload') {
+            saveReturnTo('/upload');
+          } else if (page === 'dashboard') {
+            saveReturnTo('/dashboard');
+          } else if (page === 'edit' && pageParams && pageParams.id) {
+            saveReturnTo(`/command/${encodeURIComponent(pageParams.id)}/edit`);
+          } else if (page === 'profile' && pageParams && pageParams.id) {
+            saveReturnTo(`/profile/${encodeURIComponent(pageParams.id)}`);
+          }
           console.log('[client] login click, navigating to', `${API_BASE}/api/auth/discord`);
           window.location.href = `${API_BASE}/api/auth/discord`;
         }}

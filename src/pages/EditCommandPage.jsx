@@ -1,5 +1,7 @@
 import React, { useEffect, useState } from 'react';
 import { C, FRAMEWORKS, CMD_TYPES, ALL_TAGS } from '../constants';
+import { LogIn } from 'lucide-react';
+import { saveReturnTo } from '../lib/authHelpers';
 
 export default function EditCommandPage({ user, pageParams }) {
   const id = pageParams && pageParams.id;
@@ -10,6 +12,13 @@ export default function EditCommandPage({ user, pageParams }) {
   const [success, setSuccess] = useState(false);
   const [original, setOriginal] = useState(null);
   const [dirty, setDirty] = useState(false);
+
+  // Save return destination if not authenticated
+  useEffect(() => {
+    if (user === null && id) {
+      saveReturnTo(`/command/${encodeURIComponent(id)}/edit`);
+    }
+  }, [user, id]);
 
   useEffect(() => {
     let cancelled = false;
@@ -41,6 +50,61 @@ export default function EditCommandPage({ user, pageParams }) {
   }, [cmd, original]);
 
   if (loading) return <div style={{ padding: 24 }}>Loading...</div>;
+  if (!user)
+    return (
+      <div style={{ textAlign: 'center', padding: '100px 24px' }}>
+        <div
+          style={{
+            width: 72,
+            height: 72,
+            borderRadius: '50%',
+            background: C.blurpleDim,
+            border: `1px solid rgba(88,101,242,0.3)`,
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'center',
+            margin: '0 auto 20px',
+          }}
+        >
+          <LogIn size={28} color={C.blurple} />
+        </div>
+        <h2
+          style={{
+            fontFamily: "'Syne', sans-serif",
+            color: C.white,
+            marginBottom: 8,
+            fontSize: 24,
+          }}
+        >
+          Login Required
+        </h2>
+        <p style={{ color: C.muted, marginBottom: 28, maxWidth: 380, margin: '0 auto 28px' }}>
+          You need to log in with Discord to edit commands.
+        </p>
+        <a
+          href="/api/auth/discord"
+          onClick={(e) => {
+            if (id) {
+              saveReturnTo(`/command/${encodeURIComponent(id)}/edit`);
+            }
+            console.log('[client] edit page login clicked, saving return destination');
+          }}
+          style={{
+            background: C.blurple,
+            color: '#fff',
+            textDecoration: 'none',
+            border: 'none',
+            borderRadius: 8,
+            padding: '12px 28px',
+            fontSize: 15,
+            fontWeight: 700,
+            display: 'inline-block',
+          }}
+        >
+          Login with Discord
+        </a>
+      </div>
+    );
   if (!cmd) return <div style={{ padding: 24 }}>Command not found.</div>;
 
   const handleChange = (k, v) => setCmd((s) => ({ ...s, [k]: v }));

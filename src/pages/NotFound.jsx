@@ -1,5 +1,6 @@
 import React from 'react';
 import { C } from '../constants';
+import { saveReturnTo } from '../lib/authHelpers';
 
 export default function NotFound() {
   const btnBase = {
@@ -12,6 +13,16 @@ export default function NotFound() {
   };
 
   const linkStyle = { textDecoration: 'none' };
+
+  const handleLoginClick = (e) => {
+    // Save the current path as return destination
+    try {
+      const pathname = window.location.pathname || '/';
+      saveReturnTo(pathname);
+    } catch (e) {
+      // ignore
+    }
+  };
 
   return (
     <div
@@ -45,7 +56,7 @@ export default function NotFound() {
             <button style={{ ...btnBase, background: C.blurple, color: '#fff' }}>Upload</button>
           </a>
 
-          <a href="/api/auth/discord" style={linkStyle}>
+          <a href="/api/auth/discord" onClick={handleLoginClick} style={linkStyle}>
             <button
               style={{
                 ...btnBase,

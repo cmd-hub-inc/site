@@ -4,6 +4,7 @@ import { C, CMD_TYPES, FRAMEWORKS, BOT_TOOLS, ALL_TAGS, fmt } from '../constants
 import { TagBadge, FrameworkBadge, TypeBadge } from '../components/Badges';
 import MonacoEditor from '../components/MonacoEditor';
 import CommandCard from '../components/CommandCard';
+import { saveReturnTo } from '../lib/authHelpers';
 
 const DRAFT_STORAGE_KEY = 'upload_form_draft';
 const DRAFT_AUTO_SAVE_INTERVAL = 3000; // Auto-save every 3 seconds
@@ -123,7 +124,10 @@ export default function UploadPage({ user, onNavigate }) {
         </p>
         <a
           href="/api/auth/discord"
-          onClick={() => console.log('[client] upload page login anchor clicked')}
+          onClick={(e) => {
+            saveReturnTo('/upload');
+            console.log('[client] upload page login clicked, saving return destination');
+          }}
           style={{
             background: C.blurple,
             color: '#fff',

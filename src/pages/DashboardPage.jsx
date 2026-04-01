@@ -1,6 +1,7 @@
 import { useEffect, useState } from 'react';
 import { C } from '../constants';
-import { TrendingUp, Calendar, BarChart3, Table2 } from 'lucide-react';
+import { TrendingUp, Calendar, BarChart3, Table2, LogIn } from 'lucide-react';
+import { saveReturnTo } from '../lib/authHelpers';
 
 export default function DashboardPage({ user, onNavigate }) {
   const [analytics, setAnalytics] = useState(null);
@@ -12,6 +13,7 @@ export default function DashboardPage({ user, onNavigate }) {
   // Redirect to home if not authenticated
   useEffect(() => {
     if (user === null) {
+      saveReturnTo('/dashboard');
       onNavigate?.('home');
     }
   }, [user, onNavigate]);
