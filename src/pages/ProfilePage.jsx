@@ -1,5 +1,5 @@
 import React, { useEffect, useState } from 'react';
-import { User, Package } from 'lucide-react';
+import { User, Package, Download, Heart, Check, UserPlus, LogOut } from 'lucide-react';
 import { C } from '../constants';
 import CommandCard from '../components/CommandCard';
 import ShareButtons from '../components/ShareButtons';
@@ -25,6 +25,8 @@ export default function ProfilePage({ user, profileId, onViewCommand, onNavigate
   const [loadingUserCmds, setLoadingUserCmds] = useState(true);
   const [loadingFavCmds, setLoadingFavCmds] = useState(true);
   const [isFollowing, setIsFollowing] = useState(false);
+  const [visibleUserCmds, setVisibleUserCmds] = useState(6);
+  const [visibleFavCmds, setVisibleFavCmds] = useState(6);
   const totalDownloads = userCmds.reduce((a, c) => a + (c.downloads || 0), 0);
   const totalFavs = userCmds.reduce((a, c) => a + (c.favourites || 0), 0);
 
@@ -421,29 +423,53 @@ export default function ProfilePage({ user, profileId, onViewCommand, onNavigate
           </div>
           <div style={{ display: 'flex', gap: 28 }}>
             {[
-              { label: 'Commands', value: loadingUserCmds ? null : userCmds.length },
-              { label: 'Downloads', value: loadingUserCmds ? null : totalDownloads },
-              { label: 'Favourites', value: loadingUserCmds ? null : totalFavs },
+              { label: 'Commands', value: loadingUserCmds ? null : userCmds.length, icon: Package, accentColor: '#3b82f6' },
+              { label: 'Downloads', value: loadingUserCmds ? null : totalDownloads, icon: Download, accentColor: '#10b981' },
+              { label: 'Favourites', value: loadingUserCmds ? null : totalFavs, icon: Heart, accentColor: '#ef4444' },
             ].map((s) => (
-              <div key={s.label} style={{ textAlign: 'center' }}>
+              <div key={s.label} style={{ textAlign: 'center', minWidth: 90 }}>
                 <div
                   style={{
-                    fontFamily: "'Syne', sans-serif",
-                    fontSize: 26,
-                    fontWeight: 800,
-                    color: C.white,
+                    width: '100%',
+                    display: 'flex',
+                    alignItems: 'center',
+                    justifyContent: 'center',
+                    marginBottom: 8,
+                    gap: 8,
                   }}
                 >
-                  {s.value === null ? (
-                    <div
-                      className="skeleton"
-                      style={{ width: 64, height: 22, borderRadius: 6, margin: '0 auto' }}
-                    />
-                  ) : (
-                    <CountUp value={s.value} duration={900} />
-                  )}
+                  <div
+                    style={{
+                      width: 32,
+                      height: 32,
+                      borderRadius: 8,
+                      background: `${s.accentColor}20`,
+                      display: 'flex',
+                      alignItems: 'center',
+                      justifyContent: 'center',
+                    }}
+                  >
+                    <s.icon size={16} color={s.accentColor} />
+                  </div>
+                  <div
+                    style={{
+                      fontFamily: "'Syne', sans-serif",
+                      fontSize: 20,
+                      fontWeight: 800,
+                      color: C.white,
+                    }}
+                  >
+                    {s.value === null ? (
+                      <div
+                        className="skeleton"
+                        style={{ width: 44, height: 20, borderRadius: 4 }}
+                      />
+                    ) : (
+                      <CountUp value={s.value} duration={900} />
+                    )}
+                  </div>
                 </div>
-                <div style={{ color: C.muted, fontSize: 12 }}>{s.label}</div>
+                <div style={{ color: C.muted, fontSize: 12, fontWeight: 500 }}>{s.label}</div>
               </div>
             ))}
           </div>
@@ -465,19 +491,35 @@ export default function ProfilePage({ user, profileId, onViewCommand, onNavigate
           justifyContent: 'space-between',
           alignItems: 'center',
           marginBottom: 18,
+          marginTop: 32,
         }}
       >
-        <h2
-          style={{
-            fontFamily: "'Syne', sans-serif",
-            fontSize: 20,
-            fontWeight: 800,
-            color: C.white,
-            margin: 0,
-          }}
-        >
-          Uploaded Commands
-        </h2>
+        <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
+          <div
+            style={{
+              width: 40,
+              height: 40,
+              borderRadius: 10,
+              background: '#3b82f620',
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'center',
+            }}
+          >
+            <Package size={20} color="#3b82f6" />
+          </div>
+          <h2
+            style={{
+              fontFamily: "'Syne', sans-serif",
+              fontSize: 20,
+              fontWeight: 800,
+              color: C.white,
+              margin: 0,
+            }}
+          >
+            Uploaded Commands
+          </h2>
+        </div>
         <div style={{ display: 'flex', gap: 8, alignItems: 'center' }}>
           {displayUser && user && String(displayUser.id) === String(user.id) && (
             <button
@@ -490,6 +532,16 @@ export default function ProfilePage({ user, profileId, onViewCommand, onNavigate
                 padding: '8px 18px',
                 fontSize: 13,
                 fontWeight: 700,
+                cursor: 'pointer',
+                transition: 'all 0.3s ease',
+              }}
+              onMouseEnter={(e) => {
+                e.target.style.transform = 'translateY(-2px)';
+                e.target.style.boxShadow = `0 8px 16px ${C.blurple}40`;
+              }}
+              onMouseLeave={(e) => {
+                e.target.style.transform = 'translateY(0)';
+                e.target.style.boxShadow = 'none';
               }}
             >
               Upload New
@@ -538,9 +590,32 @@ export default function ProfilePage({ user, profileId, onViewCommand, onNavigate
                 padding: '8px 18px',
                 fontSize: 13,
                 fontWeight: 700,
+                cursor: 'pointer',
+                transition: 'all 0.3s ease',
+                display: 'flex',
+                alignItems: 'center',
+                gap: 6,
+              }}
+              onMouseEnter={(e) => {
+                e.target.style.transform = 'translateY(-2px)';
+                e.target.style.boxShadow = isFollowing ? `0 8px 16px ${C.border}40` : `0 8px 16px ${C.blurple}40`;
+              }}
+              onMouseLeave={(e) => {
+                e.target.style.transform = 'translateY(0)';
+                e.target.style.boxShadow = 'none';
               }}
             >
-              {isFollowing ? 'Following' : 'Follow'}
+              {isFollowing ? (
+                <>
+                  <Check size={14} />
+                  Following
+                </>
+              ) : (
+                <>
+                  <UserPlus size={14} />
+                  Follow
+                </>
+              )}
             </button>
           )}
         </div>
@@ -568,12 +643,24 @@ export default function ProfilePage({ user, profileId, onViewCommand, onNavigate
             color: C.muted,
           }}
         >
-          <Package
-            size={36}
-            style={{ marginBottom: 14, opacity: 0.25, display: 'block', margin: '0 auto 14px' }}
-          />
-          <p style={{ margin: 0, fontSize: 16 }}>No commands uploaded yet</p>
-          <p style={{ fontSize: 13, marginTop: 8 }}>
+          <div
+            style={{
+              width: 56,
+              height: 56,
+              borderRadius: 12,
+              background: '#3b82f620',
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'center',
+              margin: '0 auto 20px',
+            }}
+          >
+            <Package size={28} color="#3b82f6" />
+          </div>
+          <p style={{ margin: 0, fontSize: 16, fontWeight: 600, color: C.white, marginBottom: 4 }}>
+            No commands uploaded yet
+          </p>
+          <p style={{ fontSize: 13, marginTop: 8, margin: '8px 0 0' }}>
             {displayUser && user && String(displayUser.id) === String(user.id)
               ? 'Be the first to share your work with the community'
               : `${displayUser?.username || 'This user'} hasn't uploaded any commands yet`}
@@ -590,6 +677,16 @@ export default function ProfilePage({ user, profileId, onViewCommand, onNavigate
                 padding: '10px 22px',
                 fontSize: 14,
                 fontWeight: 600,
+                cursor: 'pointer',
+                transition: 'all 0.3s ease',
+              }}
+              onMouseEnter={(e) => {
+                e.target.style.transform = 'translateY(-2px)';
+                e.target.style.boxShadow = `0 8px 16px ${C.blurple}40`;
+              }}
+              onMouseLeave={(e) => {
+                e.target.style.transform = 'translateY(0)';
+                e.target.style.boxShadow = 'none';
               }}
             >
               Upload your first command
@@ -597,17 +694,47 @@ export default function ProfilePage({ user, profileId, onViewCommand, onNavigate
           )}
         </div>
       ) : (
-        <div
-          style={{
-            display: 'grid',
-            gridTemplateColumns: 'repeat(auto-fill, minmax(290px, 1fr))',
-            gap: 16,
-          }}
-        >
-          {userCmds.map((cmd) => (
-            <CommandCard key={cmd.id} cmd={cmd} onClick={onViewCommand} />
-          ))}
-        </div>
+        <>
+          <div
+            style={{
+              display: 'grid',
+              gridTemplateColumns: 'repeat(auto-fill, minmax(290px, 1fr))',
+              gap: 16,
+            }}
+          >
+            {userCmds.slice(0, visibleUserCmds).map((cmd) => (
+              <CommandCard key={cmd.id} cmd={cmd} onClick={onViewCommand} />
+            ))}
+          </div>
+          {userCmds.length > visibleUserCmds && (
+            <div style={{ textAlign: 'center', marginTop: 24 }}>
+              <button
+                onClick={() => setVisibleUserCmds((v) => v + 6)}
+                style={{
+                  background: 'transparent',
+                  color: C.blurple,
+                  border: `2px solid ${C.blurple}`,
+                  borderRadius: 8,
+                  padding: '12px 32px',
+                  fontSize: 14,
+                  fontWeight: 600,
+                  cursor: 'pointer',
+                  transition: 'all 0.3s ease',
+                }}
+                onMouseEnter={(e) => {
+                  e.target.style.background = `${C.blurple}10`;
+                  e.target.style.transform = 'translateY(-2px)';
+                }}
+                onMouseLeave={(e) => {
+                  e.target.style.background = 'transparent';
+                  e.target.style.transform = 'translateY(0)';
+                }}
+              >
+                Load More ({userCmds.length - visibleUserCmds} remaining)
+              </button>
+            </div>
+          )}
+        </>
       )}
 
       <div style={{ marginTop: 32 }}>
@@ -619,17 +746,32 @@ export default function ProfilePage({ user, profileId, onViewCommand, onNavigate
             marginBottom: 18,
           }}
         >
-          <h2
-            style={{
-              fontFamily: "'Syne', sans-serif",
-              fontSize: 20,
-              fontWeight: 800,
-              color: C.white,
-              margin: 0,
-            }}
-          >
-            Favourited Commands
-          </h2>
+          <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
+            <div
+              style={{
+                width: 40,
+                height: 40,
+                borderRadius: 10,
+                background: '#ef444440',
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'center',
+              }}
+            >
+              <Heart size={20} color="#ef4444" />
+            </div>
+            <h2
+              style={{
+                fontFamily: "'Syne', sans-serif",
+                fontSize: 20,
+                fontWeight: 800,
+                color: C.white,
+                margin: 0,
+              }}
+            >
+              Favourited Commands
+            </h2>
+          </div>
         </div>
         {loadingFavCmds ? (
           <div
@@ -654,20 +796,69 @@ export default function ProfilePage({ user, profileId, onViewCommand, onNavigate
               color: C.muted,
             }}
           >
-            No favourited commands yet
+            <div
+              style={{
+                width: 56,
+                height: 56,
+                borderRadius: 12,
+                background: '#ef444440',
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'center',
+                margin: '0 auto 20px',
+              }}
+            >
+              <Heart size={28} color="#ef4444" />
+            </div>
+            <p style={{ margin: 0, fontSize: 16, fontWeight: 600, color: C.white, marginBottom: 4 }}>
+              No favourited commands yet
+            </p>
+            <p style={{ fontSize: 13, marginTop: 8, margin: '8px 0 0' }}>
+              Start exploring commands and add them to your favorites
+            </p>
           </div>
         ) : (
-          <div
-            style={{
-              display: 'grid',
-              gridTemplateColumns: 'repeat(auto-fill, minmax(290px, 1fr))',
-              gap: 16,
-            }}
-          >
-            {favCmds.map((cmd) => (
-              <CommandCard key={cmd.id} cmd={cmd} onClick={onViewCommand} />
-            ))}
-          </div>
+          <>
+            <div
+              style={{
+                display: 'grid',
+                gridTemplateColumns: 'repeat(auto-fill, minmax(290px, 1fr))',
+                gap: 16,
+              }}
+            >
+              {favCmds.slice(0, visibleFavCmds).map((cmd) => (
+                <CommandCard key={cmd.id} cmd={cmd} onClick={onViewCommand} />
+              ))}
+            </div>
+            {favCmds.length > visibleFavCmds && (
+              <div style={{ textAlign: 'center', marginTop: 24 }}>
+                <button
+                  onClick={() => setVisibleFavCmds((v) => v + 6)}
+                  style={{
+                    background: 'transparent',
+                    color: C.blurple,
+                    border: `2px solid ${C.blurple}`,
+                    borderRadius: 8,
+                    padding: '12px 32px',
+                    fontSize: 14,
+                    fontWeight: 600,
+                    cursor: 'pointer',
+                    transition: 'all 0.3s ease',
+                  }}
+                  onMouseEnter={(e) => {
+                    e.target.style.background = `${C.blurple}10`;
+                    e.target.style.transform = 'translateY(-2px)';
+                  }}
+                  onMouseLeave={(e) => {
+                    e.target.style.background = 'transparent';
+                    e.target.style.transform = 'translateY(0)';
+                  }}
+                >
+                  Load More ({favCmds.length - visibleFavCmds} remaining)
+                </button>
+              </div>
+            )}
+          </>
         )}
       </div>
     </div>
