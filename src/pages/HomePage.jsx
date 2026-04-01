@@ -221,7 +221,7 @@ export default function HomePage({ onNavigate, onViewCommand }) {
         {[
           { label: 'Commands', value: stats?.commands ?? null, color: C.blurple },
           { label: 'Downloads', value: stats?.downloads ?? null, color: C.green },
-          { label: 'Frameworks', value: stats?.frameworks ?? null, color: C.yellow },
+          { label: 'Frameworks & Tools', value: derived.frameworks?.length ?? null, color: C.yellow },
         ].map((s) => (
           <div
             key={s.label}
