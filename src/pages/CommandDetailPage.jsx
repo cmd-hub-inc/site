@@ -145,6 +145,39 @@ export default function CommandDetailPage({ cmd, onBack, user, loading = false }
       </Helmet>
 
       <div style={{ maxWidth: 920, margin: '0 auto', padding: '44px 24px' }}>
+        {/* Approval Status Banner */}
+        {cmd.approved !== undefined && (
+          <div
+            style={{
+              background: cmd.approved
+                ? 'rgba(87, 242, 135, 0.12)'
+                : 'rgba(254, 231, 92, 0.12)',
+              border: `1px solid ${cmd.approved ? 'rgba(87, 242, 135, 0.3)' : 'rgba(254, 231, 92, 0.3)'}`,
+              borderRadius: 8,
+              padding: '12px 16px',
+              marginBottom: 20,
+              display: 'flex',
+              alignItems: 'center',
+              gap: 10,
+              fontSize: 13,
+              fontWeight: 600,
+            }}
+          >
+            <div
+              style={{
+                width: 8,
+                height: 8,
+                borderRadius: '50%',
+                background: cmd.approved ? '#57F287' : '#FEE75C',
+                flexShrink: 0,
+              }}
+            />
+            <span style={{ color: cmd.approved ? '#57F287' : '#FEE75C' }}>
+              {cmd.approved ? '✓ Approved' : '◉ Pending Approval'}
+            </span>
+          </div>
+        )}
+        
       <button
         onClick={onBack}
         style={{
