@@ -60,6 +60,11 @@ export default async function handler(req, res) {
     };
   }
 
+  // Disable caching for API responses to prevent 304 empty body issues
+  res.setHeader('cache-control', 'no-store, no-cache, must-revalidate, proxy-revalidate');
+  res.setHeader('pragma', 'no-cache');
+  res.setHeader('expires', '0');
+
   const { pathname } = parse(req.url || '/');
   const matched = matchHandler(pathname || '/');
   if (!matched) {
