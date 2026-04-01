@@ -574,23 +574,27 @@ export default function ProfilePage({ user, profileId, onViewCommand, onNavigate
           />
           <p style={{ margin: 0, fontSize: 16 }}>No commands uploaded yet</p>
           <p style={{ fontSize: 13, marginTop: 8 }}>
-            Be the first to share your work with the community
+            {displayUser && user && String(displayUser.id) === String(user.id)
+              ? 'Be the first to share your work with the community'
+              : `${displayUser?.username || 'This user'} hasn't uploaded any commands yet`}
           </p>
-          <button
-            onClick={() => onNavigate('upload')}
-            style={{
-              marginTop: 20,
-              background: C.blurple,
-              color: '#fff',
-              border: 'none',
-              borderRadius: 8,
-              padding: '10px 22px',
-              fontSize: 14,
-              fontWeight: 600,
-            }}
-          >
-            Upload your first command
-          </button>
+          {displayUser && user && String(displayUser.id) === String(user.id) && (
+            <button
+              onClick={() => onNavigate('upload')}
+              style={{
+                marginTop: 20,
+                background: C.blurple,
+                color: '#fff',
+                border: 'none',
+                borderRadius: 8,
+                padding: '10px 22px',
+                fontSize: 14,
+                fontWeight: 600,
+              }}
+            >
+              Upload your first command
+            </button>
+          )}
         </div>
       ) : (
         <div
