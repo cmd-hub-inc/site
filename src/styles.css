@@ -52,3 +52,71 @@ a {
     background-position: -200% 0;
   }
 }
+
+/* Responsive navbar styles */
+.site-nav .hamburger {
+  display: none;
+}
+
+@media (max-width: 720px) {
+  .site-nav {
+    padding: 0 12px;
+  }
+
+  .site-nav .nav-center {
+    display: none !important;
+  }
+
+  .site-nav .nav-right > *:not(.hamburger) {
+    display: none !important;
+  }
+
+  .site-nav .hamburger {
+    display: inline-flex !important;
+    align-items: center;
+    justify-content: center;
+  }
+
+  .mobile-menu button {
+    background: none;
+    border: none;
+    color: var(--text);
+    text-align: left;
+    padding: 8px 6px;
+    border-radius: 6px;
+    cursor: pointer;
+  }
+
+  .mobile-menu button:hover {
+    background: rgba(255,255,255,0.02);
+  }
+}
+
+/* Desktop hover for right-side nav buttons */
+.site-nav .nav-right .nav-btn:hover {
+  background: rgba(255,255,255,0.02) !important;
+}
+
+/* Make .nav-btn generally have a small transition */
+.nav-btn {
+  transition: background 120ms ease;
+}
+
+/* Ensure mobile menu nav buttons show hover and override inline backgrounds */
+@media (max-width: 720px) {
+  .mobile-menu .nav-btn {
+    background: transparent !important;
+    color: var(--text) !important;
+    padding: 8px 6px !important;
+    border-radius: 6px !important;
+    text-align: left;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    transition: background 120ms ease;
+  }
+
+  .mobile-menu .nav-btn:hover {
+    background: rgba(255,255,255,0.03) !important;
+  }
+}

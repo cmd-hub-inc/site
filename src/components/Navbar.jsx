@@ -1,15 +1,20 @@
-import React from 'react';
-import { Home, Grid, Upload, LogOut, Users, BarChart3 } from 'lucide-react';
-import { Code2 } from 'lucide-react';
+import React, { useState } from 'react';
+import { Home, Grid, Upload, LogOut, Users, BarChart3, Code2, Menu, X } from 'lucide-react';
 import { C } from '../constants';
 
 export default function Navbar({ page, user, onNavigate, onLogin, onLogout }) {
+  const [mobileOpen, setMobileOpen] = useState(false);
+
   const navBtn = (id, label, icon) => {
     const active = page === id;
     return (
       <button
         key={id}
-        onClick={() => onNavigate(id)}
+        className="nav-btn"
+        onClick={() => {
+          onNavigate(id);
+          setMobileOpen(false);
+        }}
         style={{
           background: active ? C.blurpleDim : 'none',
           border: 'none',
@@ -31,6 +36,7 @@ export default function Navbar({ page, user, onNavigate, onLogin, onLogout }) {
 
   return (
     <nav
+      className="site-nav"
       style={{
         background: C.surface,
         borderBottom: `1px solid ${C.border}`,
@@ -44,18 +50,18 @@ export default function Navbar({ page, user, onNavigate, onLogin, onLogout }) {
         backdropFilter: 'blur(12px)',
       }}
     >
-      <button
-        onClick={() => onNavigate('home')}
-        style={{
-          background: 'none',
-          border: 'none',
-          cursor: 'pointer',
-          display: 'flex',
-          alignItems: 'center',
-          gap: 8,
-          marginRight: 28,
-        }}
-      >
+      <div style={{ display: 'flex', alignItems: 'center', gap: 12, marginRight: 8 }}>
+        <button
+          onClick={() => onNavigate('home')}
+          style={{
+            background: 'none',
+            border: 'none',
+            cursor: 'pointer',
+            display: 'flex',
+            alignItems: 'center',
+            gap: 8,
+          }}
+        >
         <div
           style={{
             width: 32,
@@ -80,24 +86,44 @@ export default function Navbar({ page, user, onNavigate, onLogin, onLogout }) {
           CmdHub
         </span>
       </button>
-
-      <div style={{ display: 'flex', gap: 2, flex: 1 }}>
+      </div>
+      <div className="nav-center" style={{ display: 'flex', gap: 2, flex: 1 }}>
         {navBtn('home', 'Home', <Home size={15} />)}
         {navBtn('browse', 'Browse', <Grid size={15} />)}
         {navBtn('creators', 'Creators', <Users size={15} />)}
         {navBtn('upload', 'Upload', <Upload size={15} />)}
       </div>
 
-      {user === undefined ? (
-        <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
-          <div className="skeleton" style={{ width: 28, height: 28, borderRadius: '50%' }} />
-          <div className="skeleton" style={{ width: 80, height: 12, borderRadius: 6 }} />
-        </div>
-      ) : user ? (
-        <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+      <div className="nav-right" style={{ display: 'flex', alignItems: 'center', gap: 8, marginLeft: 'auto' }}>
+        <button
+          className="hamburger"
+          aria-label={mobileOpen ? 'Close menu' : 'Open menu'}
+          onClick={() => setMobileOpen((s) => !s)}
+          style={{
+            background: 'none',
+            border: 'none',
+            cursor: 'pointer',
+            display: 'none',
+            padding: 6,
+            borderRadius: 6,
+            color: C.text,
+          }}
+        >
+          {mobileOpen ? <X size={18} color={C.text} /> : <Menu size={18} color={C.text} />}
+        </button>
+
+      
+        {user === undefined ? (
+          <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+            <div className="skeleton" style={{ width: 28, height: 28, borderRadius: '50%' }} />
+            <div className="skeleton" style={{ width: 80, height: 12, borderRadius: 6 }} />
+          </div>
+        ) : user ? (
+          <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
           <button
             onClick={() => onNavigate('dashboard')}
             title="Creator Dashboard"
+            className="nav-btn"
             style={{
               background: page === 'dashboard' ? C.blurpleDim : 'none',
               border: 'none',
@@ -117,6 +143,7 @@ export default function Navbar({ page, user, onNavigate, onLogin, onLogout }) {
           </button>
           <button
             onClick={() => onNavigate('profile', { id: user && user.id ? user.id : undefined })}
+            className="nav-btn"
             style={{
               background: page === 'profile' ? C.blurpleDim : 'none',
               border: 'none',
@@ -163,18 +190,20 @@ export default function Navbar({ page, user, onNavigate, onLogin, onLogout }) {
             </span>
           </button>
           <button
+            className="nav-btn"
             onClick={onLogout}
             title="Log out"
             style={{
               background: 'none',
               border: 'none',
-              color: C.faint,
+              color: C.red,
               cursor: 'pointer',
               padding: 6,
               borderRadius: 6,
             }}
           >
-            <LogOut size={16} />
+            <LogOut size={16} color={C.red} />
+            <span style={{ marginLeft: 8, color: C.red, fontSize: 14, fontWeight: 500 }}>Log out</span>
           </button>
         </div>
       ) : (
@@ -197,6 +226,122 @@ export default function Navbar({ page, user, onNavigate, onLogin, onLogout }) {
         >
           Login with Discord
         </button>
+      )}
+      </div>
+
+      {mobileOpen && (
+        <div
+          className="mobile-menu"
+          role="menu"
+          aria-label="Main menu"
+          style={{
+            position: 'absolute',
+            left: 0,
+            right: 0,
+            top: 60,
+            background: C.surface,
+            borderTop: `1px solid ${C.border}`,
+            padding: 12,
+            zIndex: 110,
+          }}
+        >
+          <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
+            {navBtn('home', 'Home', <Home size={15} />)}
+            {navBtn('browse', 'Browse', <Grid size={15} />)}
+            {navBtn('creators', 'Creators', <Users size={15} />)}
+            {navBtn('upload', 'Upload', <Upload size={15} />)}
+          </div>
+
+          <div style={{ height: 1, background: C.border, margin: '12px 0' }} />
+
+          <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
+            {user ? (
+              <>
+                <button
+                  className="nav-btn"
+                  onClick={() => {
+                    onNavigate('dashboard');
+                    setMobileOpen(false);
+                  }}
+                  style={{
+                    background: 'none',
+                    border: 'none',
+                    color: C.text,
+                    textAlign: 'left',
+                    padding: '8px 6px',
+                    cursor: 'pointer',
+                  }}
+                >
+                        <BarChart3 size={15} />
+                        <span style={{ marginLeft: 8 }}>Dashboard</span>
+                </button>
+                <button
+                  className="nav-btn"
+                  onClick={() => {
+                    onNavigate('profile', { id: user && user.id ? user.id : undefined });
+                    setMobileOpen(false);
+                  }}
+                  style={{
+                    background: 'none',
+                    border: 'none',
+                    color: C.text,
+                    textAlign: 'left',
+                    padding: '8px 6px',
+                    cursor: 'pointer',
+                    display: 'flex',
+                    alignItems: 'center',
+                    gap: 8,
+                  }}
+                >
+                  {user.avatar ? (
+                    <img src={user.avatar} alt={user.username} style={{ width: 28, height: 28, borderRadius: '50%', objectFit: 'cover' }} />
+                  ) : (
+                    <div style={{ width: 28, height: 28, borderRadius: '50%', background: C.blurple, display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#fff', fontWeight: 700 }}>
+                      {user.username[0].toUpperCase()}
+                    </div>
+                  )}
+                  <span style={{ color: C.text }}>View profile</span>
+                </button>
+                <button
+                  className="nav-btn"
+                  onClick={() => {
+                    onLogout();
+                    setMobileOpen(false);
+                  }}
+                  style={{
+                    background: 'none',
+                    border: 'none',
+                    color: C.red,
+                    textAlign: 'left',
+                    padding: '8px 6px',
+                    cursor: 'pointer',
+                  }}
+                >
+                  <LogOut size={15} color={C.red} />
+                  <span style={{ marginLeft: 8, color: C.red }}>Log out</span>
+                </button>
+              </>
+            ) : (
+              <button
+                onClick={() => {
+                  onLogin();
+                  setMobileOpen(false);
+                }}
+                style={{
+                  background: C.blurple,
+                  color: '#fff',
+                  border: 'none',
+                  borderRadius: 8,
+                  padding: '10px 12px',
+                  fontWeight: 700,
+                  cursor: 'pointer',
+                }}
+              >
+                Login with Discord
+              </button>
+            )}
+          </div>
+        </div>
       )}
     </nav>
   );
