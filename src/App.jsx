@@ -15,6 +15,7 @@ const EditCommandPage = lazy(() => import('./pages/EditCommandPage'));
 const NotFound = lazy(() => import('./pages/NotFound'));
 const CreatorsPage = lazy(() => import('./pages/CreatorsPage'));
 const DashboardPage = lazy(() => import('./pages/DashboardPage'));
+const AdminDashboardPage = lazy(() => import('./pages/AdminDashboardPage'));
 
 // Loading component for lazy-loaded pages
 function PageLoadingSpinner() {
@@ -33,6 +34,7 @@ export default function App() {
       if (pathname.startsWith('/browse')) return 'browse';
       if (pathname.startsWith('/creators')) return 'creators';
       if (pathname.startsWith('/dashboard')) return 'dashboard';
+      if (pathname.startsWith('/admin')) return 'admin';
       if (pathname.startsWith('/upload')) return 'upload';
       if (pathname.startsWith('/profile')) return 'profile';
       if (pathname.startsWith('/command/')) return 'detail';
@@ -63,6 +65,7 @@ export default function App() {
       if (p === 'browse') newPath = '/browse';
       else if (p === 'creators') newPath = '/creators';
       else if (p === 'dashboard') newPath = '/dashboard';
+      else if (p === 'admin') newPath = '/admin';
       else if (p === 'upload') newPath = '/upload';
       else if (p === 'profile') {
         // if no id provided and we have an authenticated `user`, canonicalize to use their id
@@ -340,6 +343,11 @@ export default function App() {
           setSelectedCmd(null);
           return;
         }
+        if (pathname.startsWith('/admin')) {
+          setPage('admin');
+          setSelectedCmd(null);
+          return;
+        }
         if (pathname.startsWith('/upload')) {
           setPage('upload');
           setSelectedCmd(null);
@@ -377,6 +385,7 @@ export default function App() {
       <Navbar
         page={page}
         user={user}
+        pageParams={pageParams}
         onNavigate={navigate}
         onLogin={() => {
           // Save the current page as the return destination
@@ -427,6 +436,7 @@ export default function App() {
             )}
             {page === 'edit' && <EditCommandPage user={user} pageParams={pageParams} />}
             {page === 'dashboard' && <DashboardPage user={user} onNavigate={navigate} />}
+            {page === 'admin' && <AdminDashboardPage user={user} onNavigate={navigate} />}
             {page === 'notfound' && <NotFound />}
           </Suspense>
         </ErrorBoundary>

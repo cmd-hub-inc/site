@@ -13,6 +13,7 @@ import { expressLoggingMiddleware, logError } from '../api_handlers/_lib/logger.
 import { rateLimiters } from '../api_handlers/_lib/rateLimiter.js';
 import { scheduleAnalyticsFlush } from '../api_handlers/_lib/analytics.js';
 import { scheduleTrendingComputation } from '../api_handlers/trending.js';
+import { verifyToken } from '../api_handlers/_lib/jwt.js';
 
 dotenv.config();
 const app = express();
@@ -234,25 +235,66 @@ initRedis().catch((e) => console.warn('initRedis error:', e && e.message ? e.mes
 
 const PENDING_PREFIX = 'pending:';
 async function setPending(token, data, ttl = 600) {
-  if (redisClient) {
-    await redisClient.set(PENDING_PREFIX + token, JSON.stringify(data), 'EX', ttl);
-  } else {
-    pendingAuthMap.set(token, data);
+  try {
+    const dataWithExpiry = { ...data, expiresAt: Date.now() + (ttl * 1000) };
+    if (redisClient) {
+      await redisClient.set(PENDING_PREFIX + token, JSON.stringify(dataWithExpiry), 'EX', ttl);
+      console.log('[auth] Token stored in Redis:', token, 'TTL:', ttl);
+    } else {
+      pendingAuthMap.set(token, dataWithExpiry);
+      console.log('[auth] Token stored in memory map:', token, 'Map size:', pendingAuthMap.size);
+    }
+  } catch (e) {
+    console.error('[auth] Error storing pending token:', e && e.message ? e.message : e);
+    // Fallback to in-memory if Redis fails
+    if (!redisClient) {
+      pendingAuthMap.set(token, { ...data, expiresAt: Date.now() + 600000 });
+    }
   }
 }
 async function getPending(token) {
-  if (redisClient) {
-    const v = await redisClient.get(PENDING_PREFIX + token);
-    return v ? JSON.parse(v) : null;
-  } else {
-    return pendingAuthMap.get(token) || null;
+  try {
+    if (redisClient) {
+      const v = await redisClient.get(PENDING_PREFIX + token);
+      if (!v) return null;
+      const parsed = JSON.parse(v);
+      // Check expiration
+      if (parsed.expiresAt && parsed.expiresAt < Date.now()) {
+        await redisClient.del(PENDING_PREFIX + token);
+        return null;
+      }
+      return parsed;
+    } else {
+      const v = pendingAuthMap.get(token);
+      if (!v) {
+        console.log('[auth] getPending from map, found: false Map size:', pendingAuthMap.size);
+        return null;
+      }
+      // Check expiration
+      if (v.expiresAt && v.expiresAt < Date.now()) {
+        pendingAuthMap.delete(token);
+        console.log('[auth] Token expired:', token);
+        return null;
+      }
+      console.log('[auth] getPending from map, found: true Map size:', pendingAuthMap.size);
+      return v;
+    }
+  } catch (e) {
+    console.error('[auth] Error getting pending token:', e && e.message ? e.message : e);
+    return null;
   }
 }
 async function deletePending(token) {
-  if (redisClient) {
-    await redisClient.del(PENDING_PREFIX + token);
-  } else {
-    pendingAuthMap.delete(token);
+  try {
+    if (redisClient) {
+      await redisClient.del(PENDING_PREFIX + token);
+      console.log('[auth] Deleted pending token from Redis:', token);
+    } else {
+      pendingAuthMap.delete(token);
+      console.log('[auth] Deleted pending token from map:', token, 'Map size:', pendingAuthMap.size);
+    }
+  } catch (e) {
+    console.error('[auth] Error deleting pending token:', e && e.message ? e.message : e);
   }
 }
 app.get('/api/auth/discord/callback', async (req, res) => {
@@ -308,6 +350,7 @@ app.get('/api/auth/discord/callback', async (req, res) => {
 
     // Store discord user data in pending map and redirect client with token
     const token = randomUUID();
+    console.log('[auth] Generated token for Discord user', discordId, ':', token);
     await setPending(token, { discordId, username, avatar, createdAt: Date.now() });
     const redirectTo = `${CLIENT_URL}?pendingToken=${encodeURIComponent(token)}`;
     console.log('[auth] Stored pending token, redirecting client to:', redirectTo);
@@ -324,8 +367,23 @@ app.get('/api/auth/complete', async (req, res) => {
     const { token } = req.query;
     console.log('[auth] /api/auth/complete called with token present?', !!token);
     if (!token) return res.status(400).json({ error: 'Missing token' });
-    const pending = await getPending(String(token));
-    if (!pending) return res.status(404).json({ status: 'pending_not_found' });
+    
+    let pending = await getPending(String(token));
+    
+    // If token not found in map/Redis, try to verify as JWT
+    if (!pending) {
+      console.log('[auth] Token not found in map, trying JWT verification...');
+      pending = verifyToken(String(token));
+      if (pending) {
+        console.log('[auth] Token verified as JWT');
+      }
+    }
+    
+    console.log('[auth] getPending result:', !!pending);
+    if (!pending) {
+      console.warn('[auth] Token not found or expired:', token);
+      return res.status(404).json({ status: 'pending_not_found', detail: 'Token not found or expired' });
+    }
 
     // Try to create/upsert user now
     try {
@@ -353,17 +411,48 @@ app.get('/api/auth/complete', async (req, res) => {
         }
       }
 
-      // create session for this request
-      req.session.user = { id: user.id, username: user.username, avatar: user.avatar };
+      // Check for admin status from environment or database
+      let isAdmin = false;
+      let adminRole = null;
+      const adminList = (process.env.ADMIN_IDS || '')
+        .split(',')
+        .map((x) => x.trim())
+        .filter(Boolean);
+      
+      // Check if user is in ADMIN_IDS env var
+      if (adminList.includes(String(user.id))) {
+        isAdmin = true;
+        adminRole = 'SUPER_ADMIN';
+        // Also save to database
+        try {
+          await prisma.$executeRawUnsafe(`
+            UPDATE "User"
+            SET "isAdmin" = true, "adminRole" = 'SUPER_ADMIN'
+            WHERE id = $1
+          `, user.id);
+        } catch (dbErr) {
+          // Ignore DB update errors, just continue
+        }
+      } else if (user.isAdmin) {
+        // User already has admin status in database
+        isAdmin = true;
+        adminRole = user.adminRole || 'SUPER_ADMIN';
+      }
+
+      req.session.user = { id: user.id, username: user.username, avatar: user.avatar, isAdmin, adminRole };
       req.session.save(async (err) => {
         if (err) {
           console.error('session save error', err);
           return res.status(500).json({ error: 'failed_to_save_session' });
         }
-        await deletePending(String(token));
+        try {
+          await deletePending(String(token));
+        } catch (delErr) {
+          console.warn('[auth] Failed to delete pending token:', delErr && delErr.message ? delErr.message : delErr);
+        }
         return res.json({
           ok: true,
-          user: { id: user.id, username: user.username, avatar: user.avatar },
+          user: { id: user.id, username: user.username, avatar: user.avatar, isAdmin, adminRole },
         });
       });
     } catch (e) {
@@ -372,7 +461,7 @@ app.get('/api/auth/complete', async (req, res) => {
       return res.status(202).json({ status: 'pending' });
     }
   } catch (err) {
-    console.error(err);
+    console.error('[auth] auth/complete error:', err);
     res.status(500).json({ error: 'server_error' });
   }
 });
@@ -382,19 +471,39 @@ app.get('/api/me', requireDbReady, async (req, res) => {
   try {
     const s = req.session && req.session.user;
     if (!s) return res.json({ user: null });
-    const adminList = (process.env.ADMIN_IDS || '')
-      .split(',')
-      .map((x) => x.trim())
-      .filter(Boolean);
-    const isAdmin = adminList.includes(String(s.id));
+    
     try {
       const user = await prisma.user.findUnique({ where: { id: s.id } });
+      if (user) {
+        return res.json({
+          user: {
+            id: user.id,
+            username: user.username,
+            avatar: user.avatar,
+            isAdmin: user.isAdmin || false,
+            adminRole: user.adminRole || null
+          },
+          isAdmin: user.isAdmin || false,
+        });
+      }
+      // Fallback to session user if DB query fails
       return res.json({
-        user: user ? { id: user.id, username: user.username, avatar: user.avatar } : s,
-        isAdmin,
+        user: {
+          ...s,
+          isAdmin: s.isAdmin || false,
+          adminRole: s.adminRole || null
+        },
+        isAdmin: s.isAdmin || false
       });
     } catch (e) {
-      return res.json({ user: s, isAdmin });
+      return res.json({
+        user: {
+          ...s,
+          isAdmin: s.isAdmin || false,
+          adminRole: s.adminRole || null
+        },
+        isAdmin: s.isAdmin || false
+      });
     }
   } catch (err) {
     console.error('me endpoint error', err && err.message ? err.message : err);
@@ -1440,6 +1549,211 @@ function calculatePeakDayOfWeek(commands, shares) {
   const peakDay = Object.entries(days).sort((a, b) => b[1] - a[1])[0][0];
   return peakDay;
 }
+
+// Admin middleware: check if user is admin
+async function requireAdmin(req, res, next) {
+  // Check if DB is ready
+  if (!dbReady) {
+    return res.status(503).json({ error: 'Service not ready' });
+  }
+
+  const sessionUser = req.session && req.session.user;
+  if (!sessionUser || !sessionUser.id) {
+    return res.status(401).json({ error: 'Unauthorized' });
+  }
+
+  try {
+    const user = await prisma.user.findUnique({
+      where: { id: sessionUser.id }
+    });
+    if (!user || !user.isAdmin) {
+      return res.status(403).json({ error: 'Forbidden - not an admin' });
+    }
+    req.userRole = user.adminRole || 'SUPER_ADMIN';
+    next();
+  } catch (err) {
+    console.error('[admin] Error checking admin status:', err);
+    return res.status(500).json({ error: 'Error checking admin status' });
+  }
+}
+
+// Admin: Get admin info
+app.get('/api/admin/info', requireDbReady, requireAuth, async (req, res) => {
+  const sessionUser = req.session && req.session.user;
+  try {
+    const user = await prisma.user.findUnique({
+      where: { id: sessionUser.id }
+    });
+    res.json({
+      isAdmin: user?.isAdmin || false,
+      role: user?.adminRole || null
+    });
+  } catch (err) {
+    res.status(500).json({ error: 'Error' });
+  }
+});
+
+// Admin: Get dashboard data
+app.get('/api/admin/data', requireAdmin, async (req, res) => {
+  const { section = 'overview', filter = 'all' } = req.query;
+
+  try {
+    if (section === 'overview') {
+      const totalUsers = await prisma.user.count();
+      const totalCommands = await prisma.command.count();
+      const pendingCommands = await prisma.command.count({ where: { approved: false } });
+      const pendingReports = await prisma.report.count({ where: { resolved: false } });
+
+      const recentActivity = await prisma.command.findMany({
+        take: 10,
+        orderBy: { createdAt: 'desc' },
+        include: { author: true }
+      });
+
+      return res.json({
+        totalUsers,
+        totalCommands,
+        pendingCommands,
+        pendingReports,
+        recentActivity: recentActivity.map(cmd => ({
+          action: cmd.approved ? 'Approved command' : 'New command uploaded',
+          target: `"${cmd.name}" by ${cmd.author?.username}`,
+          timestamp: cmd.createdAt
+        }))
+      });
+    }
+
+    if (section === 'commands') {
+      let where = {};
+      if (filter === 'pending') where = { approved: false };
+      if (filter === 'approved') where = { approved: true };
+
+      const commands = await prisma.command.findMany({
+        where,
+        include: { author: true },
+        orderBy: { createdAt: 'desc' }
+      });
+
+      return res.json({ commands });
+    }
+
+    if (section === 'users') {
+      const users = await prisma.user.findMany({
+        include: { _count: { select: { commands: true } } },
+        orderBy: { createdAt: 'desc' }
+      });
+
+      return res.json({ users });
+    }
+
+    if (section === 'reports') {
+      const reports = await prisma.report.findMany({
+        include: { reporter: true },
+        orderBy: { createdAt: 'desc' }
+      });
+
+      return res.json({ reports });
+    }
+
+    res.status(400).json({ error: 'Invalid section' });
+  } catch (error) {
+    console.error('Admin data error:', error);
+    res.status(500).json({ error: 'Failed to fetch admin data' });
+  }
+});
+
+// Admin: Approve command
+app.post('/api/admin/commands/:id/approve', requireAdmin, async (req, res) => {
+  if (req.userRole === 'VIEWER') {
+    return res.status(403).json({ error: 'Viewers cannot approve commands' });
+  }
+
+  const { id } = req.params;
+  const sessionUser = req.session && req.session.user;
+
+  try {
+    await prisma.command.update({
+      where: { id },
+      data: {
+        approved: true,
+        approvedBy: sessionUser.id
+      }
+    });
+    res.json({ ok: true });
+  } catch (err) {
+    res.status(500).json({ error: 'Failed to approve command' });
+  }
+});
+
+// Admin: Reject command
+app.post('/api/admin/commands/:id/reject', requireAdmin, async (req, res) => {
+  if (req.userRole === 'VIEWER') {
+    return res.status(403).json({ error: 'Viewers cannot reject commands' });
+  }
+
+  const { id } = req.params;
+  const { reason } = req.body || {};
+  const sessionUser = req.session && req.session.user;
+
+  try {
+    await prisma.command.update({
+      where: { id },
+      data: {
+        approved: false,
+        approvedBy: sessionUser.id,
+        approvalReason: reason
+      }
+    });
+    res.json({ ok: true });
+  } catch (err) {
+    res.status(500).json({ error: 'Failed to reject command' });
+  }
+});
+
+// Admin: Suspend user
+app.post('/api/admin/users/:id/suspend', requireAdmin, async (req, res) => {
+  if (req.userRole === 'VIEWER') {
+    return res.status(403).json({ error: 'Viewers cannot suspend users' });
+  }
+
+  const { id } = req.params;
+
+  try {
+    await prisma.user.update({
+      where: { id },
+      data: { suspended: true }
+    });
+    res.json({ ok: true });
+  } catch (err) {
+    res.status(500).json({ error: 'Failed to suspend user' });
+  }
+});
+
+// Admin: Resolve report
+app.post('/api/admin/reports/:id/resolve', requireAdmin, async (req, res) => {
+  if (req.userRole === 'VIEWER') {
+    return res.status(403).json({ error: 'Viewers cannot resolve reports' });
+  }
+
+  const { id } = req.params;
+  const { resolutionNote } = req.body || {};
+  const sessionUser = req.session && req.session.user;
+
+  try {
+    await prisma.report.update({
+      where: { id },
+      data: {
+        resolved: true,
+        resolvedBy: sessionUser.id,
+        resolutionNote,
+        resolvedAt: new Date()
+      }
+    });
+    res.json({ ok: true });
+  } catch (err) {
+    res.status(500).json({ error: 'Failed to resolve report' });
+  }
+});
 
 // Start server immediately; dbEnsure runs in background (db-dependent routes will return 503 until ready)
 

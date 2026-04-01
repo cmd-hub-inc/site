@@ -1,8 +1,8 @@
 import React, { useState } from 'react';
-import { Home, Grid, Upload, LogOut, Users, BarChart3, Code2, Menu, X } from 'lucide-react';
+import { Home, Grid, Upload, LogOut, Users, BarChart3, Code2, Menu, X, Shield } from 'lucide-react';
 import { C } from '../constants';
 
-export default function Navbar({ page, user, onNavigate, onLogin, onLogout }) {
+export default function Navbar({ page, user, pageParams, onNavigate, onLogin, onLogout }) {
   const [mobileOpen, setMobileOpen] = useState(false);
 
   const navBtn = (id, label, icon) => {
@@ -141,11 +141,34 @@ export default function Navbar({ page, user, onNavigate, onLogin, onLogout }) {
             <BarChart3 size={15} />
             Dashboard
           </button>
+          {user.isAdmin && (
+            <button
+              onClick={() => onNavigate('admin')}
+              title="Admin Dashboard"
+              className="nav-btn"
+              style={{
+                background: page === 'admin' ? C.blurpleDim : 'none',
+                border: 'none',
+                cursor: 'pointer',
+                borderRadius: 8,
+                padding: '6px 14px',
+                display: 'flex',
+                alignItems: 'center',
+                gap: 6,
+                color: page === 'admin' ? C.blurple : C.muted,
+                fontSize: 14,
+                fontWeight: page === 'admin' ? 600 : 400,
+              }}
+            >
+              <Shield size={15} />
+              Admin
+            </button>
+          )}
           <button
             onClick={() => onNavigate('profile', { id: user && user.id ? user.id : undefined })}
             className="nav-btn"
             style={{
-              background: page === 'profile' ? C.blurpleDim : 'none',
+              background: page === 'profile' && user && String(pageParams?.id) === String(user.id) ? C.blurpleDim : 'none',
               border: 'none',
               cursor: 'pointer',
               borderRadius: 8,
@@ -181,7 +204,7 @@ export default function Navbar({ page, user, onNavigate, onLogin, onLogout }) {
             )}
             <span
               style={{
-                color: page === 'profile' ? C.blurple : C.text,
+                color: page === 'profile' && user && String(pageParams?.id) === String(user.id) ? C.blurple : C.text,
                 fontSize: 14,
                 fontWeight: 500,
               }}

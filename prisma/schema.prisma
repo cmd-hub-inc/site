@@ -11,14 +11,20 @@ model User {
   id        String    @id @default(uuid())
   username  String    @unique
   avatar    String?
+  suspended Boolean   @default(false)
+  isAdmin   Boolean   @default(false)
+  adminRole String?   // "SUPER_ADMIN", "MODERATOR", "VIEWER"
   createdAt DateTime  @default(now())
   commands  Command[]
   ratings   Rating[]
   favorites Favorite[]
   followers Follow[]   @relation("followers")
   following Follow[]   @relation("following")
+  reportsSubmitted Report[] @relation("reporter")
 
   @@index([createdAt])
+  @@index([suspended])
+  @@index([isAdmin])
 }
 
 model Command {
@@ -39,6 +45,9 @@ model Command {
   views          Int      @default(0)
   changelog      String?
   rawData        String
+  approved       Boolean  @default(false)
+  approvedBy     String?
+  approvalReason String?
   createdAt      DateTime @default(now())
   updatedAt      DateTime @updatedAt
   authorId       String
@@ -48,9 +57,9 @@ model Command {
   analytics      CommandAnalytics?
 
   @@index([authorId])
+  @@index([approved])
   @@index([type])
   @@index([framework])
-  @@index([createdAt])
   @@index([downloads])
   @@index([rating])
 }
@@ -145,4 +154,26 @@ model Event {
   @@index([type])
   @@index([createdAt])
   @@index([commandId, type, createdAt])
+}
+
+model Report {
+  id            String   @id @default(uuid())
+  reporterId    String
+  reporter      User     @relation("reporter", fields: [reporterId], references: [id], onDelete: Cascade)
+  commandId     String?
+  userId        String?
+  reason        String
+  reportType    String   // "spam", "abuse", "inappropriate", "copyright", "other"
+  resolved      Boolean  @default(false)
+  resolvedBy    String?
+  resolutionNote String?
+  createdAt     DateTime @default(now())
+  resolvedAt    DateTime?
+
+  @@index([reporterId])
+  @@index([commandId])
+  @@index([userId])
+  @@index([reportType])
+  @@index([resolved])
+  @@index([createdAt])
 }
