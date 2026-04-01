@@ -78,6 +78,100 @@ export default function AdminDashboardPage({ user, onNavigate }) {
 
   const isViewer = adminRole === 'VIEWER';
 
+  // Handle command approval without page reload
+  const handleCommandApprove = async (cmdId) => {
+    try {
+      const res = await fetch(`/api/admin/commands/${cmdId}/approve`, { method: 'POST' });
+      if (res.ok) {
+        // Update local state instead of reloading
+        setStats(prevStats => ({
+          ...prevStats,
+          commands: prevStats.commands.map(cmd =>
+            cmd.id === cmdId ? { ...cmd, approved: true } : cmd
+          )
+        }));
+      } else {
+        console.error('Approve failed:', res.status);
+        alert('Failed to approve command');
+      }
+    } catch (err) {
+      console.error('Approve error:', err);
+      alert('Error approving command');
+    }
+  };
+
+  // Handle command rejection without page reload
+  const handleCommandReject = async (cmdId, reason) => {
+    try {
+      const res = await fetch(`/api/admin/commands/${cmdId}/reject`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ reason })
+      });
+      if (res.ok) {
+        // Remove command from list instead of reloading
+        setStats(prevStats => ({
+          ...prevStats,
+          commands: prevStats.commands.filter(cmd => cmd.id !== cmdId)
+        }));
+      } else {
+        console.error('Reject failed:', res.status);
+        alert('Failed to reject command');
+      }
+    } catch (err) {
+      console.error('Reject error:', err);
+      alert('Error rejecting command');
+    }
+  };
+
+  // Handle user suspension without page reload
+  const handleUserSuspend = async (userId) => {
+    try {
+      const res = await fetch(`/api/admin/users/${userId}/suspend`, { method: 'POST' });
+      if (res.ok) {
+        // Update user suspension status in local state
+        setStats(prevStats => ({
+          ...prevStats,
+          users: prevStats.users.map(user =>
+            user.id === userId ? { ...user, suspended: true } : user
+          )
+        }));
+      } else {
+        console.error('Suspend failed:', res.status);
+        alert('Failed to suspend user');
+      }
+    } catch (err) {
+      console.error('Suspend error:', err);
+      alert('Error suspending user');
+    }
+  };
+
+  // Handle report resolution without page reload
+  const handleReportResolve = async (reportId, resolutionNote) => {
+    try {
+      const res = await fetch(`/api/admin/reports/${reportId}/resolve`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ resolutionNote })
+      });
+      if (res.ok) {
+        // Update report status in local state
+        setStats(prevStats => ({
+          ...prevStats,
+          reports: prevStats.reports.map(report =>
+            report.id === reportId ? { ...report, resolved: true } : report
+          )
+        }));
+      } else {
+        console.error('Resolve failed:', res.status);
+        alert('Failed to resolve report');
+      }
+    } catch (err) {
+      console.error('Resolve error:', err);
+      alert('Error resolving report');
+    }
+  };
+
   // Show skeleton while checking admin status
   if (!adminRole) {
     return (
@@ -538,17 +632,17 @@ export default function AdminDashboardPage({ user, onNavigate }) {
 
             {/* COMMANDS SECTION */}
             {section === 'commands' && (
-              <CommandsList commands={stats.commands} onNavigate={onNavigate} isViewer={isViewer} />
+              <CommandsList commands={stats.commands} onNavigate={onNavigate} isViewer={isViewer} onApprove={handleCommandApprove} onReject={handleCommandReject} />
             )}
 
             {/* USERS SECTION */}
             {section === 'users' && (
-              <UsersList users={stats.users} isViewer={isViewer} />
+              <UsersList users={stats.users} isViewer={isViewer} onSuspend={handleUserSuspend} />
             )}
 
             {/* REPORTS SECTION */}
             {section === 'reports' && (
-              <ReportsList reports={stats.reports} isViewer={isViewer} />
+              <ReportsList reports={stats.reports} isViewer={isViewer} onResolve={handleReportResolve} />
             )}
           </>
         )}
@@ -577,19 +671,14 @@ function StatCard({ icon, label, value, color = C.blurple }) {
   );
 }
 
-function CommandsList({ commands, onNavigate, isViewer }) {
+function CommandsList({ commands, onNavigate, isViewer, onApprove, onReject }) {
   const [actionLoading, setActionLoading] = useState(null);
 
   const handleApprove = async (cmdId) => {
     if (isViewer) return;
     setActionLoading(`approve-${cmdId}`);
     try {
-      const res = await fetch(`/api/admin/commands/${cmdId}/approve`, { method: 'POST' });
-      if (res.ok) {
-        window.location.reload();
-      }
-    } catch (err) {
-      console.error('Approve error:', err);
+      await onApprove(cmdId);
     } finally {
       setActionLoading(null);
     }
@@ -601,16 +690,7 @@ function CommandsList({ commands, onNavigate, isViewer }) {
     if (!reason) return;
     setActionLoading(`reject-${cmdId}`);
     try {
-      const res = await fetch(`/api/admin/commands/${cmdId}/reject`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ reason })
-      });
-      if (res.ok) {
-        window.location.reload();
-      }
-    } catch (err) {
-      console.error('Reject error:', err);
+      await onReject(cmdId, reason);
     } finally {
       setActionLoading(null);
     }
@@ -719,7 +799,7 @@ function CommandsList({ commands, onNavigate, isViewer }) {
   );
 }
 
-function UsersList({ users, isViewer }) {
+function UsersList({ users, isViewer, onSuspend }) {
   const [actionLoading, setActionLoading] = useState(null);
 
   const handleSuspend = async (userId) => {
@@ -728,12 +808,7 @@ function UsersList({ users, isViewer }) {
     if (!confirm) return;
     setActionLoading(`suspend-${userId}`);
     try {
-      const res = await fetch(`/api/admin/users/${userId}/suspend`, { method: 'POST' });
-      if (res.ok) {
-        window.location.reload();
-      }
-    } catch (err) {
-      console.error('Suspend error:', err);
+      await onSuspend(userId);
     } finally {
       setActionLoading(null);
     }
@@ -814,7 +889,7 @@ function UsersList({ users, isViewer }) {
   );
 }
 
-function ReportsList({ reports, isViewer }) {
+function ReportsList({ reports, isViewer, onResolve }) {
   const [actionLoading, setActionLoading] = useState(null);
 
   const handleResolve = async (reportId) => {
@@ -823,16 +898,7 @@ function ReportsList({ reports, isViewer }) {
     if (!note) return;
     setActionLoading(`resolve-${reportId}`);
     try {
-      const res = await fetch(`/api/admin/reports/${reportId}/resolve`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ resolutionNote: note })
-      });
-      if (res.ok) {
-        window.location.reload();
-      }
-    } catch (err) {
-      console.error('Resolve error:', err);
+      await onResolve(reportId, note);
     } finally {
       setActionLoading(null);
     }
