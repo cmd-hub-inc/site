@@ -3,12 +3,12 @@
   "routes": [
     {
       "src": "/api/(.*)",
+      "dest": "/api/[...server].js",
       "headers": {
         "cache-control": "no-store, no-cache, no-transform, must-revalidate, private",
         "pragma": "no-cache",
         "expires": "0"
-      },
-      "continue": true
+      }
     },
     { "handle": "filesystem" },
     { "src": "/(.*)", "dest": "/index.html" }
