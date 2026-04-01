@@ -10,7 +10,7 @@ export default function TrendingCommands({ onViewCommand }) {
   const [timeWindow, setTimeWindow] = useState('weekly');
   const [loading, setLoading] = useState(false);
 
-  const API_BASE = import.meta.env.VITE_API_BASE ?? (import.meta.env.DEV ? '' : '/api');
+  const API_BASE = import.meta.env.VITE_API_BASE ?? (import.meta.env.DEV ? '' : '');
 
   useEffect(() => {
     const fetchTrending = async () => {

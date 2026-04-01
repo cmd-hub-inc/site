@@ -6,7 +6,7 @@ import { MOCK_COMMANDS } from '../data/mockCommands';
 import CountUp from '../components/CountUp';
 
 export default function HomePage({ onNavigate, onViewCommand }) {
-  const API_BASE = import.meta.env.VITE_API_BASE ?? (import.meta.env.DEV ? '' : '/api');
+  const API_BASE = import.meta.env.VITE_API_BASE ?? (import.meta.env.DEV ? '' : '');
 
   const [featured, setFeatured] = useState(null);
   const [commandsList, setCommandsList] = useState(null);

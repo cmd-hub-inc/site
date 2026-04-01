@@ -2,7 +2,7 @@ import React, { useEffect, useState } from 'react';
 import { C } from '../constants';
 
 export default function CreatorsPage({ onViewCreator, onNavigate }) {
-  const API_BASE = import.meta.env.VITE_API_BASE ?? (import.meta.env.DEV ? '' : '/api');
+  const API_BASE = import.meta.env.VITE_API_BASE ?? (import.meta.env.DEV ? '' : '');
   const [creators, setCreators] = useState(null);
   const [loading, setLoading] = useState(true);
   const [page, setPage] = useState(1);

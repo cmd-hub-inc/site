@@ -15,7 +15,7 @@ export default function ProfilePage({ user, profileId, onViewCommand, onNavigate
   const [viewUser, setViewUser] = useState(initialViewUser);
 
   // Note: hooks below must run on every render (move before conditional returns)
-  const API_BASE = import.meta.env.VITE_API_BASE ?? (import.meta.env.DEV ? '' : '/api');
+  const API_BASE = import.meta.env.VITE_API_BASE ?? (import.meta.env.DEV ? '' : '');
   // Normalize viewUser: some API responses return { user: {...}, top: [...] }
   const displayUser = viewUser && viewUser.user ? viewUser.user : viewUser;
   const [userCmds, setUserCmds] = useState([]);

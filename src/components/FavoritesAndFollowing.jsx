@@ -11,7 +11,7 @@ export default function FavoritesAndFollowing({ user, onNavigate }) {
   const [following, setFollowing] = useState([]);
   const [loading, setLoading] = useState(false);
 
-  const API_BASE = import.meta.env.VITE_API_BASE ?? (import.meta.env.DEV ? '' : '/api');
+  const API_BASE = import.meta.env.VITE_API_BASE ?? (import.meta.env.DEV ? '' : '');
 
   useEffect(() => {
     if (!user) return;

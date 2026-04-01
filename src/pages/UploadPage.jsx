@@ -5,7 +5,7 @@ import { TagBadge } from '../components/Badges';
 import MonacoEditor from '../components/MonacoEditor';
 
 export default function UploadPage({ user, onNavigate }) {
-  const API_BASE = import.meta.env.VITE_API_BASE ?? (import.meta.env.DEV ? '' : '/api');
+  const API_BASE = import.meta.env.VITE_API_BASE ?? (import.meta.env.DEV ? '' : '');
   const [form, setForm] = useState({
     name: '',
     description: '',

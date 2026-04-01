@@ -47,7 +47,7 @@ export default function CommandDetailPage({ cmd, onBack, user, loading = false }
   const [aggRating, setAggRating] = useState(cmd.rating || 0);
   const [aggRatingCount, setAggRatingCount] = useState(cmd.ratingCount || 0);
   const [activeTab, setActiveTab] = useState('raw');
-  const API_BASE = import.meta.env.VITE_API_BASE ?? (import.meta.env.DEV ? '' : '/api');
+  const API_BASE = import.meta.env.VITE_API_BASE ?? (import.meta.env.DEV ? '' : '');
 
   const canEdit = Boolean(user && (user.id === (cmd.author && cmd.author.id) || user.isAdmin));
 
