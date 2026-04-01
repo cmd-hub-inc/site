@@ -360,6 +360,7 @@ export default function BrowsePage({ initialTag, onViewCommand }) {
 
       {loadingCommands ? (
         <div
+          className="command-grid"
           style={{
             display: 'grid',
             gridTemplateColumns: 'repeat(auto-fill, minmax(290px, 1fr))',
@@ -372,6 +373,7 @@ export default function BrowsePage({ initialTag, onViewCommand }) {
         </div>
       ) : filtered.length > 0 ? (
         <div
+          className="command-grid"
           style={{
             display: 'grid',
             gridTemplateColumns: 'repeat(auto-fill, minmax(290px, 1fr))',
