@@ -110,7 +110,7 @@ export default function HomePage({ onNavigate, onViewCommand }) {
       <div
         style={{
           textAlign: 'center',
-          padding: '88px 24px 72px',
+          padding: 'clamp(40px, 10vw, 88px) 24px clamp(36px, 10vw, 72px)',
           position: 'relative',
           overflow: 'hidden',
         }}
@@ -146,11 +146,11 @@ export default function HomePage({ onNavigate, onViewCommand }) {
           <br />
           <span style={{ color: C.blurple }}>bot commands</span>
         </h1>
-        <p style={{ color: C.muted, fontSize: 17, maxWidth: 520, margin: '0 auto 36px' }}>
+        <p style={{ color: C.muted, fontSize: 'clamp(14px, 2.5vw, 17px)', maxWidth: 520, margin: '0 auto 36px' }}>
           The centralised hub for Discord bot command data. Browse, download, and share slash
           commands across any framework — open to everyone.
         </p>
-        <div style={{ display: 'flex', gap: 12, justifyContent: 'center', flexWrap: 'wrap' }}>
+        <div style={{ display: 'flex', gap: 12, justifyContent: 'center', flexWrap: 'wrap', maxWidth: '100%' }}>
           <button
             onClick={() => onNavigate('browse')}
             style={{
@@ -158,10 +158,22 @@ export default function HomePage({ onNavigate, onViewCommand }) {
               color: '#fff',
               border: 'none',
               borderRadius: 10,
-              padding: '13px 30px',
-              fontSize: 15,
+              padding: '13px 24px',
+              fontSize: 'clamp(13px, 2vw, 15px)',
               fontWeight: 700,
               cursor: 'pointer',
+              flex: '1 1 auto',
+              minWidth: 140,
+              maxWidth: 200,
+              transition: 'all 0.3s ease',
+            }}
+            onMouseEnter={(e) => {
+              e.target.style.transform = 'translateY(-2px)';
+              e.target.style.boxShadow = `0 8px 16px ${C.blurple}40`;
+            }}
+            onMouseLeave={(e) => {
+              e.target.style.transform = 'translateY(0)';
+              e.target.style.boxShadow = 'none';
             }}
           >
             Browse Commands
@@ -173,9 +185,22 @@ export default function HomePage({ onNavigate, onViewCommand }) {
               color: C.text,
               border: `1px solid ${C.border}`,
               borderRadius: 10,
-              padding: '13px 30px',
-              fontSize: 15,
+              padding: '13px 24px',
+              fontSize: 'clamp(13px, 2vw, 15px)',
               fontWeight: 700,
+              flex: '1 1 auto',
+              minWidth: 140,
+              maxWidth: 200,
+              cursor: 'pointer',
+              transition: 'all 0.3s ease',
+            }}
+            onMouseEnter={(e) => {
+              e.target.style.transform = 'translateY(-2px)';
+              e.target.style.boxShadow = `0 8px 16px ${C.border}40`;
+            }}
+            onMouseLeave={(e) => {
+              e.target.style.transform = 'translateY(0)';
+              e.target.style.boxShadow = 'none';
             }}
           >
             Upload a Command
@@ -186,7 +211,7 @@ export default function HomePage({ onNavigate, onViewCommand }) {
       <div
         style={{
           display: 'grid',
-          gridTemplateColumns: 'repeat(3,1fr)',
+          gridTemplateColumns: 'repeat(auto-fit, minmax(140px, 1fr))',
           gap: 14,
           maxWidth: 620,
           margin: '0 auto 72px',
@@ -204,21 +229,21 @@ export default function HomePage({ onNavigate, onViewCommand }) {
               background: C.surface,
               border: `1px solid ${C.border}`,
               borderRadius: 14,
-              padding: '22px 16px',
+              padding: 'clamp(16px, 4vw, 22px)',
               textAlign: 'center',
             }}
           >
             <div
               style={{
                 fontFamily: "'Syne', sans-serif",
-                fontSize: 34,
+                fontSize: 'clamp(24px, 6vw, 34px)',
                 fontWeight: 800,
                 color: s.color,
               }}
             >
               <CountUp value={s.value} duration={900} />
             </div>
-            <div style={{ color: C.muted, fontSize: 13, marginTop: 6 }}>{s.label}</div>
+            <div style={{ color: C.muted, fontSize: 'clamp(12px, 2vw, 13px)', marginTop: 6 }}>{s.label}</div>
           </div>
         ))}
       </div>
@@ -230,12 +255,14 @@ export default function HomePage({ onNavigate, onViewCommand }) {
             justifyContent: 'space-between',
             alignItems: 'center',
             marginBottom: 20,
+            flexWrap: 'wrap',
+            gap: 12,
           }}
         >
           <h2
             style={{
               fontFamily: "'Syne', sans-serif",
-              fontSize: 22,
+              fontSize: 'clamp(18px, 4vw, 22px)',
               fontWeight: 800,
               color: C.white,
             }}
@@ -257,7 +284,10 @@ export default function HomePage({ onNavigate, onViewCommand }) {
               display: 'flex',
               alignItems: 'center',
               gap: 4,
+              transition: 'all 0.3s ease',
             }}
+            onMouseEnter={(e) => (e.target.style.gap = '8px')}
+            onMouseLeave={(e) => (e.target.style.gap = '4px')}
           >
             View all <ChevronRight size={15} />
           </button>
@@ -265,7 +295,7 @@ export default function HomePage({ onNavigate, onViewCommand }) {
         <div
           style={{
             display: 'grid',
-            gridTemplateColumns: 'repeat(auto-fill, minmax(280px, 1fr))',
+            gridTemplateColumns: 'repeat(auto-fill, minmax(250px, 1fr))',
             gap: 16,
           }}
         >
@@ -275,11 +305,11 @@ export default function HomePage({ onNavigate, onViewCommand }) {
         </div>
       </div>
 
-      <div style={{ maxWidth: 960, margin: '0 auto', padding: '0 24px 72px' }}>
+      <div style={{ maxWidth: 960, margin: '0 auto', padding: '0 24px clamp(36px, 10vw, 72px)' }}>
         <h2
           style={{
             fontFamily: "'Syne', sans-serif",
-            fontSize: 22,
+            fontSize: 'clamp(18px, 4vw, 22px)',
             fontWeight: 800,
             color: C.white,
           }}
@@ -292,7 +322,7 @@ export default function HomePage({ onNavigate, onViewCommand }) {
         <div
           style={{
             display: 'grid',
-            gridTemplateColumns: 'repeat(auto-fill, minmax(280px, 1fr))',
+            gridTemplateColumns: 'repeat(auto-fill, minmax(250px, 1fr))',
             gap: 16,
           }}
         >
@@ -303,9 +333,9 @@ export default function HomePage({ onNavigate, onViewCommand }) {
               ))}
         </div>
 
-        <div style={{ display: 'grid', gridTemplateColumns: '2fr 1fr', gap: 20, marginTop: 28 }}>
+        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(300px, 1fr))', gap: 20, marginTop: 28 }}>
           <div>
-            <h3 style={{ fontSize: 18, color: C.white, marginBottom: 8 }}>Top Creators</h3>
+            <h3 style={{ fontSize: 'clamp(16px, 3vw, 18px)', color: C.white, marginBottom: 8 }}>Top Creators</h3>
             <div
               style={{
                 background: C.surface,
@@ -414,7 +444,7 @@ export default function HomePage({ onNavigate, onViewCommand }) {
           </div>
 
           <div>
-            <h3 style={{ fontSize: 18, color: C.white, marginBottom: 8 }}>Browse by Framework</h3>
+            <h3 style={{ fontSize: 'clamp(16px, 3vw, 18px)', color: C.white, marginBottom: 8 }}>Browse by Framework</h3>
             <div
               style={{
                 background: C.surface,
@@ -437,7 +467,7 @@ export default function HomePage({ onNavigate, onViewCommand }) {
                       <div
                         style={{
                           display: 'grid',
-                          gridTemplateColumns: 'repeat(auto-fill, minmax(160px, 1fr))',
+                          gridTemplateColumns: 'repeat(auto-fill, minmax(130px, 1fr))',
                           gap: 10,
                         }}
                       >
@@ -495,9 +525,9 @@ export default function HomePage({ onNavigate, onViewCommand }) {
           </div>
         </div>
 
-        <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 20, marginTop: 28 }}>
+        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(280px, 1fr))', gap: 20, marginTop: 28 }}>
           <div>
-            <h3 style={{ fontSize: 18, color: C.white, marginBottom: 8 }}>Trending Tags</h3>
+            <h3 style={{ fontSize: 'clamp(16px, 3vw, 18px)', color: C.white, marginBottom: 8 }}>Trending Tags</h3>
             <div
               style={{
                 background: C.surface,
@@ -532,7 +562,7 @@ export default function HomePage({ onNavigate, onViewCommand }) {
           </div>
 
           <div>
-            <h3 style={{ fontSize: 18, color: C.white, marginBottom: 8 }}>Recent Activity</h3>
+            <h3 style={{ fontSize: 'clamp(16px, 3vw, 18px)', color: C.white, marginBottom: 8 }}>Recent Activity</h3>
             <div
               style={{
                 background: C.surface,
