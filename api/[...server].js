@@ -84,6 +84,24 @@ export default async function handler(req, res) {
     return;
   }
 
+  // Extract path parameters from URL based on matched handler pattern
+  // e.g., if matched='commands/[id]' and pathname='/api/commands/my-cmd', extract id='my-cmd'
+  req.query = req.query || {};
+  const pathParts = (pathname || '').replace(/^\/api\/|\/$/, '').split('/').filter(Boolean);
+  const handlerParts = matched.split('/').filter(Boolean);
+  for (let i = 0; i < handlerParts.length; i++) {
+    if (handlerParts[i].startsWith('[') && handlerParts[i].endsWith(']')) {
+      const paramName = handlerParts[i].slice(1, -1).replace('...', '');
+      if (paramName === 'path') {
+        // Catch-all parameter: collect remaining path segments
+        req.query[paramName] = pathParts.slice(i).join('/');
+      } else {
+        // Single segment parameter
+        req.query[paramName] = pathParts[i];
+      }
+    }
+  }
+
   // Express-like handler: (req, res)
   try {
     await mod.default(req, res);
