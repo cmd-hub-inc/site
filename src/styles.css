@@ -167,3 +167,63 @@ button {
 .command-grid > *:nth-child(4) { animation-delay: 0.2s; }
 .command-grid > *:nth-child(5) { animation-delay: 0.25s; }
 .command-grid > *:nth-child(n+6) { animation-delay: 0.3s; }
+
+/* Mobile responsive styles for upload and forms */
+@media (max-width: 768px) {
+  input[type="text"],
+  input[type="email"],
+  input[type="url"],
+  input[type="password"],
+  textarea,
+  select {
+    font-size: 16px !important;
+  }
+
+  textarea {
+    min-height: 150px !important;
+  }
+
+  button {
+    font-size: 14px !important;
+    padding: 10px 14px !important;
+  }
+}
+
+@media (max-width: 480px) {
+  .container {
+    padding: 12px;
+  }
+
+  input[type="text"],
+  input[type="email"],
+  input[type="url"],
+  input[type="password"],
+  textarea,
+  select {
+    font-size: 16px !important;
+    padding: 12px 10px !important;
+  }
+
+  button {
+    width: 100% !important;
+    font-size: 13px !important;
+    padding: 12px 10px !important;
+  }
+
+  label {
+    font-size: 12px !important;
+  }
+}
+
+/* Upload form responsive grid stacking */
+.upload-form-grid {
+  display: grid !important;
+  grid-auto-flow: row !important;
+}
+
+@media (max-width: 768px) {
+  .upload-form-grid {
+    grid-template-columns: 1fr !important;
+    gap: 24px !important;
+  }
+}

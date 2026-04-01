@@ -359,13 +359,13 @@ export default function UploadPage({ user, onNavigate }) {
   };
 
   return (
-    <div style={{ maxWidth: 1400, margin: '0 auto', padding: '44px 24px' }}>
-      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'start', marginBottom: 24 }}>
+    <div style={{ maxWidth: 1400, margin: '0 auto', padding: '24px 16px' }}>
+      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'start', marginBottom: 24, flexWrap: 'wrap', gap: 12 }}>
         <div>
           <h1
             style={{
               fontFamily: "'Syne', sans-serif",
-              fontSize: 30,
+              fontSize: 'clamp(24px, 5vw, 30px)',
               fontWeight: 800,
               color: C.white,
               marginBottom: 6,
@@ -373,7 +373,7 @@ export default function UploadPage({ user, onNavigate }) {
           >
             Upload a Command
           </h1>
-          <p style={{ color: C.muted, marginBottom: 0, fontSize: 15 }}>
+          <p style={{ color: C.muted, marginBottom: 0, fontSize: 'clamp(13px, 3vw, 15px)' }}>
             Share your command raw data with the CmdHub community.
           </p>
         </div>
@@ -391,10 +391,12 @@ export default function UploadPage({ user, onNavigate }) {
             display: 'flex',
             alignItems: 'center',
             gap: 8,
+            whiteSpace: 'nowrap',
           }}
         >
           {showPreview ? <Eye size={16} /> : <EyeOff size={16} />}
-          {showPreview ? 'Hide' : 'Show'} Preview
+          <span style={{ display: 'none' }}>Show</span>
+          <span style={{ display: 'inline' }}>Preview</span>
         </button>
       </div>
 
@@ -453,7 +455,7 @@ export default function UploadPage({ user, onNavigate }) {
             Requirements {allValid ? 'Complete' : `(${[validations.name && 1, validations.description && 1, validations.rawData && 1, form.tags.length > 0 && 1].filter(Boolean).length}/4)`}
           </h3>
         </div>
-        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(180px, 1fr))', gap: 12 }}>
+        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(140px, 1fr))', gap: 12 }}>
           {[
             { label: 'Command Name', valid: validations.name },
             { label: 'Description', valid: validations.description },
@@ -483,7 +485,7 @@ export default function UploadPage({ user, onNavigate }) {
         </div>
       </div>
 
-      <div style={{ display: 'grid', gridTemplateColumns: showPreview ? '1fr 380px' : '1fr', gap: 28 }}>
+      <div className="upload-form-grid" style={{ display: 'grid', gridTemplateColumns: showPreview ? 'minmax(280px, 1fr) minmax(280px, 380px)' : '1fr', gap: 'clamp(16px, 4vw, 28px)' }}>
         {/* FORM SECTION */}
         <div>
           <div style={{ display: 'flex', gap: 8, marginBottom: 18 }}>
@@ -514,7 +516,7 @@ export default function UploadPage({ user, onNavigate }) {
               background: C.surface,
               border: `1px solid ${C.border}`,
               borderRadius: 16,
-              padding: 30,
+              padding: 'clamp(16px, 4vw, 30px)',
               overflow: 'hidden',
             }}
           >
@@ -522,7 +524,7 @@ export default function UploadPage({ user, onNavigate }) {
             <div
               style={{
                 display: 'grid',
-                gridTemplateColumns: '1fr 160px',
+                gridTemplateColumns: 'clamp(140px, 1fr, 1fr) clamp(100px, 160px, 180px)',
                 gap: 16,
                 marginBottom: 20,
                 alignItems: 'start',
@@ -743,12 +745,13 @@ export default function UploadPage({ user, onNavigate }) {
   "description": "...",
   "options": []
 }`}
-                  rows={10}
+                  rows={15}
                   style={{
                     ...inp,
                     fontFamily: "'JetBrains Mono', monospace",
                     fontSize: 12,
                     resize: 'vertical',
+                    minHeight: 'clamp(200px, 40vh, 400px)',
                     borderColor: jsonError ? C.red : dragActive ? C.blurple : C.border,
                     backgroundColor: dragActive ? `rgba(88, 101, 242, 0.1)` : C.surface2,
                     transition: 'all 0.2s ease',
@@ -844,7 +847,7 @@ export default function UploadPage({ user, onNavigate }) {
                             ? 'json'
                             : 'javascript'
                       }
-                      height="300px"
+                      height="clamp(200px, 40vh, 300px)"
                     />
                   </div>
                 </div>
@@ -968,7 +971,7 @@ export default function UploadPage({ user, onNavigate }) {
 
         {/* PREVIEW PANEL */}
         {showPreview && (
-          <div style={{ height: 'fit-content', position: 'sticky', top: 24 }}>
+          <div style={{ height: 'fit-content', position: 'sticky', top: 'clamp(12px, 2vh, 24px)' }}>
             <h3 style={{ color: C.white, fontSize: 16, fontWeight: 700, marginBottom: 12 }}>
               Preview
             </h3>
