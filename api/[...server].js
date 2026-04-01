@@ -45,6 +45,21 @@ function matchHandler(reqPath) {
 }
 
 export default async function handler(req, res) {
+  // Add Express-style methods to raw Node.js response object
+  if (!res.status) {
+    res.status = function (code) {
+      this.statusCode = code;
+      return this;
+    };
+  }
+  if (!res.json) {
+    res.json = function (data) {
+      this.setHeader('content-type', 'application/json');
+      this.end(JSON.stringify(data));
+      return this;
+    };
+  }
+
   const { pathname } = parse(req.url || '/');
   const matched = matchHandler(pathname || '/');
   if (!matched) {
