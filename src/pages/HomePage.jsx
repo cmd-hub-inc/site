@@ -1,5 +1,5 @@
 import React, { useEffect, useState } from 'react';
-import { Zap, ChevronRight } from 'lucide-react';
+import { Zap, ChevronRight, TrendingUp, Bell } from 'lucide-react';
 import CommandCard from '../components/CommandCard';
 import { C } from '../constants';
 import { MOCK_COMMANDS } from '../data/mockCommands';
@@ -240,7 +240,10 @@ export default function HomePage({ onNavigate, onViewCommand }) {
               color: C.white,
             }}
           >
-            🔥 Most Downloaded
+            <span style={{ display: 'inline-flex', alignItems: 'center', gap: 8 }}>
+              <TrendingUp size={18} />
+              Most Downloaded
+            </span>
           </h2>
           <button
             onClick={() => onNavigate('browse')}
@@ -281,7 +284,10 @@ export default function HomePage({ onNavigate, onViewCommand }) {
             color: C.white,
           }}
         >
-          🔔 Latest Uploads
+          <span style={{ display: 'inline-flex', alignItems: 'center', gap: 8 }}>
+            <Bell size={18} />
+            Latest Uploads
+          </span>
         </h2>
         <div
           style={{
