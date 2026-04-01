@@ -24,20 +24,45 @@
       <p style="margin-top:12px;color:#8d9bb0;font-size:13px">If the problem persists, contact support.</p>
     </div>
     <script>
-      // Try to display a meaningful status code when available.
+      // Display any available status code passed via known globals or query params.
       (function(){
         try{
-          // fetch a non-existent sentinel to surface a status code if server provides it
-          // this is a best-effort; when the platform serves the static error page with
-          // a status code, fetch will still return 200 for the static file. However
-          // some platforms expose the original status via `window.__VERCEL_ERROR__` or
-          // via custom headers; check a couple of known places.
           var statusEl = document.getElementById('status');
-          if(window.__VERCEL_ERROR__ && window.__VERCEL_ERROR__.status) {
+
+          // 1) Check query param ?status=NN or ?code=NN
+          var qs = (typeof window !== 'undefined' && window.location && window.location.search) ? window.location.search : '';
+          if (qs) {
+            try {
+              var params = new URLSearchParams(qs);
+              var s = params.get('status') || params.get('code') || params.get('status_code');
+              if (s) {
+                statusEl.textContent = s;
+                return;
+              }
+              // If oauth errors are present, surface them
+              var oauthErr = params.get('error');
+              var oauthDesc = params.get('error_description');
+              if (oauthErr) {
+                statusEl.textContent = oauthErr + (oauthDesc ? (': ' + decodeURIComponent(oauthDesc)) : '');
+                return;
+              }
+            } catch (e) {}
+          }
+
+          // 2) Known global injected by some platforms
+          if (window.__VERCEL_ERROR__ && window.__VERCEL_ERROR__.status) {
             statusEl.textContent = window.__VERCEL_ERROR__.status;
             return;
           }
-          // Fallback: show generic 'error'
+
+          // 3) Next/other frameworks sometimes expose a globals object
+          if (window.__NEXT_DATA__ && window.__NEXT_DATA__.props) {
+            var nd = window.__NEXT_DATA__.props;
+            if (nd.statusCode) { statusEl.textContent = nd.statusCode; return; }
+            if (nd.pageProps && nd.pageProps.status) { statusEl.textContent = nd.pageProps.status; return; }
+          }
+
+          // 4) Fallback to generic label
           statusEl.textContent = 'error';
         }catch(e){
           // ignore
