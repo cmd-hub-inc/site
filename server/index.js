@@ -623,20 +623,8 @@ app.get('/api/users/:id/commands', requireDbReady, async (req, res) => {
   }
 });
 
-// Public: get basic user profile by id
-app.get('/api/users/:id', requireDbReady, async (req, res) => {
-  const { id } = req.params;
-  try {
-    const u = await prisma.user.findUnique({ where: { id } });
-    if (!u) return res.status(404).json({ error: 'Not found' });
-    const username =
-      u.username && u.username.endsWith('#0') ? u.username.replace(/#0$/, '') : u.username;
-    return res.json({ id: u.id, username, avatar: u.avatar });
-  } catch (err) {
-    console.error('get user profile error', err && err.message ? err.message : err);
-    return res.status(500).json({ error: 'failed' });
-  }
-});
+// NOTE: Removed duplicate basic `/api/users/:id` handler so the
+// more feature-complete profile handler defined later is used.
 
 // Follow a user (requires auth)
 app.post('/api/users/:id/follow', requireDbReady, requireAuth, async (req, res) => {

@@ -7,6 +7,7 @@ import { MOCK_COMMANDS } from '../data/mockCommands';
 import CountUp from '../components/CountUp';
 
 export default function ProfilePage({ user, profileId, onViewCommand, onNavigate }) {
+  console.info('[client] ProfilePage mount', { profileId, hasUserProp: !!user });
   // If viewing a specific profileId that isn't the current user, start null (loading)
   const initialViewUser = profileId
     ? user && String(user.id) === String(profileId)
@@ -27,6 +28,139 @@ export default function ProfilePage({ user, profileId, onViewCommand, onNavigate
   const totalDownloads = userCmds.reduce((a, c) => a + (c.downloads || 0), 0);
   const totalFavs = userCmds.reduce((a, c) => a + (c.favourites || 0), 0);
 
+  // Fetch profile data when viewing another user's profile
+  useEffect(() => {
+    let cancelled = false;
+    (async () => {
+      if (!profileId) return;
+      if (user && String(user.id) === String(profileId)) {
+        setViewUser(user);
+        return;
+      }
+      try {
+        console.info('[client] fetching profile', profileId);
+        let resp = null;
+        for (let attempt = 0; attempt < 8 && !cancelled; attempt++) {
+          try {
+            resp = await fetch(`${API_BASE}/api/users/${encodeURIComponent(profileId)}`);
+          } catch (e) {
+            resp = null;
+          }
+          if (!resp) {
+            await new Promise((r) => setTimeout(r, 400));
+            continue;
+          }
+          if (resp.ok) break;
+          if (resp.status === 202 || resp.status === 503) {
+            await new Promise((r) => setTimeout(r, 500));
+            continue;
+          }
+          break;
+        }
+
+        if (cancelled) return;
+        if (resp && resp.ok) {
+          const data = await resp.json();
+          const normalized = data && data.user ? data.user : data;
+          console.info('[client] fetched profile data for', profileId, { respStatus: resp.status, data });
+          if (!cancelled) {
+            setViewUser(normalized);
+            console.info('[client] set viewUser to', normalized);
+          }
+        } else if (resp && resp.status === 404) {
+          if (!cancelled)
+            setViewUser({
+              id: profileId,
+              username: 'Unknown user',
+              avatar: null,
+              followers: 0,
+              following: 0,
+            });
+        } else {
+          console.info('[client] failed to fetch profile after retries', { profileId, status: resp ? resp.status : 'no-response' });
+          if (!cancelled)
+            setViewUser({
+              id: profileId,
+              username: 'Unknown user',
+              avatar: null,
+              followers: 0,
+              following: 0,
+            });
+        }
+      } catch (e) {
+        // ignore
+      }
+    })();
+
+    return () => {
+      cancelled = true;
+    };
+  }, [profileId, user, API_BASE]);
+
+  useEffect(() => {
+    let cancelled = false;
+    if (!profileId) return;
+    (async () => {
+      setLoadingUserCmds(true);
+      try {
+        const id = viewUser && viewUser.id ? viewUser.id : profileId;
+        const r = await fetch(`${API_BASE}/api/users/${encodeURIComponent(id)}/commands`);
+        if (r.ok) {
+          const cmds = await r.json();
+          if (!cancelled) setUserCmds(cmds);
+        } else {
+          if (!cancelled) setUserCmds([]);
+        }
+      } catch (e) {
+        if (!cancelled) setUserCmds([]);
+      } finally {
+        if (!cancelled) setLoadingUserCmds(false);
+      }
+
+      setLoadingFavCmds(true);
+      try {
+        const id = viewUser && viewUser.id ? viewUser.id : profileId;
+        const r2 = await fetch(`${API_BASE}/api/users/${encodeURIComponent(id)}/favourites`);
+        if (r2.ok) {
+          const f = await r2.json();
+          if (!cancelled) setFavCmds(f);
+        } else {
+          if (!cancelled) setFavCmds([]);
+        }
+      } catch (e) {
+        if (!cancelled) setFavCmds([]);
+      } finally {
+        if (!cancelled) setLoadingFavCmds(false);
+      }
+    })();
+
+    return () => {
+      cancelled = true;
+    };
+  }, [profileId, user, viewUser, API_BASE]);
+
+  useEffect(() => {
+    let cancelled = false;
+    (async () => {
+      if (!displayUser || !user) return;
+      if (String(displayUser.id) === String(user.id)) return;
+      try {
+        const r = await fetch(
+          `${API_BASE}/api/users/${encodeURIComponent(displayUser.id)}/is-following`,
+          { credentials: 'include' },
+        );
+        if (r.ok) {
+          const b = await r.json();
+          if (!cancelled) setIsFollowing(!!b.following);
+        }
+      } catch (e) {}
+    })();
+    return () => {
+      cancelled = true;
+    };
+  }, [displayUser, user, API_BASE]);
+
+  // Render conditional UI without early returns to preserve hook order
   if (!viewUser) {
     // If we're loading a remote profile or the client is logged in but viewUser isn't set yet,
     // show a header loading placeholder. Only show the 'Not logged in' message when no
@@ -222,130 +356,6 @@ export default function ProfilePage({ user, profileId, onViewCommand, onNavigate
         </div>
       </div>
     );
-
-  useEffect(() => {
-    let cancelled = false;
-    // If there's a profileId and it's not the current user, fetch that profile
-    (async () => {
-      if (!profileId) return;
-      if (user && String(user.id) === String(profileId)) {
-        // viewing our own profile — ensure viewUser is current user
-        setViewUser(user);
-        return;
-      }
-      try {
-        let resp = null;
-        // retry loop for transient 202/503 responses (db not ready yet)
-        for (let attempt = 0; attempt < 8 && !cancelled; attempt++) {
-          try {
-            resp = await fetch(`${API_BASE}/api/users/${encodeURIComponent(profileId)}`);
-          } catch (e) {
-            resp = null;
-          }
-          if (!resp) {
-            await new Promise((r) => setTimeout(r, 400));
-            continue;
-          }
-          if (resp.ok) break;
-          if (resp.status === 202 || resp.status === 503) {
-            // transient; wait and retry
-            await new Promise((r) => setTimeout(r, 500));
-            continue;
-          }
-          // non-retryable status (404, 400, etc.)
-          break;
-        }
-
-        if (cancelled) return;
-        if (resp && resp.ok) {
-          const data = await resp.json();
-          const normalized = data && data.user ? data.user : data;
-          if (!cancelled) setViewUser(normalized);
-        } else if (resp && resp.status === 404) {
-          // show a minimal not-found object to avoid infinite skeleton; parent can decide to render notfound page
-          if (!cancelled)
-            setViewUser({
-              id: profileId,
-              username: 'Unknown user',
-              avatar: null,
-              followers: 0,
-              following: 0,
-            });
-        }
-        // otherwise leave viewUser as null (still loading) — will be retried on subsequent mounts
-      } catch (e) {
-        // ignore
-      }
-    })();
-
-    return () => {
-      cancelled = true;
-    };
-  }, [profileId, user]);
-
-  useEffect(() => {
-    let cancelled = false;
-    if (!profileId) return;
-    (async () => {
-      setLoadingUserCmds(true);
-      try {
-        const id = viewUser && viewUser.id ? viewUser.id : profileId;
-        const r = await fetch(`${API_BASE}/api/users/${encodeURIComponent(id)}/commands`);
-        if (r.ok) {
-          const cmds = await r.json();
-          if (!cancelled) setUserCmds(cmds);
-        } else {
-          if (!cancelled) setUserCmds([]);
-        }
-      } catch (e) {
-        if (!cancelled) setUserCmds([]);
-      } finally {
-        if (!cancelled) setLoadingUserCmds(false);
-      }
-
-      setLoadingFavCmds(true);
-      try {
-        const id = viewUser && viewUser.id ? viewUser.id : profileId;
-        const r2 = await fetch(`${API_BASE}/api/users/${encodeURIComponent(id)}/favourites`);
-        if (r2.ok) {
-          const f = await r2.json();
-          if (!cancelled) setFavCmds(f);
-        } else {
-          if (!cancelled) setFavCmds([]);
-        }
-      } catch (e) {
-        if (!cancelled) setFavCmds([]);
-      } finally {
-        if (!cancelled) setLoadingFavCmds(false);
-      }
-    })();
-
-    return () => {
-      cancelled = true;
-    };
-  }, [profileId, user, viewUser]);
-
-  // Check if current authenticated user is following this profile
-  useEffect(() => {
-    let cancelled = false;
-    (async () => {
-      if (!displayUser || !user) return;
-      if (String(displayUser.id) === String(user.id)) return;
-      try {
-        const r = await fetch(
-          `${API_BASE}/api/users/${encodeURIComponent(displayUser.id)}/is-following`,
-          { credentials: 'include' },
-        );
-        if (r.ok) {
-          const b = await r.json();
-          if (!cancelled) setIsFollowing(!!b.following);
-        }
-      } catch (e) {}
-    })();
-    return () => {
-      cancelled = true;
-    };
-  }, [displayUser, user]);
 
   return (
     <div style={{ maxWidth: 960, margin: '0 auto', padding: '44px 24px' }}>
