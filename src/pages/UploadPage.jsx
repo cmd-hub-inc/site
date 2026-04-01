@@ -35,6 +35,7 @@ export default function UploadPage({ user, onNavigate }) {
   const [dragActive, setDragActive] = useState(false);
   const [imageError, setImageError] = useState('');
   const [imageLoading, setImageLoading] = useState(false);
+  const [tagSearch, setTagSearch] = useState('');
 
   // Auto-save draft to localStorage
   useEffect(() => {
@@ -625,16 +626,64 @@ export default function UploadPage({ user, onNavigate }) {
               <label style={label}>
                 Tags <span style={{ color: C.red }}>*</span>
               </label>
-              <div style={{ display: 'flex', flexWrap: 'wrap', gap: 6 }}>
-                {ALL_TAGS.map((t) => (
-                  <TagBadge
-                    key={t}
-                    tag={t}
-                    onClick={() => toggleTag(t)}
-                    selected={form.tags.includes(t)}
-                  />
-                ))}
+              
+              {/* Tag Search Input */}
+              <input
+                type="text"
+                placeholder="Search tags..."
+                value={tagSearch}
+                onChange={(e) => setTagSearch(e.target.value.toLowerCase())}
+                style={{
+                  ...inputValid(true),
+                  marginBottom: 12,
+                  width: '100%',
+                }}
+              />
+
+              {/* Selected Tags Display */}
+              {form.tags.length > 0 && (
+                <div style={{ marginBottom: 12, padding: 10, background: C.surface2, borderRadius: 8 }}>
+                  <div style={{ color: C.faint, fontSize: 11, fontWeight: 700, marginBottom: 6, textTransform: 'uppercase' }}>
+                    Selected ({form.tags.length})
+                  </div>
+                  <div style={{ display: 'flex', flexWrap: 'wrap', gap: 6 }}>
+                    {form.tags.sort().map((t) => (
+                      <TagBadge
+                        key={t}
+                        tag={t}
+                        onClick={() => toggleTag(t)}
+                        selected={true}
+                      />
+                    ))}
+                  </div>
+                </div>
+              )}
+
+              {/* Available Tags */}
+              <div>
+                <div style={{ color: C.faint, fontSize: 11, fontWeight: 700, marginBottom: 6, textTransform: 'uppercase' }}>
+                  Available
+                </div>
+                <div style={{ display: 'flex', flexWrap: 'wrap', gap: 6 }}>
+                  {ALL_TAGS
+                    .filter((t) => t.includes(tagSearch) && !form.tags.includes(t))
+                    .sort()
+                    .map((t) => (
+                      <TagBadge
+                        key={t}
+                        tag={t}
+                        onClick={() => toggleTag(t)}
+                        selected={false}
+                      />
+                    ))}
+                </div>
+                {ALL_TAGS.filter((t) => t.includes(tagSearch) && !form.tags.includes(t)).length === 0 && tagSearch && (
+                  <p style={{ color: C.faint, fontSize: 12, marginTop: 8 }}>
+                    No tags match "{tagSearch}"
+                  </p>
+                )}
               </div>
+
               {form.tags.length === 0 && (
                 <p style={{ color: C.faint, fontSize: 12, marginTop: 8 }}>
                   Select at least one tag to help people find your command.
