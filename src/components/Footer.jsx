@@ -1,5 +1,5 @@
 import React from 'react';
-import { Code2 } from 'lucide-react';
+import { Code2, Github, MessageCircle, ExternalLink } from 'lucide-react';
 import { C } from '../constants';
 
 export default function Footer({ onNavigate }) {
@@ -75,11 +75,100 @@ export default function Footer({ onNavigate }) {
                   padding: '3px 0',
                   fontFamily: 'inherit',
                   textTransform: 'capitalize',
+                  transition: 'color 0.3s ease',
                 }}
+                onMouseEnter={(e) => (e.target.style.color = C.text)}
+                onMouseLeave={(e) => (e.target.style.color = C.faint)}
               >
                 {p}
               </button>
             ))}
+          </div>
+
+          <div>
+            <div
+              style={{
+                color: C.muted,
+                fontSize: 11,
+                fontWeight: 700,
+                textTransform: 'uppercase',
+                letterSpacing: 1,
+                marginBottom: 10,
+              }}
+            >
+              Resources
+            </div>
+            <a
+              href="/docs/"
+              style={{
+                color: C.faint,
+                textDecoration: 'none',
+                display: 'block',
+                fontSize: 13,
+                padding: '3px 0',
+                transition: 'color 0.3s ease',
+              }}
+              onMouseEnter={(e) => (e.target.style.color = C.text)}
+              onMouseLeave={(e) => (e.target.style.color = C.faint)}
+            >
+              Documentation
+            </a>
+          </div>
+
+          <div>
+            <div
+              style={{
+                color: C.muted,
+                fontSize: 11,
+                fontWeight: 700,
+                textTransform: 'uppercase',
+                letterSpacing: 1,
+                marginBottom: 10,
+              }}
+            >
+              Community
+            </div>
+            <a
+              href="https://github.com/cmd-hub-inc"
+              target="_blank"
+              rel="noopener noreferrer"
+              style={{
+                color: C.faint,
+                textDecoration: 'none',
+                display: 'flex',
+                alignItems: 'center',
+                gap: 6,
+                fontSize: 13,
+                padding: '3px 0',
+                transition: 'color 0.3s ease',
+              }}
+              onMouseEnter={(e) => (e.target.style.color = C.text)}
+              onMouseLeave={(e) => (e.target.style.color = C.faint)}
+            >
+              GitHub
+              <ExternalLink size={11} style={{ opacity: 0.6 }} />
+            </a>
+            <a
+              href="https://dc.gg/devvyyxyz"
+              target="_blank"
+              rel="noopener noreferrer"
+              style={{
+                color: C.faint,
+                textDecoration: 'none',
+                display: 'flex',
+                alignItems: 'center',
+                gap: 6,
+                fontSize: 13,
+                padding: '3px 0',
+                marginTop: 6,
+                transition: 'color 0.3s ease',
+              }}
+              onMouseEnter={(e) => (e.target.style.color = C.text)}
+              onMouseLeave={(e) => (e.target.style.color = C.faint)}
+            >
+              Discord
+              <ExternalLink size={11} style={{ opacity: 0.6 }} />
+            </a>
           </div>
         </div>
       </div>
