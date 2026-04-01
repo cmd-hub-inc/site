@@ -27,16 +27,26 @@ async function ensure() {
         `;
         const hasUploadCategory = Array.isArray(colRows) && colRows.length > 0;
         if (!hasUploadCategory) {
-          console.log('[dbEnsure] Detected missing column "uploadCategory" on Command — adding it.');
+          console.log(
+            '[dbEnsure] Detected missing column "uploadCategory" on Command — adding it.',
+          );
           try {
-            await prisma.$executeRawUnsafe(`ALTER TABLE "Command" ADD COLUMN IF NOT EXISTS "uploadCategory" text DEFAULT 'Framework'`);
+            await prisma.$executeRawUnsafe(
+              `ALTER TABLE "Command" ADD COLUMN IF NOT EXISTS "uploadCategory" text DEFAULT 'Framework'`,
+            );
             console.log('[dbEnsure] Added uploadCategory column to Command.');
           } catch (acol) {
-            console.warn('[dbEnsure] Failed to add uploadCategory column:', acol && acol.message ? acol.message : acol);
+            console.warn(
+              '[dbEnsure] Failed to add uploadCategory column:',
+              acol && acol.message ? acol.message : acol,
+            );
           }
         }
       } catch (colErr) {
-        console.warn('[dbEnsure] Failed to check/add Command.uploadCategory column:', colErr && colErr.message ? colErr.message : colErr);
+        console.warn(
+          '[dbEnsure] Failed to check/add Command.uploadCategory column:',
+          colErr && colErr.message ? colErr.message : colErr,
+        );
       }
 
       // If commands table exists but is empty, seed mock data for dev convenience
@@ -253,11 +263,9 @@ async function ensure() {
                 const uploadCat = m.uploadCategory || 'Framework';
                 try {
                   await prisma.$executeRawUnsafe(
-                    `UPDATE "Command" SET "uploadCategory" = ${uploadCat ? `'${String(
-                      uploadCat,
-                    ).replace(/'/g, "''")}'` : "'Framework'"} WHERE id = '${String(
-                      created.id,
-                    ).replace(/'/g, "''")}'`,
+                    `UPDATE "Command" SET "uploadCategory" = ${
+                      uploadCat ? `'${String(uploadCat).replace(/'/g, "''")}'` : "'Framework'"
+                    } WHERE id = '${String(created.id).replace(/'/g, "''")}'`,
                   );
                 } catch (uerr) {
                   // ignore update errors

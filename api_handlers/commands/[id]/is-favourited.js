@@ -2,7 +2,8 @@ import prisma from '../../_lib/prisma.js';
 import { getSessionFromReq } from '../../_lib/utils.js';
 
 export default async function handler(req, res) {
-  if (req.method !== 'GET') return res.setHeader('Allow', 'GET') && res.status(405).end('Method Not Allowed');
+  if (req.method !== 'GET')
+    return res.setHeader('Allow', 'GET') && res.status(405).end('Method Not Allowed');
   const { id } = req.query;
   const session = getSessionFromReq(req);
   if (!session) return res.status(401).json({ error: 'Not authenticated' });

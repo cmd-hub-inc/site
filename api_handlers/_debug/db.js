@@ -14,6 +14,8 @@ export default async function handler(req, res) {
     try {
       await client.end();
     } catch {}
-    return res.status(500).json({ ok: false, error: String(err && err.message ? err.message : err) });
+    return res
+      .status(500)
+      .json({ ok: false, error: String(err && err.message ? err.message : err) });
   }
 }

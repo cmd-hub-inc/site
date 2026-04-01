@@ -28,7 +28,11 @@ export default async function handler(req, res) {
       });
     } catch (e) {
       const msg = e && e.message ? String(e.message) : '';
-      if (msg.includes('Unknown argument `avatar`') || msg.includes('Unknown arg') || msg.includes('avatar')) {
+      if (
+        msg.includes('Unknown argument `avatar`') ||
+        msg.includes('Unknown arg') ||
+        msg.includes('avatar')
+      ) {
         user = await prisma.user.upsert({
           where: { id: pending.discordId },
           create: { id: pending.discordId, username: pending.username },
@@ -42,9 +46,16 @@ export default async function handler(req, res) {
     // create session JWT
     const sessionToken = signSession({ id: user.id, username: user.username, avatar: user.avatar });
     const isProd = process.env.NODE_ENV === 'production';
-    const cookie = cookieHeader('session', sessionToken, { maxAge: 7 * 24 * 60 * 60, httpOnly: true, secure: isProd });
+    const cookie = cookieHeader('session', sessionToken, {
+      maxAge: 7 * 24 * 60 * 60,
+      httpOnly: true,
+      secure: isProd,
+    });
     res.setHeader('Set-Cookie', cookie);
-    return res.json({ ok: true, user: { id: user.id, username: user.username, avatar: user.avatar } });
+    return res.json({
+      ok: true,
+      user: { id: user.id, username: user.username, avatar: user.avatar },
+    });
   } catch (err) {
     console.error('auth complete error', err && err.message ? err.message : err);
     return res.status(500).json({ error: 'server_error' });

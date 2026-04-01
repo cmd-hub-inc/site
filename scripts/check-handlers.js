@@ -1,7 +1,11 @@
 async function check(path) {
   try {
     const mod = await import(path);
-    console.log(path, '->', typeof mod.default === 'function' ? 'handler function' : typeof mod.default);
+    console.log(
+      path,
+      '->',
+      typeof mod.default === 'function' ? 'handler function' : typeof mod.default,
+    );
   } catch (e) {
     console.error(path, 'failed to import:', e && e.message ? e.message : e);
   }
@@ -16,4 +20,7 @@ async function run() {
   await check('../api/auth/complete.js');
 }
 
-run().catch((e) => { console.error('check script failed', e); process.exit(1); });
+run().catch((e) => {
+  console.error('check script failed', e);
+  process.exit(1);
+});

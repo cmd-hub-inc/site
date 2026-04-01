@@ -1,11 +1,15 @@
 import prisma from '../../_lib/prisma.js';
 
 export default async function handler(req, res) {
-  if (req.method !== 'GET') return res.setHeader('Allow', 'GET') && res.status(405).end('Method Not Allowed');
+  if (req.method !== 'GET')
+    return res.setHeader('Allow', 'GET') && res.status(405).end('Method Not Allowed');
   const { id } = req.query;
   try {
     try {
-      const cmds = await prisma.command.findMany({ where: { authorId: id }, include: { author: true } });
+      const cmds = await prisma.command.findMany({
+        where: { authorId: id },
+        include: { author: true },
+      });
       try {
         const ids = cmds.map((c) => c.id).filter(Boolean);
         if (ids.length === 0) return res.json(cmds);
@@ -13,14 +17,18 @@ export default async function handler(req, res) {
           SELECT id, "uploadCategory" FROM "Command" WHERE id = ANY(${ids})
         `;
         const map = {};
-        if (Array.isArray(urows)) urows.forEach((r) => (map[r.id] = r.uploadCategory || r.uploadcategory));
+        if (Array.isArray(urows))
+          urows.forEach((r) => (map[r.id] = r.uploadCategory || r.uploadcategory));
         const out = cmds.map((c) => ({ ...c, uploadCategory: map[c.id] || 'Framework' }));
         return res.json(out);
       } catch (e) {
         return res.json(cmds);
       }
     } catch (prismaErr) {
-      console.warn('[api] Prisma findMany failed for user commands, falling back to raw SQL:', prismaErr && prismaErr.message ? prismaErr.message : prismaErr);
+      console.warn(
+        '[api] Prisma findMany failed for user commands, falling back to raw SQL:',
+        prismaErr && prismaErr.message ? prismaErr.message : prismaErr,
+      );
       const rows = await prisma.$queryRaw`
         SELECT c.*, u.id as author_id, u.username as author_username, u.avatar as author_avatar
         FROM "Command" c LEFT JOIN "User" u ON c."authorId" = u.id

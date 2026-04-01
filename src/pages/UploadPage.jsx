@@ -274,7 +274,9 @@ export default function UploadPage({ user, onNavigate }) {
         </div>
         <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 16, marginBottom: 20 }}>
           <div>
-            <label style={label}>{form.uploadCategory === 'Framework' ? 'Framework' : 'Tool'}</label>
+            <label style={label}>
+              {form.uploadCategory === 'Framework' ? 'Framework' : 'Tool'}
+            </label>
             <select
               value={form.framework}
               onChange={(e) => set('framework', e.target.value)}
@@ -282,9 +284,9 @@ export default function UploadPage({ user, onNavigate }) {
             >
               {form.uploadCategory === 'Framework'
                 ? FRAMEWORKS.map((f) => <option key={f}>{f}</option>)
-                : FRAMEWORKS.filter((f) => f.toLowerCase().includes('bot') || f.toLowerCase().includes('maker')).map((f) => (
-                    <option key={f}>{f}</option>
-                  ))}
+                : FRAMEWORKS.filter(
+                    (f) => f.toLowerCase().includes('bot') || f.toLowerCase().includes('maker'),
+                  ).map((f) => <option key={f}>{f}</option>)}
             </select>
           </div>
           <div>
@@ -367,7 +369,9 @@ export default function UploadPage({ user, onNavigate }) {
                   Raw JSON Data <span style={{ color: C.red }}>*</span>
                 </>
               ) : (
-                <>Code / Raw Data <span style={{ color: C.red }}>*</span></>
+                <>
+                  Code / Raw Data <span style={{ color: C.red }}>*</span>
+                </>
               )}
             </label>
             {jsonError && <span style={{ color: C.red, fontSize: 12 }}>⚠ {jsonError}</span>}
@@ -376,7 +380,9 @@ export default function UploadPage({ user, onNavigate }) {
             <textarea
               value={form.rawData}
               onChange={(e) => handleRaw(e.target.value)}
-              placeholder={'{\\n  "name": "your-command",\\n  "description": "...",\\n  "options": []\\n}'}
+              placeholder={
+                '{\\n  "name": "your-command",\\n  "description": "...",\\n  "options": []\\n}'
+              }
               rows={10}
               style={{
                 ...inp,
@@ -394,8 +400,8 @@ export default function UploadPage({ user, onNavigate }) {
                 form.framework && form.framework.toLowerCase().includes('python')
                   ? 'python'
                   : form.framework && form.framework.toLowerCase().includes('json')
-                  ? 'json'
-                  : 'javascript'
+                    ? 'json'
+                    : 'javascript'
               }
               height="300px"
             />
@@ -403,13 +409,14 @@ export default function UploadPage({ user, onNavigate }) {
           <div style={{ marginTop: 8, color: C.muted, fontSize: 13 }}>
             {form.uploadCategory === 'Bot Tool' ? (
               <>
-                Expecting framework-agnostic JSON. Provide an object with the command metadata and options
-                (name, description, options, etc.). Invalid JSON will be rejected.
+                Expecting framework-agnostic JSON. Provide an object with the command metadata and
+                options (name, description, options, etc.). Invalid JSON will be rejected.
               </>
             ) : (
               <>
                 Expecting source code or snippets for the chosen framework (JavaScript, TypeScript,
-                Python, etc.). Include only the command implementation or export needed for the framework.
+                Python, etc.). Include only the command implementation or export needed for the
+                framework.
               </>
             )}
           </div>

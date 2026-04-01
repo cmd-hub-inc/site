@@ -10,13 +10,21 @@ async function listCommands(req, res) {
         SELECT id, "uploadCategory" FROM "Command" WHERE id = ANY(${ids})
       `;
       const map = {};
-      if (Array.isArray(rows)) rows.forEach((r) => (map[r.id || r.ID || Object.values(r)[0]] = r.uploadCategory || r.uploadcategory || r.UploadCategory));
+      if (Array.isArray(rows))
+        rows.forEach(
+          (r) =>
+            (map[r.id || r.ID || Object.values(r)[0]] =
+              r.uploadCategory || r.uploadcategory || r.UploadCategory),
+        );
       const out = cmds.map((c) => ({ ...c, uploadCategory: map[c.id] || 'Framework' }));
       return res.json(out);
     }
     return res.json(cmds);
   } catch (prismaErr) {
-    console.warn('[api] Prisma findMany failed, falling back to raw SQL:', prismaErr && prismaErr.message ? prismaErr.message : prismaErr);
+    console.warn(
+      '[api] Prisma findMany failed, falling back to raw SQL:',
+      prismaErr && prismaErr.message ? prismaErr.message : prismaErr,
+    );
     try {
       const rows = await prisma.$queryRaw`
         SELECT c.*, u.id as author_id, u.username as author_username, u.avatar as author_avatar
@@ -50,7 +58,10 @@ async function listCommands(req, res) {
       });
       return res.json(out);
     } catch (rawErr) {
-      console.error('raw SQL fallback failed for /api/commands', rawErr && rawErr.message ? rawErr.message : rawErr);
+      console.error(
+        'raw SQL fallback failed for /api/commands',
+        rawErr && rawErr.message ? rawErr.message : rawErr,
+      );
       return res.status(500).json({ error: 'failed' });
     }
   }
@@ -71,9 +82,13 @@ async function createCommand(req, res) {
       const msg = (e && e.message) || String(e);
       if (msg.includes('uploadCategory') || msg.includes('does not exist')) {
         try {
-          const esc = (v) => (v === null || v === undefined ? 'NULL' : `'${String(v).replace(/'/g, "''")}'`);
+          const esc = (v) =>
+            v === null || v === undefined ? 'NULL' : `'${String(v).replace(/'/g, "''")}'`;
           const tags = Array.isArray(data.tags) ? data.tags : [];
-          const tagsSql = tags.length > 0 ? `ARRAY[${tags.map((t) => `'${String(t).replace(/'/g, "''")}'`).join(',')}]::text[]` : `ARRAY[]::text[]`;
+          const tagsSql =
+            tags.length > 0
+              ? `ARRAY[${tags.map((t) => `'${String(t).replace(/'/g, "''")}'`).join(',')}]::text[]`
+              : `ARRAY[]::text[]`;
           const id = data.id || cryptoRandomId();
           const name = esc(data.name || id);
           const description = esc(data.description || '');
@@ -86,15 +101,24 @@ async function createCommand(req, res) {
           const rawData = esc(data.rawData || '{}');
           const insertSQL = `INSERT INTO "Command" (id, name, description, type, framework, version, tags, "githubUrl", "websiteUrl", downloads, rating, "ratingCount", favourites, views, changelog, "rawData", "createdAt", "updatedAt", "authorId") VALUES (${esc(id)}, ${name}, ${description}, ${type}, ${framework}, ${version}, ${tagsSql}, ${githubUrl}, ${websiteUrl}, 0, 0, 0, 0, 0, ${changelog}, ${rawData}, now(), now(), ${esc(authorId)}) RETURNING id`;
           const inserted = await prisma.$queryRawUnsafe(insertSQL);
-          const insertedId = Array.isArray(inserted) && inserted.length ? (inserted[0].id || Object.values(inserted[0])[0]) : id;
+          const insertedId =
+            Array.isArray(inserted) && inserted.length
+              ? inserted[0].id || Object.values(inserted[0])[0]
+              : id;
           try {
-            const withAuthor = await prisma.command.findUnique({ where: { id: insertedId }, include: { author: true } });
+            const withAuthor = await prisma.command.findUnique({
+              where: { id: insertedId },
+              include: { author: true },
+            });
             cmd = withAuthor || { id: insertedId, name: data.name, authorId };
           } catch (fetchErr) {
             cmd = { id: insertedId, name: data.name, authorId };
           }
         } catch (rawErr) {
-          console.error('raw insert fallback failed', rawErr && rawErr.message ? rawErr.message : rawErr);
+          console.error(
+            'raw insert fallback failed',
+            rawErr && rawErr.message ? rawErr.message : rawErr,
+          );
           return res.status(500).json({ error: 'failed_to_create_command' });
         }
       } else {
@@ -113,8 +137,14 @@ async function createCommand(req, res) {
       const urows = await prisma.$queryRaw`
         SELECT "uploadCategory" FROM "Command" WHERE id = ${cmd.id} LIMIT 1
       `;
-      const uploadCategory = Array.isArray(urows) && urows.length ? urows[0].uploadCategory || urows[0].uploadcategory : 'Framework';
-      const withAuthor = await prisma.command.findUnique({ where: { id: cmd.id }, include: { author: true } });
+      const uploadCategory =
+        Array.isArray(urows) && urows.length
+          ? urows[0].uploadCategory || urows[0].uploadcategory
+          : 'Framework';
+      const withAuthor = await prisma.command.findUnique({
+        where: { id: cmd.id },
+        include: { author: true },
+      });
       return res.status(201).json({ ...withAuthor, uploadCategory });
     } catch (e) {
       return res.status(201).json(cmd);

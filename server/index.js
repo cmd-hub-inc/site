@@ -9,6 +9,10 @@ import { spawn } from 'child_process';
 import ensure from '../scripts/dbEnsure.js';
 // Note: `ioredis` is imported dynamically below so the server can run without it installed.
 import { PrismaClient } from '@prisma/client';
+import { expressLoggingMiddleware, logError } from '../api_handlers/_lib/logger.js';
+import { rateLimiters } from '../api_handlers/_lib/rateLimiter.js';
+import { scheduleAnalyticsFlush } from '../api_handlers/_lib/analytics.js';
+import { scheduleTrendingComputation } from '../api_handlers/trending.js';
 
 dotenv.config();
 const app = express();
@@ -48,6 +52,16 @@ app.use(
   }),
 );
 app.use(express.json());
+
+// Add request logging middleware
+app.use(expressLoggingMiddleware);
+
+// Add rate limiting middleware to API routes
+app.use('/api/', rateLimiters.api);
+app.use('/api/commands', rateLimiters.read);
+app.use('/api/favorites', rateLimiters.api);
+app.use('/api/users/:id/follow', rateLimiters.api);
+app.use('/api/commands/*/rate', rateLimiters.rating);
 
 // Initialize session store with PG-backed store in production, fallback to in-memory in dev
 let sessionStore;
@@ -368,11 +382,17 @@ app.get('/api/me', requireDbReady, async (req, res) => {
   try {
     const s = req.session && req.session.user;
     if (!s) return res.json({ user: null });
-    const adminList = (process.env.ADMIN_IDS || '').split(',').map((x) => x.trim()).filter(Boolean);
+    const adminList = (process.env.ADMIN_IDS || '')
+      .split(',')
+      .map((x) => x.trim())
+      .filter(Boolean);
     const isAdmin = adminList.includes(String(s.id));
     try {
       const user = await prisma.user.findUnique({ where: { id: s.id } });
-      return res.json({ user: user ? { id: user.id, username: user.username, avatar: user.avatar } : s, isAdmin });
+      return res.json({
+        user: user ? { id: user.id, username: user.username, avatar: user.avatar } : s,
+        isAdmin,
+      });
     } catch (e) {
       return res.json({ user: s, isAdmin });
     }
@@ -412,13 +432,21 @@ app.get('/api/commands', requireDbReady, async (req, res) => {
           SELECT id, "uploadCategory" FROM "Command" WHERE id = ANY(${ids})
         `;
         const map = {};
-        if (Array.isArray(rows)) rows.forEach((r) => (map[r.id || r.ID || Object.values(r)[0]] = r.uploadCategory || r.uploadcategory || r.UploadCategory));
+        if (Array.isArray(rows))
+          rows.forEach(
+            (r) =>
+              (map[r.id || r.ID || Object.values(r)[0]] =
+                r.uploadCategory || r.uploadcategory || r.UploadCategory),
+          );
         const out = cmds.map((c) => ({ ...c, uploadCategory: map[c.id] || 'Framework' }));
         return res.json(out);
       }
       return res.json(cmds);
     } catch (prismaErr) {
-      console.warn('[api] Prisma findMany failed, falling back to raw SQL:', prismaErr && prismaErr.message ? prismaErr.message : prismaErr);
+      console.warn(
+        '[api] Prisma findMany failed, falling back to raw SQL:',
+        prismaErr && prismaErr.message ? prismaErr.message : prismaErr,
+      );
       try {
         const rows = await prisma.$queryRaw`
           SELECT c.*, u.id as author_id, u.username as author_username, u.avatar as author_avatar
@@ -452,7 +480,10 @@ app.get('/api/commands', requireDbReady, async (req, res) => {
         });
         return res.json(out);
       } catch (rawErr) {
-        console.error('raw SQL fallback failed for /api/commands', rawErr && rawErr.message ? rawErr.message : rawErr);
+        console.error(
+          'raw SQL fallback failed for /api/commands',
+          rawErr && rawErr.message ? rawErr.message : rawErr,
+        );
         return res.status(500).json({ error: 'failed' });
       }
     }
@@ -525,7 +556,10 @@ app.get('/api/users/:id/commands', requireDbReady, async (req, res) => {
   const { id } = req.params;
   try {
     try {
-      const cmds = await prisma.command.findMany({ where: { authorId: id }, include: { author: true } });
+      const cmds = await prisma.command.findMany({
+        where: { authorId: id },
+        include: { author: true },
+      });
       try {
         const ids = cmds.map((c) => c.id).filter(Boolean);
         if (ids.length === 0) return res.json(cmds);
@@ -533,14 +567,18 @@ app.get('/api/users/:id/commands', requireDbReady, async (req, res) => {
           SELECT id, "uploadCategory" FROM "Command" WHERE id = ANY(${ids})
         `;
         const map = {};
-        if (Array.isArray(urows)) urows.forEach((r) => (map[r.id] = r.uploadCategory || r.uploadcategory));
+        if (Array.isArray(urows))
+          urows.forEach((r) => (map[r.id] = r.uploadCategory || r.uploadcategory));
         const out = cmds.map((c) => ({ ...c, uploadCategory: map[c.id] || 'Framework' }));
         return res.json(out);
       } catch (e) {
         return res.json(cmds);
       }
     } catch (prismaErr) {
-      console.warn('[api] Prisma findMany failed for user commands, falling back to raw SQL:', prismaErr && prismaErr.message ? prismaErr.message : prismaErr);
+      console.warn(
+        '[api] Prisma findMany failed for user commands, falling back to raw SQL:',
+        prismaErr && prismaErr.message ? prismaErr.message : prismaErr,
+      );
       try {
         const rows = await prisma.$queryRaw`
           SELECT c.*, u.id as author_id, u.username as author_username, u.avatar as author_avatar
@@ -572,7 +610,10 @@ app.get('/api/users/:id/commands', requireDbReady, async (req, res) => {
         }));
         return res.json(out);
       } catch (rawErr) {
-        console.error('raw SQL fallback failed for /api/users/:id/commands', rawErr && rawErr.message ? rawErr.message : rawErr);
+        console.error(
+          'raw SQL fallback failed for /api/users/:id/commands',
+          rawErr && rawErr.message ? rawErr.message : rawErr,
+        );
         return res.status(500).json({ error: 'failed' });
       }
     }
@@ -588,7 +629,8 @@ app.get('/api/users/:id', requireDbReady, async (req, res) => {
   try {
     const u = await prisma.user.findUnique({ where: { id } });
     if (!u) return res.status(404).json({ error: 'Not found' });
-    const username = u.username && u.username.endsWith('#0') ? u.username.replace(/#0$/, '') : u.username;
+    const username =
+      u.username && u.username.endsWith('#0') ? u.username.replace(/#0$/, '') : u.username;
     return res.json({ id: u.id, username, avatar: u.avatar });
   } catch (err) {
     console.error('get user profile error', err && err.message ? err.message : err);
@@ -693,14 +735,18 @@ app.get('/api/users/:id/favourites', requireDbReady, async (req, res) => {
       Array.isArray(rows) ? rows.map((r) => r.commandId || r.commandid || Object.values(r)[0]) : []
     ).filter(Boolean);
     if (ids.length === 0) return res.json([]);
-    const cmds = await prisma.command.findMany({ where: { id: { in: ids } }, include: { author: true } });
+    const cmds = await prisma.command.findMany({
+      where: { id: { in: ids } },
+      include: { author: true },
+    });
     // attach uploadCategory
     try {
       const urows = await prisma.$queryRaw`
         SELECT id, "uploadCategory" FROM "Command" WHERE id = ANY(${ids})
       `;
       const map = {};
-      if (Array.isArray(urows)) urows.forEach((r) => (map[r.id] = r.uploadCategory || r.uploadcategory));
+      if (Array.isArray(urows))
+        urows.forEach((r) => (map[r.id] = r.uploadCategory || r.uploadcategory));
       const out = cmds.map((c) => ({ ...c, uploadCategory: map[c.id] || 'Framework' }));
       return res.json(out);
     } catch (e) {
@@ -736,7 +782,10 @@ app.get('/api/users', requireDbReady, async (req, res) => {
     try {
       rows = await prisma.$queryRawUnsafe(sql);
     } catch (queryErr) {
-      console.warn('[api] prisma.$queryRawUnsafe failed for /api/users, falling back to Prisma client findMany', queryErr && queryErr.message ? queryErr.message : queryErr);
+      console.warn(
+        '[api] prisma.$queryRawUnsafe failed for /api/users, falling back to Prisma client findMany',
+        queryErr && queryErr.message ? queryErr.message : queryErr,
+      );
       // fallback: simpler query via Prisma client (may be less performant)
       try {
         rows = await prisma.user.findMany({
@@ -745,9 +794,19 @@ app.get('/api/users', requireDbReady, async (req, res) => {
           take: limit,
         });
         // map to expected shape
-        rows = (rows || []).map((r) => ({ id: r.id, username: r.username, avatar: r.avatar, commands: 0, downloads: 0, avg_rating: 0 }));
+        rows = (rows || []).map((r) => ({
+          id: r.id,
+          username: r.username,
+          avatar: r.avatar,
+          commands: 0,
+          downloads: 0,
+          avg_rating: 0,
+        }));
       } catch (clientErr) {
-        console.error('[api] fallback findMany also failed for /api/users', clientErr && clientErr.stack ? clientErr.stack : clientErr);
+        console.error(
+          '[api] fallback findMany also failed for /api/users',
+          clientErr && clientErr.stack ? clientErr.stack : clientErr,
+        );
         throw clientErr;
       }
     }
@@ -767,7 +826,10 @@ app.get('/api/users', requireDbReady, async (req, res) => {
 
     return res.json({ users: normalized, page, limit, total });
   } catch (err) {
-    console.error('users list error', err && err.stack ? err.stack : err && err.message ? err.message : err);
+    console.error(
+      'users list error',
+      err && err.stack ? err.stack : err && err.message ? err.message : err,
+    );
     return res.status(500).json({ error: 'failed' });
   }
 });
@@ -803,7 +865,10 @@ app.get('/api/users/:id', requireDbReady, async (req, res) => {
       SELECT c.* FROM "Command" c WHERE c."authorId" = ${id} ORDER BY c.downloads DESC NULLS LAST LIMIT 8
     `;
 
-    return res.json({ user: { id: user.id, username: user.username, avatar: user.avatar, followers, following }, top: Array.isArray(top) ? top : [] });
+    return res.json({
+      user: { id: user.id, username: user.username, avatar: user.avatar, followers, following },
+      top: Array.isArray(top) ? top : [],
+    });
   } catch (err) {
     console.error('user profile error', err && err.message ? err.message : err);
     return res.status(500).json({ error: 'failed' });
@@ -821,13 +886,17 @@ app.get('/api/users/me/favourites', requireDbReady, requireAuth, async (req, res
       Array.isArray(rows) ? rows.map((r) => r.commandId || r.commandid || Object.values(r)[0]) : []
     ).filter(Boolean);
     if (ids.length === 0) return res.json([]);
-    const cmds = await prisma.command.findMany({ where: { id: { in: ids } }, include: { author: true } });
+    const cmds = await prisma.command.findMany({
+      where: { id: { in: ids } },
+      include: { author: true },
+    });
     try {
       const urows = await prisma.$queryRaw`
         SELECT id, "uploadCategory" FROM "Command" WHERE id = ANY(${ids})
       `;
       const map = {};
-      if (Array.isArray(urows)) urows.forEach((r) => (map[r.id] = r.uploadCategory || r.uploadcategory));
+      if (Array.isArray(urows))
+        urows.forEach((r) => (map[r.id] = r.uploadCategory || r.uploadcategory));
       const out = cmds.map((c) => ({ ...c, uploadCategory: map[c.id] || 'Framework' }));
       return res.json(out);
     } catch (e) {
@@ -879,7 +948,10 @@ app.get('/api/commands/:id', requireDbReady, async (req, res) => {
         include: { author: true },
       });
     } catch (prismaErr) {
-      console.warn('[api] Prisma update failed for views, falling back to raw SQL:', prismaErr && prismaErr.message ? prismaErr.message : prismaErr);
+      console.warn(
+        '[api] Prisma update failed for views, falling back to raw SQL:',
+        prismaErr && prismaErr.message ? prismaErr.message : prismaErr,
+      );
       try {
         const rows = await prisma.$queryRaw`
           UPDATE "Command" SET views = COALESCE(views,0) + 1 WHERE id = ${id} RETURNING *
@@ -889,9 +961,18 @@ app.get('/api/commands/:id', requireDbReady, async (req, res) => {
         const auth = await prisma.$queryRaw`
           SELECT id, username, avatar FROM "User" WHERE id = ${row.authorId} LIMIT 1
         `;
-        updated = { ...row, author: auth && auth[0] ? { id: auth[0].id, username: auth[0].username, avatar: auth[0].avatar } : null };
+        updated = {
+          ...row,
+          author:
+            auth && auth[0]
+              ? { id: auth[0].id, username: auth[0].username, avatar: auth[0].avatar }
+              : null,
+        };
       } catch (rawErr) {
-        console.error('raw SQL fallback failed for increment views', rawErr && rawErr.message ? rawErr.message : rawErr);
+        console.error(
+          'raw SQL fallback failed for increment views',
+          rawErr && rawErr.message ? rawErr.message : rawErr,
+        );
         return res.status(500).json({ error: 'failed' });
       }
     }
@@ -909,7 +990,10 @@ app.get('/api/commands/:id', requireDbReady, async (req, res) => {
           const urows = await prisma.$queryRaw`
             SELECT "uploadCategory" FROM "Command" WHERE id = ${id} LIMIT 1
           `;
-          const uploadCategory = Array.isArray(urows) && urows.length ? urows[0].uploadCategory || urows[0].uploadcategory : 'Framework';
+          const uploadCategory =
+            Array.isArray(urows) && urows.length
+              ? urows[0].uploadCategory || urows[0].uploadcategory
+              : 'Framework';
           return res.json({ ...updated, myRating, uploadCategory });
         } catch (e) {
           return res.json({ ...updated, myRating, uploadCategory: 'Framework' });
@@ -924,7 +1008,10 @@ app.get('/api/commands/:id', requireDbReady, async (req, res) => {
       const urows = await prisma.$queryRaw`
         SELECT "uploadCategory" FROM "Command" WHERE id = ${id} LIMIT 1
       `;
-      const uploadCategory = Array.isArray(urows) && urows.length ? urows[0].uploadCategory || urows[0].uploadcategory : 'Framework';
+      const uploadCategory =
+        Array.isArray(urows) && urows.length
+          ? urows[0].uploadCategory || urows[0].uploadcategory
+          : 'Framework';
       return res.json({ ...updated, uploadCategory });
     } catch (e) {
       return res.json({ ...updated, uploadCategory: 'Framework' });
@@ -938,25 +1025,20 @@ app.get('/api/commands/:id', requireDbReady, async (req, res) => {
 });
 
 // Get current authenticated user's rating for a command
-app.get(
-  '/api/commands/:id/my-rating',
-  requireDbReady,
-  requireAuth,
-  async (req, res) => {
-    const { id } = req.params;
-    const userId = req.session.user.id;
-    try {
-      const rows = await prisma.$queryRaw`
+app.get('/api/commands/:id/my-rating', requireDbReady, requireAuth, async (req, res) => {
+  const { id } = req.params;
+  const userId = req.session.user.id;
+  try {
+    const rows = await prisma.$queryRaw`
         SELECT value FROM "Rating" WHERE "userId" = ${userId} AND "commandId" = ${id} LIMIT 1
       `;
-      const myRating = Array.isArray(rows) && rows.length ? Number(rows[0].value) : null;
-      return res.json({ rating: myRating });
-    } catch (err) {
-      console.error('my-rating error', err && err.message ? err.message : err);
-      return res.status(500).json({ error: 'failed' });
-    }
-  },
-);
+    const myRating = Array.isArray(rows) && rows.length ? Number(rows[0].value) : null;
+    return res.json({ rating: myRating });
+  } catch (err) {
+    console.error('my-rating error', err && err.message ? err.message : err);
+    return res.status(500).json({ error: 'failed' });
+  }
+});
 
 // Upsert a user's rating for a command and update aggregate on Command
 app.post('/api/commands/:id/rate', requireDbReady, requireAuth, async (req, res) => {
@@ -964,7 +1046,8 @@ app.post('/api/commands/:id/rate', requireDbReady, requireAuth, async (req, res)
   const userId = req.session.user.id;
   const { rating } = req.body;
   const r = Number(rating);
-  if (!Number.isFinite(r) || r < 1 || r > 5) return res.status(400).json({ error: 'invalid_rating' });
+  if (!Number.isFinite(r) || r < 1 || r > 5)
+    return res.status(400).json({ error: 'invalid_rating' });
   try {
     await prisma.$transaction(async (tx) => {
       // Lock existing rating if present
@@ -1036,9 +1119,13 @@ app.post('/api/commands', requireDbReady, requireAuth, async (req, res) => {
       if (msg.includes('uploadCategory') || msg.includes('does not exist')) {
         try {
           // Build safe SQL-literal helpers
-          const esc = (v) => (v === null || v === undefined ? 'NULL' : `'${String(v).replace(/'/g, "''")}'`);
+          const esc = (v) =>
+            v === null || v === undefined ? 'NULL' : `'${String(v).replace(/'/g, "''")}'`;
           const tags = Array.isArray(data.tags) ? data.tags : [];
-          const tagsSql = tags.length > 0 ? `ARRAY[${tags.map((t) => `'${String(t).replace(/'/g, "''")}'`).join(',')}]::text[]` : `ARRAY[]::text[]`;
+          const tagsSql =
+            tags.length > 0
+              ? `ARRAY[${tags.map((t) => `'${String(t).replace(/'/g, "''")}'`).join(',')}]::text[]`
+              : `ARRAY[]::text[]`;
           const id = data.id || randomUUID();
           const name = esc(data.name || id);
           const description = esc(data.description || '');
@@ -1053,16 +1140,25 @@ app.post('/api/commands', requireDbReady, requireAuth, async (req, res) => {
           const insertSQL = `INSERT INTO "Command" (id, name, description, type, framework, version, tags, "githubUrl", "websiteUrl", downloads, rating, "ratingCount", favourites, views, changelog, "rawData", "createdAt", "updatedAt", "authorId") VALUES (${esc(id)}, ${name}, ${description}, ${type}, ${framework}, ${version}, ${tagsSql}, ${githubUrl}, ${websiteUrl}, 0, 0, 0, 0, 0, ${changelog}, ${rawData}, now(), now(), ${esc(authorId)}) RETURNING id`;
           const inserted = await prisma.$queryRawUnsafe(insertSQL);
           // inserted may be an array of rows or a single row depending on adapter
-          const insertedId = Array.isArray(inserted) && inserted.length ? (inserted[0].id || Object.values(inserted[0])[0]) : id;
+          const insertedId =
+            Array.isArray(inserted) && inserted.length
+              ? inserted[0].id || Object.values(inserted[0])[0]
+              : id;
           // Try to fetch via Prisma; if that fails, return minimal object
           try {
-            const withAuthor = await prisma.command.findUnique({ where: { id: insertedId }, include: { author: true } });
+            const withAuthor = await prisma.command.findUnique({
+              where: { id: insertedId },
+              include: { author: true },
+            });
             cmd = withAuthor || { id: insertedId, name: data.name, authorId };
           } catch (fetchErr) {
             cmd = { id: insertedId, name: data.name, authorId };
           }
         } catch (rawErr) {
-          console.error('raw insert fallback failed', rawErr && rawErr.message ? rawErr.message : rawErr);
+          console.error(
+            'raw insert fallback failed',
+            rawErr && rawErr.message ? rawErr.message : rawErr,
+          );
           return res.status(500).json({ error: 'failed_to_create_command' });
         }
       } else {
@@ -1086,8 +1182,14 @@ app.post('/api/commands', requireDbReady, requireAuth, async (req, res) => {
       const urows = await prisma.$queryRaw`
         SELECT "uploadCategory" FROM "Command" WHERE id = ${cmd.id} LIMIT 1
       `;
-      const uploadCategory = Array.isArray(urows) && urows.length ? urows[0].uploadCategory || urows[0].uploadcategory : 'Framework';
-      const withAuthor = await prisma.command.findUnique({ where: { id: cmd.id }, include: { author: true } });
+      const uploadCategory =
+        Array.isArray(urows) && urows.length
+          ? urows[0].uploadCategory || urows[0].uploadcategory
+          : 'Framework';
+      const withAuthor = await prisma.command.findUnique({
+        where: { id: cmd.id },
+        include: { author: true },
+      });
       return res.status(201).json({ ...withAuthor, uploadCategory });
     } catch (e) {
       return res.status(201).json(cmd);
@@ -1101,7 +1203,11 @@ app.post('/api/commands', requireDbReady, requireAuth, async (req, res) => {
 app.put('/api/commands/:id', requireDbReady, requireAuth, async (req, res) => {
   const { id } = req.params;
   const sessionUser = req.session && req.session.user;
-  const adminList = process.env.ADMIN_IDS ? String(process.env.ADMIN_IDS).split(',').map((s) => s.trim()) : [];
+  const adminList = process.env.ADMIN_IDS
+    ? String(process.env.ADMIN_IDS)
+        .split(',')
+        .map((s) => s.trim())
+    : [];
   const isAdmin = sessionUser && adminList.includes(sessionUser.id);
   try {
     const existing = await prisma.command.findUnique({ where: { id } });
@@ -1133,14 +1239,20 @@ app.put('/api/commands/:id', requireDbReady, requireAuth, async (req, res) => {
     // normalize tags if string
     if (updatable.tags && typeof updatable.tags === 'string') {
       try {
-        updatable.tags = updatable.tags.split(',').map((t) => t.trim()).filter(Boolean);
+        updatable.tags = updatable.tags
+          .split(',')
+          .map((t) => t.trim())
+          .filter(Boolean);
       } catch (e) {
         updatable.tags = [];
       }
     }
 
     const updated = await prisma.command.update({ where: { id }, data: { ...updatable } });
-    const withAuthor = await prisma.command.findUnique({ where: { id }, include: { author: true } });
+    const withAuthor = await prisma.command.findUnique({
+      where: { id },
+      include: { author: true },
+    });
     return res.json(withAuthor);
   } catch (err) {
     console.error('update command error', err && err.message ? err.message : err);
@@ -1149,6 +1261,20 @@ app.put('/api/commands/:id', requireDbReady, requireAuth, async (req, res) => {
 });
 
 // Start server immediately; dbEnsure runs in background (db-dependent routes will return 503 until ready)
+
+// Schedule periodic tasks
+try {
+  // Flush buffered analytics to DB every 5 minutes
+  scheduleAnalyticsFlush(5 * 60 * 1000);
+  console.log('[start] Analytics flush scheduled (every 5 minutes)');
+
+  // Compute trending commands every 6 hours
+  scheduleTrendingComputation(6 * 60 * 60 * 1000);
+  console.log('[start] Trending computation scheduled (every 6 hours)');
+} catch (error) {
+  logError('Failed to schedule background tasks', error);
+}
+
 app.listen(PORT, () => {
   console.log(`Server running on http://localhost:${PORT}`);
 });

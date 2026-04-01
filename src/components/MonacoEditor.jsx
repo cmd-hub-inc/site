@@ -7,7 +7,12 @@ try {
   Monaco = null;
 }
 
-export default function MonacoEditor({ value, onChange, language = 'javascript', height = '300px' }) {
+export default function MonacoEditor({
+  value,
+  onChange,
+  language = 'javascript',
+  height = '300px',
+}) {
   if (!Monaco) {
     return (
       <textarea

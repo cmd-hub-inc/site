@@ -1,17 +1,27 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, Suspense, lazy } from 'react';
 import Navbar from './components/Navbar';
 import ErrorBoundary from './components/ErrorBoundary';
-import HomePage from './pages/HomePage';
-import BrowsePage from './pages/BrowsePage';
-import UploadPage from './pages/UploadPage';
-import ProfilePage from './pages/ProfilePage';
-import CommandDetailPage from './pages/CommandDetailPage';
-import EditCommandPage from './pages/EditCommandPage';
-import NotFound from './pages/NotFound';
-import CreatorsPage from './pages/CreatorsPage';
 import Footer from './components/Footer';
 import { MOCK_USER } from './constants';
-// Removed Next.js-specific Vercel integrations (not compatible with Vite/react)
+
+// Code splitting: lazy load page components
+const HomePage = lazy(() => import('./pages/HomePage'));
+const BrowsePage = lazy(() => import('./pages/BrowsePage'));
+const UploadPage = lazy(() => import('./pages/UploadPage'));
+const ProfilePage = lazy(() => import('./pages/ProfilePage'));
+const CommandDetailPage = lazy(() => import('./pages/CommandDetailPage'));
+const EditCommandPage = lazy(() => import('./pages/EditCommandPage'));
+const NotFound = lazy(() => import('./pages/NotFound'));
+const CreatorsPage = lazy(() => import('./pages/CreatorsPage'));
+
+// Loading component for lazy-loaded pages
+function PageLoadingSpinner() {
+  return (
+    <div className="flex items-center justify-center min-h-screen">
+      <div className="text-lg text-gray-600">Loading...</div>
+    </div>
+  );
+}
 
 export default function App() {
   const [page, setPage] = useState(() => {
@@ -222,8 +232,6 @@ export default function App() {
     };
   }, []);
 
-
-
   // Handle browser back/forward for shareable links
   useEffect(() => {
     let mounted = true;
@@ -337,7 +345,14 @@ export default function App() {
   }, [user, page]);
 
   return (
-    <div style={{ minHeight: '100vh', background: '#1e1f22', display: 'flex', flexDirection: 'column' }}>
+    <div
+      style={{
+        minHeight: '100vh',
+        background: '#1e1f22',
+        display: 'flex',
+        flexDirection: 'column',
+      }}
+    >
       <Navbar
         page={page}
         user={user}
@@ -355,31 +370,33 @@ export default function App() {
       />
       <main style={{ flex: 1 }}>
         <ErrorBoundary>
-        {page === 'home' && <HomePage onNavigate={navigate} onViewCommand={viewCommand} />}
-        {page === 'browse' && <BrowsePage initialTag={pageParams.tag} onViewCommand={viewCommand} />}
-        {page === 'creators' && <CreatorsPage onNavigate={navigate} />}
-        {page === 'upload' && <UploadPage user={user} onNavigate={navigate} />}
-        {page === 'profile' && (
-          <ProfilePage
-            key={pageParams && pageParams.id}
-            user={user}
-            profileId={pageParams && pageParams.id}
-            onViewCommand={viewCommand}
-            onNavigate={navigate}
-          />
-        )}
-        {page === 'detail' && (
-          <CommandDetailPage
-            cmd={selectedCmd}
-            loading={!selectedCmd}
-            onBack={() => navigate('browse')}
-            user={user}
-          />
-        )}
-        {page === 'edit' && (
-          <EditCommandPage user={user} pageParams={pageParams} />
-        )}
-        {page === 'notfound' && <NotFound />}
+          <Suspense fallback={<PageLoadingSpinner />}>
+            {page === 'home' && <HomePage onNavigate={navigate} onViewCommand={viewCommand} />}
+            {page === 'browse' && (
+              <BrowsePage initialTag={pageParams.tag} onViewCommand={viewCommand} />
+            )}
+            {page === 'creators' && <CreatorsPage onNavigate={navigate} />}
+            {page === 'upload' && <UploadPage user={user} onNavigate={navigate} />}
+            {page === 'profile' && (
+              <ProfilePage
+                key={pageParams && pageParams.id}
+                user={user}
+                profileId={pageParams && pageParams.id}
+                onViewCommand={viewCommand}
+                onNavigate={navigate}
+              />
+            )}
+            {page === 'detail' && (
+              <CommandDetailPage
+                cmd={selectedCmd}
+                loading={!selectedCmd}
+                onBack={() => navigate('browse')}
+                user={user}
+              />
+            )}
+            {page === 'edit' && <EditCommandPage user={user} pageParams={pageParams} />}
+            {page === 'notfound' && <NotFound />}
+          </Suspense>
         </ErrorBoundary>
       </main>
 

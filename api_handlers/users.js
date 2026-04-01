@@ -21,12 +21,29 @@ export default async function handler(req, res) {
     try {
       rows = await prisma.$queryRawUnsafe(sql);
     } catch (queryErr) {
-      console.warn('[api] prisma.$queryRawUnsafe failed for /api/users, falling back to Prisma client findMany', queryErr && queryErr.message ? queryErr.message : queryErr);
+      console.warn(
+        '[api] prisma.$queryRawUnsafe failed for /api/users, falling back to Prisma client findMany',
+        queryErr && queryErr.message ? queryErr.message : queryErr,
+      );
       try {
-        rows = await prisma.user.findMany({ select: { id: true, username: true, avatar: true }, skip: offset, take: limit });
-        rows = (rows || []).map((r) => ({ id: r.id, username: r.username, avatar: r.avatar, commands: 0, downloads: 0, avg_rating: 0 }));
+        rows = await prisma.user.findMany({
+          select: { id: true, username: true, avatar: true },
+          skip: offset,
+          take: limit,
+        });
+        rows = (rows || []).map((r) => ({
+          id: r.id,
+          username: r.username,
+          avatar: r.avatar,
+          commands: 0,
+          downloads: 0,
+          avg_rating: 0,
+        }));
       } catch (clientErr) {
-        console.error('[api] fallback findMany also failed for /api/users', clientErr && clientErr.stack ? clientErr.stack : clientErr);
+        console.error(
+          '[api] fallback findMany also failed for /api/users',
+          clientErr && clientErr.stack ? clientErr.stack : clientErr,
+        );
         throw clientErr;
       }
     }
@@ -45,7 +62,10 @@ export default async function handler(req, res) {
 
     return res.json({ users: normalized, page, limit, total });
   } catch (err) {
-    console.error('users list error', err && err.stack ? err.stack : err && err.message ? err.message : err);
+    console.error(
+      'users list error',
+      err && err.stack ? err.stack : err && err.message ? err.message : err,
+    );
     return res.status(500).json({ error: 'failed' });
   }
 }

@@ -11,7 +11,7 @@ export default async function handler(req, res) {
     if (reqHost && (t.host === reqHost || t.hostname === reqHost)) {
       res.statusCode = 502;
       res.end(
-        'Bad Gateway: PROXY_TARGET is misconfigured (points to this deployment), causing a proxy loop. Set PROXY_TARGET to your external backend.'
+        'Bad Gateway: PROXY_TARGET is misconfigured (points to this deployment), causing a proxy loop. Set PROXY_TARGET to your external backend.',
       );
       return;
     }

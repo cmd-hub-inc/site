@@ -65,9 +65,17 @@ export default function CreatorsPage({ onViewCreator, onNavigate }) {
           }}
         >
           <h2 style={{ color: C.white, margin: '0 0 8px' }}>Creators</h2>
-          <div style={{ color: C.muted, marginBottom: 18 }}>Browse authors and view their uploads</div>
+          <div style={{ color: C.muted, marginBottom: 18 }}>
+            Browse authors and view their uploads
+          </div>
 
-          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill,minmax(240px,1fr))', gap: 12 }}>
+          <div
+            style={{
+              display: 'grid',
+              gridTemplateColumns: 'repeat(auto-fill,minmax(240px,1fr))',
+              gap: 12,
+            }}
+          >
             {[...Array(6)].map((_, i) => (
               <div
                 key={`skel-${i}`}
@@ -83,11 +91,17 @@ export default function CreatorsPage({ onViewCreator, onNavigate }) {
               >
                 <div className="skeleton" style={{ width: 48, height: 48, borderRadius: 8 }} />
                 <div style={{ flex: 1 }}>
-                  <div className="skeleton" style={{ width: '40%', height: 14, borderRadius: 6, marginBottom: 8 }} />
+                  <div
+                    className="skeleton"
+                    style={{ width: '40%', height: 14, borderRadius: 6, marginBottom: 8 }}
+                  />
                   <div className="skeleton" style={{ width: '30%', height: 12, borderRadius: 6 }} />
                 </div>
                 <div style={{ width: 100 }}>
-                  <div className="skeleton" style={{ width: '100%', height: 34, borderRadius: 8 }} />
+                  <div
+                    className="skeleton"
+                    style={{ width: '100%', height: 34, borderRadius: 8 }}
+                  />
                 </div>
               </div>
             ))}
@@ -108,7 +122,9 @@ export default function CreatorsPage({ onViewCreator, onNavigate }) {
           }}
         >
           <h2 style={{ color: C.white, margin: '0 0 8px' }}>Creators</h2>
-          <div style={{ color: C.muted, marginBottom: 18 }}>Browse authors and view their uploads</div>
+          <div style={{ color: C.muted, marginBottom: 18 }}>
+            Browse authors and view their uploads
+          </div>
           <div style={{ color: C.muted }}>No creators found yet.</div>
         </div>
       </div>
@@ -125,9 +141,17 @@ export default function CreatorsPage({ onViewCreator, onNavigate }) {
         }}
       >
         <h2 style={{ color: C.white, margin: '0 0 6px' }}>Creators</h2>
-        <div style={{ color: C.muted, marginBottom: 12 }}>Browse authors and view their uploads</div>
+        <div style={{ color: C.muted, marginBottom: 12 }}>
+          Browse authors and view their uploads
+        </div>
 
-        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill,minmax(240px,1fr))', gap: 12 }}>
+        <div
+          style={{
+            display: 'grid',
+            gridTemplateColumns: 'repeat(auto-fill,minmax(240px,1fr))',
+            gap: 12,
+          }}
+        >
           {creators.map((u) => (
             <div
               key={u.id}
@@ -142,18 +166,52 @@ export default function CreatorsPage({ onViewCreator, onNavigate }) {
               }}
             >
               {u.avatar ? (
-                <img src={u.avatar} alt={u.username} style={{ width: 48, height: 48, borderRadius: 8, objectFit: 'cover' }} />
+                <img
+                  src={u.avatar}
+                  alt={u.username}
+                  style={{ width: 48, height: 48, borderRadius: 8, objectFit: 'cover' }}
+                />
               ) : (
-                <div style={{ width: 48, height: 48, borderRadius: 8, background: C.blurple, display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#fff', fontWeight: 800 }}>{(u.username || 'U').charAt(0).toUpperCase()}</div>
+                <div
+                  style={{
+                    width: 48,
+                    height: 48,
+                    borderRadius: 8,
+                    background: C.blurple,
+                    display: 'flex',
+                    alignItems: 'center',
+                    justifyContent: 'center',
+                    color: '#fff',
+                    fontWeight: 800,
+                  }}
+                >
+                  {(u.username || 'U').charAt(0).toUpperCase()}
+                </div>
               )}
               <div style={{ flex: 1 }}>
-                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                <div
+                  style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}
+                >
                   <div style={{ color: C.text, fontWeight: 700 }}>{u.username}</div>
                   <div style={{ color: C.muted, fontSize: 13 }}>{u.commands} uploads</div>
                 </div>
                 <div style={{ marginTop: 8, display: 'flex', gap: 8, alignItems: 'center' }}>
-                  <button onClick={() => onNavigate('profile', { id: u.id })} style={{ background: C.blurple, border: 'none', color: '#fff', padding: '8px 12px', borderRadius: 8, fontWeight: 700 }}>View profile</button>
-                  <div style={{ color: C.muted, fontSize: 12 }}>{u.downloads ? `${u.downloads} downloads` : ''}</div>
+                  <button
+                    onClick={() => onNavigate('profile', { id: u.id })}
+                    style={{
+                      background: C.blurple,
+                      border: 'none',
+                      color: '#fff',
+                      padding: '8px 12px',
+                      borderRadius: 8,
+                      fontWeight: 700,
+                    }}
+                  >
+                    View profile
+                  </button>
+                  <div style={{ color: C.muted, fontSize: 12 }}>
+                    {u.downloads ? `${u.downloads} downloads` : ''}
+                  </div>
                 </div>
               </div>
             </div>
@@ -161,9 +219,35 @@ export default function CreatorsPage({ onViewCreator, onNavigate }) {
         </div>
 
         <div style={{ marginTop: 12, display: 'flex', justifyContent: 'center', gap: 8 }}>
-          <button disabled={page <= 1} onClick={() => setPage((p) => Math.max(1, p - 1))} style={{ padding: '6px 10px', borderRadius: 8, border: `1px solid ${C.border}`, background: 'transparent', color: C.text }}>Prev</button>
-          <div style={{ color: C.muted, alignSelf: 'center' }}>{Math.min((page - 1) * 20 + 1, total)} - {Math.min(page * 20, total)} of {total}</div>
-          <button disabled={page * 20 >= total} onClick={() => setPage((p) => p + 1)} style={{ padding: '6px 10px', borderRadius: 8, border: `1px solid ${C.border}`, background: 'transparent', color: C.text }}>Next</button>
+          <button
+            disabled={page <= 1}
+            onClick={() => setPage((p) => Math.max(1, p - 1))}
+            style={{
+              padding: '6px 10px',
+              borderRadius: 8,
+              border: `1px solid ${C.border}`,
+              background: 'transparent',
+              color: C.text,
+            }}
+          >
+            Prev
+          </button>
+          <div style={{ color: C.muted, alignSelf: 'center' }}>
+            {Math.min((page - 1) * 20 + 1, total)} - {Math.min(page * 20, total)} of {total}
+          </div>
+          <button
+            disabled={page * 20 >= total}
+            onClick={() => setPage((p) => p + 1)}
+            style={{
+              padding: '6px 10px',
+              borderRadius: 8,
+              border: `1px solid ${C.border}`,
+              background: 'transparent',
+              color: C.text,
+            }}
+          >
+            Next
+          </button>
         </div>
       </div>
     </div>

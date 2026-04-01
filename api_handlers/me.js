@@ -24,7 +24,9 @@ export default async function handler(req, res) {
     if (!s) return res.json({ user: null });
     try {
       const user = await prisma.user.findUnique({ where: { id: s.id } });
-      return res.json({ user: user ? { id: user.id, username: user.username, avatar: user.avatar } : s });
+      return res.json({
+        user: user ? { id: user.id, username: user.username, avatar: user.avatar } : s,
+      });
     } catch (e) {
       return res.json({ user: s });
     }

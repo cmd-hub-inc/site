@@ -2,7 +2,8 @@ import prisma from '../_lib/prisma.js';
 
 export default async function handler(req, res) {
   const { id } = req.query;
-  if (req.method !== 'GET') return res.setHeader('Allow', 'GET') && res.status(405).end('Method Not Allowed');
+  if (req.method !== 'GET')
+    return res.setHeader('Allow', 'GET') && res.status(405).end('Method Not Allowed');
   try {
     const urows = await prisma.$queryRaw`
       SELECT id, username, avatar FROM "User" WHERE id = ${id} LIMIT 1
@@ -26,7 +27,10 @@ export default async function handler(req, res) {
     const top = await prisma.$queryRaw`
       SELECT c.* FROM "Command" c WHERE c."authorId" = ${id} ORDER BY c.downloads DESC NULLS LAST LIMIT 8
     `;
-    return res.json({ user: { id: user.id, username: user.username, avatar: user.avatar, followers, following }, top: Array.isArray(top) ? top : [] });
+    return res.json({
+      user: { id: user.id, username: user.username, avatar: user.avatar, followers, following },
+      top: Array.isArray(top) ? top : [],
+    });
   } catch (err) {
     console.error('user profile error', err && err.message ? err.message : err);
     return res.status(500).json({ error: 'failed' });

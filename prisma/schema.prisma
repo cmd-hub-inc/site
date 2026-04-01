@@ -9,11 +9,16 @@ datasource db {
 
 model User {
   id        String    @id @default(uuid())
-  username  String
+  username  String    @unique
   avatar    String?
   createdAt DateTime  @default(now())
   commands  Command[]
-  Rating    Rating[]
+  ratings   Rating[]
+  favorites Favorite[]
+  followers Follow[]   @relation("followers")
+  following Follow[]   @relation("following")
+
+  @@index([createdAt])
 }
 
 model Command {
@@ -39,6 +44,68 @@ model Command {
   authorId       String
   author         User     @relation(fields: [authorId], references: [id])
   ratings        Rating[]
+  favorites      Favorite[]
+  analytics      CommandAnalytics?
+
+  @@index([authorId])
+  @@index([type])
+  @@index([framework])
+  @@index([createdAt])
+  @@index([downloads])
+  @@index([rating])
+}
+
+model Favorite {
+  userId    String
+  commandId String
+  createdAt DateTime @default(now())
+
+  user    User    @relation(fields: [userId], references: [id], onDelete: Cascade)
+  command Command @relation(fields: [commandId], references: [id], onDelete: Cascade)
+
+  @@id([userId, commandId])
+  @@index([userId])
+  @@index([createdAt])
+}
+
+model Follow {
+  followerId String
+  followingId String
+  createdAt  DateTime @default(now())
+
+  follower  User @relation("followers", fields: [followerId], references: [id], onDelete: Cascade)
+  following User @relation("following", fields: [followingId], references: [id], onDelete: Cascade)
+
+  @@id([followerId, followingId])
+  @@index([followerId])
+  @@index([followingId])
+  @@index([createdAt])
+}
+
+model CommandAnalytics {
+  id             String   @id @default(uuid())
+  commandId      String   @unique
+  command        Command  @relation(fields: [commandId], references: [id], onDelete: Cascade)
+  views          Int      @default(0)
+  downloads      Int      @default(0)
+  favorites      Int      @default(0)
+  ratings        Int      @default(0)
+  updatedAt      DateTime @updatedAt
+
+  @@index([updatedAt])
+}
+
+model TrendingCommand {
+  id            String   @id @default(uuid())
+  commandId     String
+  rank          Int
+  timeWindow    String   // "weekly" or "monthly"
+  score         Float
+  computedAt    DateTime @default(now())
+
+  @@unique([commandId, timeWindow])
+  @@index([rank])
+  @@index([timeWindow])
 }
 
 model Rating {

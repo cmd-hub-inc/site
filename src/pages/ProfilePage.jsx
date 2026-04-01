@@ -13,7 +13,7 @@ export default function ProfilePage({ user, profileId, onViewCommand, onNavigate
       : null
     : user || null;
   const [viewUser, setViewUser] = useState(initialViewUser);
-  
+
   // Note: hooks below must run on every render (move before conditional returns)
   const API_BASE = import.meta.env.VITE_API_BASE ?? (import.meta.env.DEV ? '' : '/api');
   // Normalize viewUser: some API responses return { user: {...}, top: [...] }
@@ -45,7 +45,10 @@ export default function ProfilePage({ user, profileId, onViewCommand, onNavigate
             <div style={{ display: 'flex', gap: 22, alignItems: 'center', flexWrap: 'wrap' }}>
               <div className="skeleton" style={{ width: 76, height: 76, borderRadius: '50%' }} />
               <div style={{ flex: 1 }}>
-                <div className="skeleton" style={{ width: 220, height: 24, borderRadius: 6, marginBottom: 8 }} />
+                <div
+                  className="skeleton"
+                  style={{ width: 220, height: 24, borderRadius: 6, marginBottom: 8 }}
+                />
                 <div className="skeleton" style={{ width: 120, height: 14, borderRadius: 6 }} />
               </div>
               <div style={{ display: 'flex', gap: 28 }}>
@@ -59,11 +62,20 @@ export default function ProfilePage({ user, profileId, onViewCommand, onNavigate
             </div>
           </div>
 
-          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(290px, 1fr))', gap: 16 }}>
+          <div
+            style={{
+              display: 'grid',
+              gridTemplateColumns: 'repeat(auto-fill, minmax(290px, 1fr))',
+              gap: 16,
+            }}
+          >
             {[1, 2, 3].map((i) => (
               <div key={i}>
                 <div style={{ padding: 0 }}>
-                  <div className="skeleton" style={{ width: '100%', height: 140, borderRadius: 12 }} />
+                  <div
+                    className="skeleton"
+                    style={{ width: '100%', height: 140, borderRadius: 12 }}
+                  />
                 </div>
               </div>
             ))}
@@ -251,7 +263,13 @@ export default function ProfilePage({ user, profileId, onViewCommand, onNavigate
         } else if (resp && resp.status === 404) {
           // show a minimal not-found object to avoid infinite skeleton; parent can decide to render notfound page
           if (!cancelled)
-            setViewUser({ id: profileId, username: 'Unknown user', avatar: null, followers: 0, following: 0 });
+            setViewUser({
+              id: profileId,
+              username: 'Unknown user',
+              avatar: null,
+              followers: 0,
+              following: 0,
+            });
         }
         // otherwise leave viewUser as null (still loading) — will be retried on subsequent mounts
       } catch (e) {
@@ -313,7 +331,10 @@ export default function ProfilePage({ user, profileId, onViewCommand, onNavigate
       if (!displayUser || !user) return;
       if (String(displayUser.id) === String(user.id)) return;
       try {
-        const r = await fetch(`${API_BASE}/api/users/${encodeURIComponent(displayUser.id)}/is-following`, { credentials: 'include' });
+        const r = await fetch(
+          `${API_BASE}/api/users/${encodeURIComponent(displayUser.id)}/is-following`,
+          { credentials: 'include' },
+        );
         if (r.ok) {
           const b = await r.json();
           if (!cancelled) setIsFollowing(!!b.following);
@@ -357,8 +378,10 @@ export default function ProfilePage({ user, profileId, onViewCommand, onNavigate
                 alt={displayUser.username}
                 style={{ width: 76, height: 76, borderRadius: '50%', objectFit: 'cover' }}
               />
+            ) : displayUser && displayUser.username ? (
+              displayUser.username[0].toUpperCase()
             ) : (
-              (displayUser && displayUser.username ? displayUser.username[0].toUpperCase() : '')
+              ''
             )}
           </div>
           <div style={{ flex: 1 }}>
@@ -386,7 +409,7 @@ export default function ProfilePage({ user, profileId, onViewCommand, onNavigate
             </div>
           </div>
           <div style={{ display: 'flex', gap: 28 }}>
-                {[
+            {[
               { label: 'Commands', value: loadingUserCmds ? null : userCmds.length },
               { label: 'Downloads', value: loadingUserCmds ? null : totalDownloads },
               { label: 'Favourites', value: loadingUserCmds ? null : totalFavs },
@@ -458,7 +481,10 @@ export default function ProfilePage({ user, profileId, onViewCommand, onNavigate
               onClick={async () => {
                 try {
                   if (isFollowing) {
-                    const r = await fetch(`${API_BASE}/api/users/${encodeURIComponent(displayUser.id)}/unfollow`, { method: 'POST', credentials: 'include' });
+                    const r = await fetch(
+                      `${API_BASE}/api/users/${encodeURIComponent(displayUser.id)}/unfollow`,
+                      { method: 'POST', credentials: 'include' },
+                    );
                     if (r.ok) {
                       const body = await r.json();
                       setIsFollowing(false);
@@ -467,7 +493,10 @@ export default function ProfilePage({ user, profileId, onViewCommand, onNavigate
                       }
                     }
                   } else {
-                    const r = await fetch(`${API_BASE}/api/users/${encodeURIComponent(displayUser.id)}/follow`, { method: 'POST', credentials: 'include' });
+                    const r = await fetch(
+                      `${API_BASE}/api/users/${encodeURIComponent(displayUser.id)}/follow`,
+                      { method: 'POST', credentials: 'include' },
+                    );
                     if (r.ok) {
                       const body = await r.json();
                       setIsFollowing(true);

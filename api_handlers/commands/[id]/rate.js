@@ -2,14 +2,16 @@ import prisma from '../../_lib/prisma.js';
 import { getSessionFromReq } from '../../_lib/utils.js';
 
 export default async function handler(req, res) {
-  if (req.method !== 'POST') return res.setHeader('Allow', 'POST') && res.status(405).end('Method Not Allowed');
+  if (req.method !== 'POST')
+    return res.setHeader('Allow', 'POST') && res.status(405).end('Method Not Allowed');
   const { id } = req.query;
   const session = getSessionFromReq(req);
   if (!session) return res.status(401).json({ error: 'Not authenticated' });
   const userId = session.id;
   const { rating } = req.body || {};
   const r = Number(rating);
-  if (!Number.isFinite(r) || r < 1 || r > 5) return res.status(400).json({ error: 'invalid_rating' });
+  if (!Number.isFinite(r) || r < 1 || r > 5)
+    return res.status(400).json({ error: 'invalid_rating' });
   try {
     await prisma.$transaction(async (tx) => {
       const prevRows = await tx.$queryRaw`
