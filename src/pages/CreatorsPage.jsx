@@ -1,5 +1,6 @@
 import React, { useEffect, useState } from 'react';
 import { C } from '../constants';
+import { Users, Package, Download, ChevronLeft, ChevronRight } from 'lucide-react';
 
 export default function CreatorsPage({ onViewCreator, onNavigate }) {
   const API_BASE = import.meta.env.VITE_API_BASE ?? (import.meta.env.DEV ? '' : '');
@@ -54,55 +55,74 @@ export default function CreatorsPage({ onViewCreator, onNavigate }) {
 
   if (loading)
     return (
-      <div style={{ maxWidth: 980, margin: '40px auto', padding: 18 }}>
-        <div
-          style={{
-            background: C.surface,
-            border: `1px solid ${C.border}`,
-            borderRadius: 12,
-            padding: 28,
-            textAlign: 'center',
-          }}
-        >
-          <h2 style={{ color: C.white, margin: '0 0 8px' }}>Creators</h2>
-          <div style={{ color: C.muted, marginBottom: 18 }}>
-            Browse authors and view their uploads
+      <div style={{ background: C.bg, minHeight: '100vh', padding: '40px 20px', color: C.text }}>
+        <div style={{ maxWidth: 1200, margin: '0 auto' }}>
+          {/* Header Skeleton */}
+          <div style={{ marginBottom: 40, animation: 'pulse 2s infinite' }}>
+            <div style={{ display: 'flex', alignItems: 'center', gap: 12, marginBottom: 8 }}>
+              <div style={{ width: 28, height: 28, background: C.border, borderRadius: 6 }} />
+              <div style={{ width: 250, height: 32, background: C.border, borderRadius: 4 }} />
+            </div>
+            <div style={{ width: 400, height: 14, background: C.border, borderRadius: 4 }} />
           </div>
 
-          <div
-            style={{
-              display: 'grid',
-              gridTemplateColumns: 'repeat(auto-fill,minmax(240px,1fr))',
-              gap: 12,
-            }}
-          >
+          {/* Creator Cards Skeleton */}
+          <div style={{
+            display: 'grid',
+            gridTemplateColumns: 'repeat(auto-fill, minmax(300px, 1fr))',
+            gap: 20
+          }}>
             {[...Array(6)].map((_, i) => (
               <div
                 key={`skel-${i}`}
                 style={{
-                  background: 'rgba(255,255,255,0.02)',
-                  borderRadius: 10,
-                  padding: 12,
-                  display: 'flex',
-                  gap: 12,
-                  alignItems: 'center',
-                  minHeight: 64,
+                  background: C.surface,
+                  border: `1px solid ${C.border}`,
+                  borderRadius: 12,
+                  padding: 20,
+                  animation: 'pulse 2s infinite'
                 }}
               >
-                <div className="skeleton" style={{ width: 48, height: 48, borderRadius: 8 }} />
-                <div style={{ flex: 1 }}>
+                {/* Avatar Skeleton */}
+                <div style={{ display: 'flex', gap: 16, marginBottom: 16 }}>
                   <div
-                    className="skeleton"
-                    style={{ width: '40%', height: 14, borderRadius: 6, marginBottom: 8 }}
+                    style={{
+                      width: 60,
+                      height: 60,
+                      borderRadius: 8,
+                      background: C.border,
+                      flexShrink: 0
+                    }}
                   />
-                  <div className="skeleton" style={{ width: '30%', height: 12, borderRadius: 6 }} />
+                  <div style={{ flex: 1 }}>
+                    <div
+                      style={{
+                        width: '70%',
+                        height: 16,
+                        background: C.border,
+                        borderRadius: 4,
+                        marginBottom: 8
+                      }}
+                    />
+                    <div
+                      style={{
+                        width: '40%',
+                        height: 12,
+                        background: C.border,
+                        borderRadius: 4
+                      }}
+                    />
+                  </div>
                 </div>
-                <div style={{ width: 100 }}>
-                  <div
-                    className="skeleton"
-                    style={{ width: '100%', height: 34, borderRadius: 8 }}
-                  />
+
+                {/* Stats Skeleton */}
+                <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 12, marginBottom: 16 }}>
+                  <div style={{ height: 12, background: C.border, borderRadius: 4 }} />
+                  <div style={{ height: 12, background: C.border, borderRadius: 4 }} />
                 </div>
+
+                {/* Button Skeleton */}
+                <div style={{ height: 36, background: C.border, borderRadius: 6 }} />
               </div>
             ))}
           </div>
@@ -111,142 +131,286 @@ export default function CreatorsPage({ onViewCreator, onNavigate }) {
     );
   if (!creators || creators.length === 0)
     return (
-      <div style={{ maxWidth: 980, margin: '40px auto', padding: 18 }}>
-        <div
-          style={{
+      <div style={{ background: C.bg, minHeight: '100vh', padding: '40px 20px', color: C.text }}>
+        <div style={{ maxWidth: 1200, margin: '0 auto' }}>
+          <div style={{ marginBottom: 40 }}>
+            <div style={{ display: 'flex', alignItems: 'center', gap: 12, marginBottom: 8 }}>
+              <Users size={28} style={{ color: C.blurple }} />
+              <h1 style={{ fontSize: 32, fontWeight: 700, margin: 0, color: C.text }}>
+                Creators
+              </h1>
+            </div>
+            <p style={{ color: C.muted, margin: 0, fontSize: 14 }}>
+              Browse authors and view their uploads
+            </p>
+          </div>
+
+          <div style={{
             background: C.surface,
             border: `1px solid ${C.border}`,
             borderRadius: 12,
-            padding: 28,
+            padding: 60,
             textAlign: 'center',
-          }}
-        >
-          <h2 style={{ color: C.white, margin: '0 0 8px' }}>Creators</h2>
-          <div style={{ color: C.muted, marginBottom: 18 }}>
-            Browse authors and view their uploads
+            color: C.muted
+          }}>
+            <Users size={48} style={{ marginBottom: 16, opacity: 0.5, margin: '0 auto 16px' }} />
+            <p style={{ margin: 0, fontSize: 14 }}>No creators found yet.</p>
           </div>
-          <div style={{ color: C.muted }}>No creators found yet.</div>
         </div>
       </div>
     );
 
   return (
-    <div style={{ maxWidth: 980, margin: '40px auto', padding: 18 }}>
-      <div
-        style={{
-          background: C.surface,
-          border: `1px solid ${C.border}`,
-          borderRadius: 12,
-          padding: 20,
-        }}
-      >
-        <h2 style={{ color: C.white, margin: '0 0 6px' }}>Creators</h2>
-        <div style={{ color: C.muted, marginBottom: 12 }}>
-          Browse authors and view their uploads
+    <div style={{ background: C.bg, minHeight: '100vh', padding: '40px 20px', color: C.text }}>
+      <div style={{ maxWidth: 1200, margin: '0 auto' }}>
+        {/* Header */}
+        <div style={{ marginBottom: 40 }}>
+          <div style={{ display: 'flex', alignItems: 'center', gap: 12, marginBottom: 8 }}>
+            <Users size={28} style={{ color: C.blurple }} />
+            <h1 style={{ fontSize: 32, fontWeight: 700, margin: 0, color: C.text }}>
+              Creators
+            </h1>
+          </div>
+          <p style={{ color: C.muted, margin: 0, fontSize: 14 }}>
+            Browse {total} amazing creators and discover their commands
+          </p>
         </div>
 
-        <div
-          style={{
-            display: 'grid',
-            gridTemplateColumns: 'repeat(auto-fill,minmax(240px,1fr))',
-            gap: 12,
-          }}
-        >
+        {/* Creator Cards Grid */}
+        <div style={{
+          display: 'grid',
+          gridTemplateColumns: 'repeat(auto-fill, minmax(300px, 1fr))',
+          gap: 20,
+          marginBottom: 32
+        }}>
           {creators.map((u) => (
             <div
               key={u.id}
               style={{
-                background: 'rgba(255,255,255,0.02)',
-                borderRadius: 10,
-                padding: 12,
+                background: C.surface,
+                border: `1px solid ${C.border}`,
+                borderRadius: 12,
+                padding: 20,
+                transition: 'all 0.3s ease',
                 display: 'flex',
-                gap: 12,
-                alignItems: 'center',
-                minHeight: 64,
+                flexDirection: 'column'
+              }}
+              onMouseEnter={e => {
+                e.currentTarget.style.borderColor = C.blurple;
+                e.currentTarget.style.background = `rgba(88, 101, 242, 0.08)`;
+                e.currentTarget.style.transform = 'translateY(-2px)';
+                e.currentTarget.style.boxShadow = `0 4px 12px rgba(88, 101, 242, 0.15)`;
+              }}
+              onMouseLeave={e => {
+                e.currentTarget.style.borderColor = C.border;
+                e.currentTarget.style.background = C.surface;
+                e.currentTarget.style.transform = 'translateY(0)';
+                e.currentTarget.style.boxShadow = 'none';
               }}
             >
-              {u.avatar ? (
-                <img
-                  src={u.avatar}
-                  alt={u.username}
-                  style={{ width: 48, height: 48, borderRadius: 8, objectFit: 'cover' }}
-                />
-              ) : (
-                <div
-                  style={{
-                    width: 48,
-                    height: 48,
-                    borderRadius: 8,
-                    background: C.blurple,
-                    display: 'flex',
-                    alignItems: 'center',
-                    justifyContent: 'center',
-                    color: '#fff',
-                    fontWeight: 800,
-                  }}
-                >
-                  {(u.username || 'U').charAt(0).toUpperCase()}
-                </div>
-              )}
-              <div style={{ flex: 1 }}>
-                <div
-                  style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}
-                >
-                  <div style={{ color: C.text, fontWeight: 700 }}>{u.username}</div>
-                  <div style={{ color: C.muted, fontSize: 13 }}>{u.commands} uploads</div>
-                </div>
-                <div style={{ marginTop: 8, display: 'flex', gap: 8, alignItems: 'center' }}>
-                  <button
-                    onClick={() => onNavigate('profile', { id: u.id })}
+              {/* Avatar & Info */}
+              <div style={{ display: 'flex', gap: 16, marginBottom: 16 }}>
+                {u.avatar ? (
+                  <img
+                    src={u.avatar}
+                    alt={u.username}
                     style={{
-                      background: C.blurple,
-                      border: 'none',
-                      color: '#fff',
-                      padding: '8px 12px',
+                      width: 60,
+                      height: 60,
                       borderRadius: 8,
-                      fontWeight: 700,
+                      objectFit: 'cover',
+                      flexShrink: 0
+                    }}
+                  />
+                ) : (
+                  <div
+                    style={{
+                      width: 60,
+                      height: 60,
+                      borderRadius: 8,
+                      background: C.blurple,
+                      display: 'flex',
+                      alignItems: 'center',
+                      justifyContent: 'center',
+                      color: '#fff',
+                      fontWeight: 800,
+                      fontSize: 24,
+                      flexShrink: 0
                     }}
                   >
-                    View profile
-                  </button>
-                  <div style={{ color: C.muted, fontSize: 12 }}>
-                    {u.downloads ? `${u.downloads} downloads` : ''}
+                    {(u.username || 'U').charAt(0).toUpperCase()}
+                  </div>
+                )}
+                <div style={{ flex: 1 }}>
+                  <h3 style={{
+                    margin: '0 0 4px 0',
+                    fontSize: 16,
+                    fontWeight: 700,
+                    color: C.text,
+                    overflow: 'hidden',
+                    textOverflow: 'ellipsis',
+                    whiteSpace: 'nowrap'
+                  }}>
+                    {u.username}
+                  </h3>
+                  <p style={{
+                    margin: 0,
+                    color: C.muted,
+                    fontSize: 13,
+                    overflow: 'hidden',
+                    textOverflow: 'ellipsis',
+                    whiteSpace: 'nowrap'
+                  }}>
+                    Creator
+                  </p>
+                </div>
+              </div>
+
+              {/* Stats */}
+              <div style={{
+                display: 'grid',
+                gridTemplateColumns: '1fr 1fr',
+                gap: 12,
+                marginBottom: 16,
+                padding: '12px 0',
+                borderTop: `1px solid ${C.border}`,
+                borderBottom: `1px solid ${C.border}`
+              }}>
+                <div style={{ textAlign: 'center' }}>
+                  <div style={{ fontSize: 20, fontWeight: 700, color: C.blurple, marginBottom: 2 }}>
+                    {u.commands || 0}
+                  </div>
+                  <div style={{ fontSize: 11, color: C.muted, fontWeight: 600, textTransform: 'uppercase', letterSpacing: '0.5px' }}>
+                    Commands
+                  </div>
+                </div>
+                <div style={{ textAlign: 'center' }}>
+                  <div style={{ fontSize: 20, fontWeight: 700, color: C.blurple, marginBottom: 2 }}>
+                    {u.downloads || 0}
+                  </div>
+                  <div style={{ fontSize: 11, color: C.muted, fontWeight: 600, textTransform: 'uppercase', letterSpacing: '0.5px' }}>
+                    Downloads
                   </div>
                 </div>
               </div>
+
+              {/* Button */}
+              <button
+                onClick={() => onNavigate('profile', { id: u.id })}
+                style={{
+                  background: C.blurple,
+                  border: 'none',
+                  color: '#fff',
+                  padding: '12px 16px',
+                  borderRadius: 8,
+                  fontWeight: 700,
+                  fontSize: 14,
+                  cursor: 'pointer',
+                  transition: 'all 0.2s ease'
+                }}
+                onMouseEnter={e => {
+                  e.currentTarget.style.opacity = '0.9';
+                  e.currentTarget.style.transform = 'scale(1.02)';
+                }}
+                onMouseLeave={e => {
+                  e.currentTarget.style.opacity = '1';
+                  e.currentTarget.style.transform = 'scale(1)';
+                }}
+              >
+                View Profile
+              </button>
             </div>
           ))}
         </div>
 
-        <div style={{ marginTop: 12, display: 'flex', justifyContent: 'center', gap: 8 }}>
+        {/* Pagination */}
+        <div style={{
+          display: 'flex',
+          justifyContent: 'center',
+          alignItems: 'center',
+          gap: 16,
+          padding: '20px 0'
+        }}>
           <button
             disabled={page <= 1}
             onClick={() => setPage((p) => Math.max(1, p - 1))}
             style={{
-              padding: '6px 10px',
+              padding: '8px 12px',
               borderRadius: 8,
               border: `1px solid ${C.border}`,
-              background: 'transparent',
-              color: C.text,
+              background: page <= 1 ? 'transparent' : 'rgba(88, 101, 242, 0.1)',
+              color: page <= 1 ? C.muted : C.blurple,
+              cursor: page <= 1 ? 'not-allowed' : 'pointer',
+              display: 'flex',
+              alignItems: 'center',
+              gap: 4,
+              fontWeight: 600,
+              transition: 'all 0.2s ease',
+              opacity: page <= 1 ? 0.5 : 1
+            }}
+            onMouseEnter={e => {
+              if (page > 1) {
+                e.currentTarget.style.borderColor = C.blurple;
+                e.currentTarget.style.background = 'rgba(88, 101, 242, 0.2)';
+              }
+            }}
+            onMouseLeave={e => {
+              if (page > 1) {
+                e.currentTarget.style.borderColor = C.border;
+                e.currentTarget.style.background = 'rgba(88, 101, 242, 0.1)';
+              }
             }}
           >
+            <ChevronLeft size={16} />
             Prev
           </button>
-          <div style={{ color: C.muted, alignSelf: 'center' }}>
-            {Math.min((page - 1) * 20 + 1, total)} - {Math.min(page * 20, total)} of {total}
+
+          <div style={{
+            color: C.muted,
+            fontSize: 14,
+            fontWeight: 500,
+            minWidth: 200,
+            textAlign: 'center'
+          }}>
+            Page {page} of {Math.ceil(total / 20) || 1}
+            <br />
+            <span style={{ fontSize: 12 }}>
+              {Math.min((page - 1) * 20 + 1, total)} - {Math.min(page * 20, total)} of {total}
+            </span>
           </div>
+
           <button
             disabled={page * 20 >= total}
             onClick={() => setPage((p) => p + 1)}
             style={{
-              padding: '6px 10px',
+              padding: '8px 12px',
               borderRadius: 8,
               border: `1px solid ${C.border}`,
-              background: 'transparent',
-              color: C.text,
+              background: page * 20 >= total ? 'transparent' : 'rgba(88, 101, 242, 0.1)',
+              color: page * 20 >= total ? C.muted : C.blurple,
+              cursor: page * 20 >= total ? 'not-allowed' : 'pointer',
+              display: 'flex',
+              alignItems: 'center',
+              gap: 4,
+              fontWeight: 600,
+              transition: 'all 0.2s ease',
+              opacity: page * 20 >= total ? 0.5 : 1
+            }}
+            onMouseEnter={e => {
+              if (page * 20 < total) {
+                e.currentTarget.style.borderColor = C.blurple;
+                e.currentTarget.style.background = 'rgba(88, 101, 242, 0.2)';
+              }
+            }}
+            onMouseLeave={e => {
+              if (page * 20 < total) {
+                e.currentTarget.style.borderColor = C.border;
+                e.currentTarget.style.background = 'rgba(88, 101, 242, 0.1)';
+              }
             }}
           >
             Next
+            <ChevronRight size={16} />
           </button>
         </div>
       </div>
