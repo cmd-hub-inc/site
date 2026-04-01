@@ -119,3 +119,16 @@ model Rating {
 
   @@id([userId, commandId])
 }
+
+model Share {
+  id        String   @id @default(uuid())
+  commandId String
+  userId    String?
+  platform  String   // "twitter", "facebook", "linkedin", "discord", "reddit"
+  createdAt DateTime @default(now())
+
+  @@index([commandId])
+  @@index([userId])
+  @@index([platform])
+  @@index([createdAt])
+}

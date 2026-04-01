@@ -2,6 +2,7 @@ import React, { useEffect, useState } from 'react';
 import { User, Package } from 'lucide-react';
 import { C } from '../constants';
 import CommandCard from '../components/CommandCard';
+import ShareButtons from '../components/ShareButtons';
 import { MOCK_COMMANDS } from '../data/mockCommands';
 import CountUp from '../components/CountUp';
 
@@ -438,6 +439,17 @@ export default function ProfilePage({ user, profileId, onViewCommand, onNavigate
           </div>
         </div>
       </div>
+
+      {displayUser && (
+        <ShareButtons 
+          command={{ name: displayUser.username }}
+          shareUrl={`${window.location.origin}/profile/${displayUser.id}`}
+          user={user}
+          title="Share this profile"
+          theme={{ surface: C.surface, border: C.border, text: C.text, muted: C.muted }}
+        />
+      )}
+
       <div
         style={{
           display: 'flex',

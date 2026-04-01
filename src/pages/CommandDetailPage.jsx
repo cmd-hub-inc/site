@@ -1,4 +1,5 @@
 import React, { useState, useEffect } from 'react';
+import { Helmet } from 'react-helmet-async';
 import {
   ArrowLeft,
   Download,
@@ -16,6 +17,8 @@ import {
 import { C } from '../constants';
 import { FrameworkBadge, TypeBadge, TagBadge } from '../components/Badges';
 import { StatPill } from '../components/Stars';
+import ShareButtons from '../components/ShareButtons';
+import { getCommandMetaTags } from '../lib/metaTags';
 
 export default function CommandDetailPage({ cmd, onBack, user, loading = false }) {
   if (loading || !cmd) {
@@ -125,8 +128,23 @@ export default function CommandDetailPage({ cmd, onBack, user, loading = false }
   const dateStr = (s) =>
     new Date(s).toLocaleDateString('en-GB', { day: 'numeric', month: 'short', year: 'numeric' });
 
+  const metaTags = getCommandMetaTags(cmd);
+
   return (
-    <div style={{ maxWidth: 920, margin: '0 auto', padding: '44px 24px' }}>
+    <>
+      <Helmet>
+        <title>{cmd.name} - Discord Commands</title>
+        {metaTags.map((tag, idx) => {
+          const { property, ...rest } = tag;
+          return property ? (
+            <meta key={idx} property={property} {...rest} />
+          ) : (
+            <meta key={idx} {...rest} />
+          );
+        })}
+      </Helmet>
+
+      <div style={{ maxWidth: 920, margin: '0 auto', padding: '44px 24px' }}>
       <button
         onClick={onBack}
         style={{
@@ -643,6 +661,9 @@ export default function CommandDetailPage({ cmd, onBack, user, loading = false }
           Log in with Discord to rate and favourite this command
         </div>
       )}
+
+      <ShareButtons command={cmd} user={user} theme={{ surface: C.surface, border: C.border, text: C.text, muted: C.muted }} />
     </div>
+    </>
   );
 }
