@@ -30,7 +30,18 @@ export default function MonacoEditor({
       language={language}
       value={value}
       onChange={(v) => onChange(v)}
-      options={{ automaticLayout: true, minimap: { enabled: false } }}
+      theme="vs-dark"
+      options={{
+        automaticLayout: true,
+        minimap: { enabled: false },
+        fontSize: 13,
+        fontFamily: "'JetBrains Mono', monospace",
+        lineNumbers: 'on',
+        folding: true,
+        wordWrap: 'on',
+        contextmenu: true,
+        scrollBeyondLastLine: false,
+      }}
     />
   );
 }
