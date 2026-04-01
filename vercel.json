@@ -2,5 +2,14 @@
   "version": 2,
   "build": {
     "env": {}
+  },
+  "routes": [
+    { "handle": "filesystem" },
+    { "src": "^/api(/.*)?$", "dest": "/api$1" },
+    { "src": "^/(.*)$", "dest": "/index.html" }
+  ],
+  "error": {
+    "src": "^/.*$",
+    "dest": "/error.html"
   }
 }

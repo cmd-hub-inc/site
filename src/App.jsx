@@ -17,15 +17,18 @@ export default function App() {
   const [page, setPage] = useState(() => {
     try {
       const pathname = typeof window !== 'undefined' ? window.location.pathname || '' : '';
+      if (pathname === '/' || pathname === '') return 'home';
       if (pathname.startsWith('/browse')) return 'browse';
       if (pathname.startsWith('/creators')) return 'creators';
       if (pathname.startsWith('/upload')) return 'upload';
       if (pathname.startsWith('/profile')) return 'profile';
       if (pathname.startsWith('/command/')) return 'detail';
+      // If path doesn't match any known client routes, show NotFound
+      return 'notfound';
     } catch (e) {
-      // ignore and fallback to home
+      // ignore and fallback to notfound
+      return 'notfound';
     }
-    return 'home';
   });
   const [pageParams, setPageParams] = useState({});
   // `undefined` = loading, `null` = not authenticated, object = authenticated
@@ -180,9 +183,15 @@ export default function App() {
                 setSelectedCmd(cmd);
                 setPage('detail');
                 // still try to fetch user afterwards
+              } else {
+                // command not found -> show client NotFound page
+                setPage('notfound');
+                setSelectedCmd(null);
               }
             } catch (e) {
-              // ignore
+              // network error or other failure -> show NotFound
+              setPage('notfound');
+              setSelectedCmd(null);
             }
           } else if (profMatch) {
             const id = decodeURIComponent(profMatch[1]);
@@ -237,7 +246,10 @@ export default function App() {
               setPageParams({ id });
               return;
             }
-          } catch (e) {}
+          } catch (e) {
+            // ignore
+          }
+          // If fetch failed or returned non-OK, still navigate to the edit view (form may handle missing data)
           setPage('edit');
           setPageParams({ id });
           return;
@@ -256,6 +268,10 @@ export default function App() {
           } catch (e) {
             // ignore
           }
+          // not found or error -> show NotFound
+          setPage('notfound');
+          setSelectedCmd(null);
+          return;
         }
 
         if (profMatch) {
@@ -297,8 +313,9 @@ export default function App() {
           setSelectedCmd(null);
           return;
         }
-        // default home
-        setPage('home');
+
+        // default to notfound for unknown client paths
+        setPage('notfound');
         setSelectedCmd(null);
       } catch (e) {
         // ignore

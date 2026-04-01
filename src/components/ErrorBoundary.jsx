@@ -38,6 +38,12 @@ export default class ErrorBoundary extends React.Component {
             >
               Home
             </button>
+            <button
+              onClick={() => (window.location.href = '/error.html')}
+              style={{ background: 'transparent', color: C.white, border: `1px solid ${C.border}`, borderRadius: 8, padding: '8px 12px' }}
+            >
+              Open error page
+            </button>
           </div>
         </div>
       );

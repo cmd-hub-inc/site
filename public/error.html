@@ -1,0 +1,48 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width,initial-scale=1" />
+    <title>Something went wrong</title>
+    <style>
+      html,body{height:100%;margin:0}
+      body{display:flex;align-items:center;justify-content:center;font-family:Inter,system-ui,Segoe UI,Roboto,Helvetica,Arial,sans-serif;background:#0f1720;color:#e6eef8}
+      .card{max-width:720px;padding:36px;border-radius:12px;background:linear-gradient(180deg,rgba(255,255,255,0.03),rgba(255,255,255,0.02));box-shadow:0 6px 30px rgba(2,6,23,0.6);text-align:center}
+      h1{margin:0 0 8px;font-size:28px}
+      p{margin:0 0 16px;color:#b6c2d6}
+      a.button{display:inline-block;padding:10px 16px;border-radius:8px;background:#2563eb;color:white;text-decoration:none}
+      .code{display:inline-block;padding:6px 10px;border-radius:6px;background:rgba(255,255,255,0.03);margin-left:8px;font-weight:600}
+    </style>
+  </head>
+  <body>
+    <div class="card">
+      <h1>Something went wrong <span id="status" class="code">—</span></h1>
+      <p>We're sorry — an error occurred while processing your request. Try refreshing, or return home.</p>
+      <p>
+        <a class="button" href="/">Go home</a>
+      </p>
+      <p style="margin-top:12px;color:#8d9bb0;font-size:13px">If the problem persists, contact support.</p>
+    </div>
+    <script>
+      // Try to display a meaningful status code when available.
+      (function(){
+        try{
+          // fetch a non-existent sentinel to surface a status code if server provides it
+          // this is a best-effort; when the platform serves the static error page with
+          // a status code, fetch will still return 200 for the static file. However
+          // some platforms expose the original status via `window.__VERCEL_ERROR__` or
+          // via custom headers; check a couple of known places.
+          var statusEl = document.getElementById('status');
+          if(window.__VERCEL_ERROR__ && window.__VERCEL_ERROR__.status) {
+            statusEl.textContent = window.__VERCEL_ERROR__.status;
+            return;
+          }
+          // Fallback: show generic 'error'
+          statusEl.textContent = 'error';
+        }catch(e){
+          // ignore
+        }
+      })();
+    </script>
+  </body>
+</html>

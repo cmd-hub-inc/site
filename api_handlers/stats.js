@@ -1,5 +1,5 @@
-// Simple proxy for /api/stats to avoid mixed-content (HTTP) from browser
-// Vercel will serve this over HTTPS and fetch the HTTP backend server-side.
+import prisma from './_lib/prisma.js';
+
 export default async function handler(req, res) {
   if (req.method !== 'GET') {
     res.statusCode = 405;
@@ -7,29 +7,26 @@ export default async function handler(req, res) {
     return res.end('Method Not Allowed');
   }
 
-  const targetBase = process.env.PROXY_TARGET || 'http://cmd-hub.devvyyxyz';
-
-  // Guard against PROXY_TARGET pointing to this deployment
   try {
-    const t = new URL(targetBase);
-    const reqHost = req.headers && req.headers.host;
-    if (reqHost && (t.host === reqHost || t.hostname === reqHost)) {
-      res.statusCode = 502;
-      return res.end('Bad Gateway: PROXY_TARGET misconfigured (points to this deployment) — configure external backend.');
+    const commandsCount = await prisma.command.count();
+    const agg = await prisma.command.aggregate({ _sum: { downloads: true } });
+    const totalDownloads = agg && agg._sum && agg._sum.downloads ? Number(agg._sum.downloads) : 0;
+    const frameworksRes = await prisma.$queryRaw`SELECT COUNT(DISTINCT framework) as count FROM "Command"`;
+    let frameworksCount = 0;
+    try {
+      if (Array.isArray(frameworksRes) && frameworksRes.length) {
+        const v = frameworksRes[0].count || frameworksRes[0].COUNT || frameworksRes[0].count_distinct || 0;
+        frameworksCount = Number(v);
+      } else if (frameworksRes && typeof frameworksRes === 'object') {
+        frameworksCount = Number(frameworksRes.count || 0);
+      }
+    } catch (e) {
+      frameworksCount = 0;
     }
-  } catch (e) {}
 
-  const target = `${targetBase}/api/stats`;
-  try {
-    const backendRes = await fetch(target, { headers: { accept: 'application/json' } });
-    const body = await backendRes.text();
-    res.statusCode = backendRes.status;
-    const ct = backendRes.headers.get('content-type');
-    if (ct) res.setHeader('content-type', ct);
-    return res.end(body);
+    return res.json({ commands: commandsCount, downloads: totalDownloads, frameworks: frameworksCount });
   } catch (err) {
-    console.error('proxy /api/stats error', err && err.message ? err.message : err);
-    res.statusCode = 502;
-    return res.end('Bad Gateway');
+    console.error('stats error', err && err.message ? err.message : err);
+    return res.status(500).json({ error: 'failed_to_get_stats' });
   }
 }
