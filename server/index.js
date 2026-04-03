@@ -1119,6 +1119,229 @@ app.get('/api/users/me/favourites', requireDbReady, requireAuth, async (req, res
   }
 });
 
+// Collections: list all collections with optional creator filter and pagination
+app.get('/api/collections', requireDbReady, async (req, res) => {
+  try {
+    const page = Math.max(1, Number(req.query.page || 1));
+    const limit = Math.min(100, Math.max(1, Number(req.query.limit || 20)));
+    const skip = (page - 1) * limit;
+    const userId = req.query.userId ? String(req.query.userId) : null;
+
+    const where = userId ? { createdBy: userId } : {};
+    const [items, total] = await Promise.all([
+      prisma.collection.findMany({
+        where,
+        include: {
+          creator: { select: { id: true, username: true, avatar: true } },
+          _count: { select: { collectionCommands: true } },
+        },
+        orderBy: { createdAt: 'desc' },
+        skip,
+        take: limit,
+      }),
+      prisma.collection.count({ where }),
+    ]);
+
+    return res.json({
+      data: items.map((c) => ({
+        id: c.id,
+        name: c.name,
+        description: c.description,
+        createdBy: c.createdBy,
+        creator: c.creator,
+        createdAt: c.createdAt,
+        updatedAt: c.updatedAt,
+        commandCount: c._count?.collectionCommands || 0,
+      })),
+      pagination: {
+        total,
+        page,
+        limit,
+        pages: Math.max(1, Math.ceil(total / limit)),
+      },
+    });
+  } catch (err) {
+    console.error('collections list error', err && err.message ? err.message : err);
+    return res.status(500).json({ error: 'Failed to fetch collections' });
+  }
+});
+
+// Collections: create
+app.post('/api/collections', requireDbReady, requireAuth, async (req, res) => {
+  try {
+    const name = String(req.body?.name || '').trim();
+    const descriptionRaw = typeof req.body?.description === 'string' ? req.body.description : '';
+    const description = descriptionRaw.trim();
+
+    if (!name) return res.status(400).json({ error: 'Collection name is required' });
+    if (name.length > 100)
+      return res.status(400).json({ error: 'Collection name must be less than 100 characters' });
+    if (description.length > 500)
+      return res.status(400).json({ error: 'Description must be less than 500 characters' });
+
+    const createdBy = req.session.user.id;
+    const collection = await prisma.collection.create({
+      data: { name, description: description || null, createdBy },
+      include: { creator: { select: { id: true, username: true, avatar: true } } },
+    });
+
+    return res.status(201).json({ ...collection, commandCount: 0 });
+  } catch (err) {
+    console.error('create collection error', err && err.message ? err.message : err);
+    return res.status(500).json({ error: 'Failed to create collection' });
+  }
+});
+
+// Collections: detail
+app.get('/api/collections/:id', requireDbReady, async (req, res) => {
+  try {
+    const id = String(req.params.id || '');
+    if (!id) return res.status(400).json({ error: 'Collection ID is required' });
+
+    const collection = await prisma.collection.findUnique({
+      where: { id },
+      include: {
+        creator: { select: { id: true, username: true, avatar: true } },
+        collectionCommands: {
+          include: { command: { include: { author: true } } },
+          orderBy: { addedAt: 'desc' },
+        },
+      },
+    });
+
+    if (!collection) return res.status(404).json({ error: 'Collection not found' });
+
+    return res.json({
+      id: collection.id,
+      name: collection.name,
+      description: collection.description,
+      createdBy: collection.createdBy,
+      creator: collection.creator,
+      createdAt: collection.createdAt,
+      updatedAt: collection.updatedAt,
+      commandCount: collection.collectionCommands.filter((cc) => Boolean(cc && cc.command)).length,
+      commands: collection.collectionCommands.map((cc) => cc.command).filter(Boolean),
+    });
+  } catch (err) {
+    console.error('collection detail error', err && err.message ? err.message : err);
+    return res.status(500).json({ error: 'Failed to fetch collection' });
+  }
+});
+
+// Collections: update
+app.patch('/api/collections/:id', requireDbReady, requireAuth, async (req, res) => {
+  try {
+    const id = String(req.params.id || '');
+    if (!id) return res.status(400).json({ error: 'Collection ID is required' });
+
+    const existing = await prisma.collection.findUnique({ where: { id } });
+    if (!existing) return res.status(404).json({ error: 'Collection not found' });
+    if (existing.createdBy !== req.session.user.id)
+      return res.status(403).json({ error: 'Not authorized to update this collection' });
+
+    const data = {};
+    if (req.body?.name !== undefined) {
+      const name = String(req.body.name || '').trim();
+      if (!name) return res.status(400).json({ error: 'Collection name is required' });
+      if (name.length > 100)
+        return res.status(400).json({ error: 'Collection name must be less than 100 characters' });
+      data.name = name;
+    }
+    if (req.body?.description !== undefined) {
+      const description = String(req.body.description || '').trim();
+      if (description.length > 500)
+        return res.status(400).json({ error: 'Description must be less than 500 characters' });
+      data.description = description || null;
+    }
+    if (Object.keys(data).length === 0)
+      return res.status(400).json({ error: 'No fields to update' });
+
+    const collection = await prisma.collection.update({
+      where: { id },
+      data,
+      include: { creator: { select: { id: true, username: true, avatar: true } } },
+    });
+    return res.json(collection);
+  } catch (err) {
+    console.error('update collection error', err && err.message ? err.message : err);
+    return res.status(500).json({ error: 'Failed to update collection' });
+  }
+});
+
+// Collections: delete
+app.delete('/api/collections/:id', requireDbReady, requireAuth, async (req, res) => {
+  try {
+    const id = String(req.params.id || '');
+    if (!id) return res.status(400).json({ error: 'Collection ID is required' });
+
+    const existing = await prisma.collection.findUnique({ where: { id } });
+    if (!existing) return res.status(404).json({ error: 'Collection not found' });
+    if (existing.createdBy !== req.session.user.id)
+      return res.status(403).json({ error: 'Not authorized to delete this collection' });
+
+    await prisma.collection.delete({ where: { id } });
+    return res.json({ success: true });
+  } catch (err) {
+    console.error('delete collection error', err && err.message ? err.message : err);
+    return res.status(500).json({ error: 'Failed to delete collection' });
+  }
+});
+
+// Collections: add command
+app.post('/api/collections/:id/commands', requireDbReady, requireAuth, async (req, res) => {
+  try {
+    const collectionId = String(req.params.id || '');
+    const commandId = String(req.body?.commandId || '');
+
+    if (!collectionId) return res.status(400).json({ error: 'Collection ID is required' });
+    if (!commandId) return res.status(400).json({ error: 'Command ID is required' });
+
+    const collection = await prisma.collection.findUnique({ where: { id: collectionId } });
+    if (!collection) return res.status(404).json({ error: 'Collection not found' });
+    if (collection.createdBy !== req.session.user.id)
+      return res.status(403).json({ error: 'Not authorized to modify this collection' });
+
+    const command = await prisma.command.findUnique({ where: { id: commandId } });
+    if (!command) return res.status(404).json({ error: 'Command not found' });
+
+    await prisma.collectionCommand.upsert({
+      where: { collectionId_commandId: { collectionId, commandId } },
+      create: { collectionId, commandId },
+      update: {},
+    });
+
+    const cmd = await prisma.command.findUnique({ where: { id: commandId }, include: { author: true } });
+    return res.status(201).json(cmd);
+  } catch (err) {
+    console.error('add collection command error', err && err.message ? err.message : err);
+    return res.status(500).json({ error: 'Failed to add command to collection' });
+  }
+});
+
+// Collections: remove command
+app.delete('/api/collections/:id/commands/:commandId', requireDbReady, requireAuth, async (req, res) => {
+  try {
+    const collectionId = String(req.params.id || '');
+    const commandId = String(req.params.commandId || '');
+
+    if (!collectionId) return res.status(400).json({ error: 'Collection ID is required' });
+    if (!commandId) return res.status(400).json({ error: 'Command ID is required' });
+
+    const collection = await prisma.collection.findUnique({ where: { id: collectionId } });
+    if (!collection) return res.status(404).json({ error: 'Collection not found' });
+    if (collection.createdBy !== req.session.user.id)
+      return res.status(403).json({ error: 'Not authorized to modify this collection' });
+
+    await prisma.collectionCommand.delete({
+      where: { collectionId_commandId: { collectionId, commandId } },
+    });
+    return res.json({ success: true });
+  } catch (err) {
+    console.error('remove collection command error', err && err.message ? err.message : err);
+    return res.status(500).json({ error: 'Failed to remove command from collection' });
+  }
+});
+
 // Aggregated stats for homepage
 app.get('/api/stats', requireDbReady, async (req, res) => {
   try {
@@ -1622,6 +1845,7 @@ app.get('/api/news', requireDbReady, async (req, res) => {
         id: n.id,
         title: n.title,
         content: n.content,
+        type: n.type || 'general',
         author: n.hideAuthor ? 'Site Admin' : n.author?.username,
         authorId: n.author?.id,
         authorAvatar: n.hideAuthor ? null : n.author?.avatar,
@@ -1630,6 +1854,17 @@ app.get('/api/news', requireDbReady, async (req, res) => {
       })),
     });
   } catch (err) {
+    const message = String(err?.message || '');
+    const knownSchemaIssue =
+      err?.code === 'P2021' ||
+      err?.code === 'P2022' ||
+      /does not exist|unknown field|invalid.*column|relation .* does not exist/i.test(message);
+
+    if (knownSchemaIssue) {
+      console.warn('[news] News schema not ready yet, returning empty list:', message);
+      return res.json({ news: [] });
+    }
+
     console.error('[news] Failed to fetch published news:', err);
     return res.status(500).json({ error: 'Failed to fetch news' });
   }

@@ -93,6 +93,37 @@ async function ensure() {
         );
       }
 
+      // Ensure Collection feature tables exist.
+      try {
+        await prisma.$executeRawUnsafe(`
+          CREATE TABLE IF NOT EXISTS "Collection" (
+            "id" text PRIMARY KEY,
+            "name" text NOT NULL,
+            "description" text,
+            "createdBy" text NOT NULL,
+            "createdAt" timestamptz DEFAULT now(),
+            "updatedAt" timestamptz DEFAULT now(),
+            CONSTRAINT fk_collection_creator FOREIGN KEY ("createdBy") REFERENCES "User"(id) ON DELETE CASCADE
+          )
+        `);
+        await prisma.$executeRawUnsafe(`
+          CREATE TABLE IF NOT EXISTS "CollectionCommand" (
+            "id" text PRIMARY KEY,
+            "collectionId" text NOT NULL,
+            "commandId" text NOT NULL,
+            "addedAt" timestamptz DEFAULT now(),
+            CONSTRAINT fk_collection_command_collection FOREIGN KEY ("collectionId") REFERENCES "Collection"(id) ON DELETE CASCADE,
+            CONSTRAINT fk_collection_command_command FOREIGN KEY ("commandId") REFERENCES "Command"(id) ON DELETE CASCADE,
+            CONSTRAINT uq_collection_command UNIQUE ("collectionId", "commandId")
+          )
+        `);
+      } catch (collectionErr) {
+        console.warn(
+          '[dbEnsure] Failed to ensure Collection tables:',
+          collectionErr && collectionErr.message ? collectionErr.message : collectionErr,
+        );
+      }
+
       // Ensure Report table columns exist (schema drift guard).
       try {
         await prisma.$executeRawUnsafe(

@@ -26,6 +26,7 @@ model User {
   following        Follow[]   @relation("following")
   reportsSubmitted Report[]   @relation("reporter")
   news             News[]
+  collections      Collection[]
 
   @@index([createdAt])
   @@index([suspended])
@@ -60,6 +61,7 @@ model Command {
   ratings        Rating[]
   favorites      Favorite[]
   analytics      CommandAnalytics?
+  collectionCommands CollectionCommand[]
 
   @@index([authorId])
   @@index([approved])
@@ -201,4 +203,34 @@ model News {
   @@index([createdBy])
   @@index([createdAt])
   @@index([type])
+}
+
+model Collection {
+  id          String   @id @default(uuid())
+  name        String
+  description String?
+  createdBy   String
+  creator     User     @relation(fields: [createdBy], references: [id], onDelete: Cascade)
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+  
+  collectionCommands CollectionCommand[]
+
+  @@index([createdBy])
+  @@index([createdAt])
+  @@index([updatedAt])
+}
+
+model CollectionCommand {
+  id           String   @id @default(uuid())
+  collectionId String
+  commandId    String
+  collection   Collection @relation(fields: [collectionId], references: [id], onDelete: Cascade)
+  command      Command    @relation(fields: [commandId], references: [id], onDelete: Cascade)
+  addedAt      DateTime @default(now())
+
+  @@unique([collectionId, commandId])
+  @@index([collectionId])
+  @@index([commandId])
+  @@index([addedAt])
 }

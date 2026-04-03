@@ -1,10 +1,12 @@
 import React, { useEffect, useState } from 'react';
-import { User, Package, Download, Heart, Check, UserPlus, LogOut } from 'lucide-react';
+import { User, Package, Download, Heart, Check, UserPlus, BookOpen } from 'lucide-react';
 import { C } from '../constants';
 import CommandCard from '../components/CommandCard';
+import CollectionCard from '../components/CollectionCard';
 import ShareButtons from '../components/ShareButtons';
 import { MOCK_COMMANDS } from '../data/mockCommands';
 import CountUp from '../components/CountUp';
+import { fetchCollections } from '../api';
 
 export default function ProfilePage({ user, profileId, onViewCommand, onNavigate }) {
   console.info('[client] ProfilePage mount', { profileId, hasUserProp: !!user });
@@ -22,11 +24,14 @@ export default function ProfilePage({ user, profileId, onViewCommand, onNavigate
   const displayUser = viewUser && viewUser.user ? viewUser.user : viewUser;
   const [userCmds, setUserCmds] = useState([]);
   const [favCmds, setFavCmds] = useState([]);
+  const [userCollections, setUserCollections] = useState([]);
   const [loadingUserCmds, setLoadingUserCmds] = useState(true);
   const [loadingFavCmds, setLoadingFavCmds] = useState(true);
+  const [loadingCollections, setLoadingCollections] = useState(true);
   const [isFollowing, setIsFollowing] = useState(false);
   const [visibleUserCmds, setVisibleUserCmds] = useState(6);
   const [visibleFavCmds, setVisibleFavCmds] = useState(6);
+  const [visibleCollections, setVisibleCollections] = useState(6);
   const totalDownloads = userCmds.reduce((a, c) => a + (c.downloads || 0), 0);
   const totalFavs = userCmds.reduce((a, c) => a + (c.favourites || 0), 0);
 
@@ -133,6 +138,19 @@ export default function ProfilePage({ user, profileId, onViewCommand, onNavigate
         if (!cancelled) setFavCmds([]);
       } finally {
         if (!cancelled) setLoadingFavCmds(false);
+      }
+
+      setLoadingCollections(true);
+      try {
+        const id = viewUser && viewUser.id ? viewUser.id : profileId;
+        const payload = await fetchCollections(id, 100, 1);
+        if (!cancelled) {
+          setUserCollections(Array.isArray(payload?.data) ? payload.data : []);
+        }
+      } catch (e) {
+        if (!cancelled) setUserCollections([]);
+      } finally {
+        if (!cancelled) setLoadingCollections(false);
       }
     })();
 
@@ -736,6 +754,156 @@ export default function ProfilePage({ user, profileId, onViewCommand, onNavigate
           )}
         </>
       )}
+
+      <div style={{ marginTop: 32 }}>
+        <div
+          style={{
+            display: 'flex',
+            justifyContent: 'space-between',
+            alignItems: 'center',
+            marginBottom: 18,
+          }}
+        >
+          <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
+            <div
+              style={{
+                width: 40,
+                height: 40,
+                borderRadius: 10,
+                background: '#8b5cf620',
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'center',
+              }}
+            >
+              <BookOpen size={20} color="#8b5cf6" />
+            </div>
+            <h2
+              style={{
+                fontFamily: "'Syne', sans-serif",
+                fontSize: 20,
+                fontWeight: 800,
+                color: C.white,
+                margin: 0,
+              }}
+            >
+              Collections
+            </h2>
+          </div>
+        </div>
+        {loadingCollections ? (
+          <div
+            style={{
+              display: 'grid',
+              gridTemplateColumns: 'repeat(auto-fill, minmax(290px, 1fr))',
+              gap: 16,
+            }}
+          >
+            {[1, 2, 3].map((i) => (
+              <div
+                key={`coll-skel-${i}`}
+                style={{
+                  background: C.surface,
+                  border: `1px solid ${C.border}`,
+                  borderRadius: 12,
+                  padding: 16,
+                  minHeight: 140,
+                }}
+              >
+                <div style={{ display: 'flex', alignItems: 'flex-start', gap: 10, marginBottom: 10 }}>
+                  <div className="skeleton" style={{ width: 18, height: 18, borderRadius: 4, marginTop: 3 }} />
+                  <div style={{ flex: 1 }}>
+                    <div className="skeleton" style={{ width: '68%', height: 18, borderRadius: 6, marginBottom: 8 }} />
+                    <div className="skeleton" style={{ width: '92%', height: 12, borderRadius: 6 }} />
+                  </div>
+                </div>
+                <div className="skeleton" style={{ width: '60%', height: 12, borderRadius: 6, marginBottom: 8 }} />
+                <div className="skeleton" style={{ width: '42%', height: 11, borderRadius: 6 }} />
+              </div>
+            ))}
+          </div>
+        ) : userCollections.length === 0 ? (
+          <div
+            style={{
+              background: C.surface,
+              border: `1px solid ${C.border}`,
+              borderRadius: 14,
+              padding: '40px 20px',
+              textAlign: 'center',
+              color: C.muted,
+            }}
+          >
+            <div
+              style={{
+                width: 56,
+                height: 56,
+                borderRadius: 12,
+                background: '#8b5cf620',
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'center',
+                margin: '0 auto 20px',
+              }}
+            >
+              <BookOpen size={28} color="#8b5cf6" />
+            </div>
+            <p style={{ margin: 0, fontSize: 16, fontWeight: 600, color: C.white, marginBottom: 4 }}>
+              No collections yet
+            </p>
+            <p style={{ fontSize: 13, marginTop: 8, margin: '8px 0 0' }}>
+              {displayUser && user && String(displayUser.id) === String(user.id)
+                ? 'Create your first collection from the Collections page.'
+                : `${displayUser?.username || 'This user'} has not created any collections yet.`}
+            </p>
+          </div>
+        ) : (
+          <>
+            <div
+              style={{
+                display: 'grid',
+                gridTemplateColumns: 'repeat(auto-fill, minmax(290px, 1fr))',
+                gap: 16,
+              }}
+            >
+              {userCollections.slice(0, visibleCollections).map((collection) => (
+                <CollectionCard
+                  key={collection.id}
+                  collection={collection}
+                  onClick={() => onNavigate && onNavigate('collection-detail', { id: collection.id })}
+                />
+              ))}
+            </div>
+            {userCollections.length > visibleCollections && (
+              <div style={{ textAlign: 'center', marginTop: 24 }}>
+                <button
+                  onClick={() => setVisibleCollections((v) => v + 6)}
+                  style={{
+                    background: 'transparent',
+                    color: C.blurple,
+                    border: `2px solid ${C.blurple}`,
+                    borderRadius: 8,
+                    padding: '12px 32px',
+                    fontSize: 14,
+                    fontWeight: 600,
+                    cursor: 'pointer',
+                    transition: 'all 0.3s ease',
+                  }}
+                  onMouseEnter={(e) => {
+                    e.target.style.background = `${C.blurple}10`;
+                    e.target.style.transform = 'translateY(-2px)';
+                  }}
+                  onMouseLeave={(e) => {
+                    e.target.style.background = 'transparent';
+                    e.target.style.transform = 'translateY(0)';
+                  }}
+                >
+                  Load More ({userCollections.length - visibleCollections} remaining)
+                </button>
+              </div>
+            )}
+          </>
+        )}
+      </div>
 
       <div style={{ marginTop: 32 }}>
         <div

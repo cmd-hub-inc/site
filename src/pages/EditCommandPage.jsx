@@ -49,7 +49,24 @@ export default function EditCommandPage({ user, pageParams }) {
     }
   }, [cmd, original]);
 
-  if (loading) return <div style={{ padding: '60px 24px', maxWidth: 1200, margin: '0 auto' }}>Loading...</div>;
+  if (loading) {
+    return (
+      <div style={{ padding: '60px 24px', maxWidth: 1200, margin: '0 auto' }}>
+        <div style={{ marginBottom: 24 }}>
+          <div className="skeleton" style={{ height: 32, borderRadius: 6, width: '40%', marginBottom: 12 }} />
+          <div className="skeleton" style={{ height: 16, borderRadius: 6, width: '60%' }} />
+        </div>
+        <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 20 }}>
+          {[...Array(6)].map((_, i) => (
+            <div key={i}>
+              <div className="skeleton" style={{ height: 14, borderRadius: 4, marginBottom: 8, width: '40%' }} />
+              <div className="skeleton" style={{ height: 40, borderRadius: 6 }} />
+            </div>
+          ))}
+        </div>
+      </div>
+    );
+  }
   if (!user)
     return (
       <div style={{ textAlign: 'center', padding: '60px 24px', maxWidth: 1200, margin: '0 auto' }}>

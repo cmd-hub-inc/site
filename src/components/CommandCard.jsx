@@ -9,6 +9,10 @@ export default function CommandCard({ cmd, onClick, loading = false }) {
   const [hov, setHov] = useState(false);
   const [copied, setCopied] = useState(false);
 
+  if (!loading && !cmd) {
+    return null;
+  }
+
   const handleCopy = (e) => {
     e.stopPropagation();
     navigator.clipboard.writeText(`/${cmd.name}`);

@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { Home, Grid, Upload, LogOut, Users, BarChart3, Code2, Menu, X, Shield, Newspaper } from 'lucide-react';
+import { Home, Grid, Upload, LogOut, Users, BarChart3, Code2, Menu, X, Shield, Newspaper, BookOpen } from 'lucide-react';
 import { C } from '../constants';
 
 export default function Navbar({ page, user, pageParams, newsHasUnread, onNavigate, onLogin, onLogout }) {
@@ -103,6 +103,7 @@ export default function Navbar({ page, user, pageParams, newsHasUnread, onNaviga
       <div className="nav-center" style={{ display: 'flex', gap: 2, flex: 1 }}>
         {navBtn('home', 'Home', <Home size={15} />)}
         {navBtn('browse', 'Browse', <Grid size={15} />)}
+        {navBtn('collections', 'Collections', <BookOpen size={15} />)}
         {navBtn('creators', 'Creators', <Users size={15} />)}
         {navBtn('news', 'News', <Newspaper size={15} />)}
         {navBtn('upload', 'Upload', <Upload size={15} />)}
@@ -287,6 +288,7 @@ export default function Navbar({ page, user, pageParams, newsHasUnread, onNaviga
           <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
             {navBtn('home', 'Home', <Home size={15} />)}
             {navBtn('browse', 'Browse', <Grid size={15} />)}
+            {navBtn('collections', 'Collections', <BookOpen size={15} />)}
             {navBtn('creators', 'Creators', <Users size={15} />)}
             {navBtn('news', 'News', <Newspaper size={15} />)}
             {navBtn('upload', 'Upload', <Upload size={15} />)}

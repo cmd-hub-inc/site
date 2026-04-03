@@ -22,8 +22,19 @@ export default function AdminPage({ user, onNavigate }) {
 
   if (loading) {
     return (
-      <div style={{ padding: '60px 24px', textAlign: 'center', color: C.muted }}>
-        <p>Loading...</p>
+      <div style={{ padding: '60px 24px', maxWidth: 1200, margin: '0 auto' }}>
+        <div style={{ marginBottom: 40 }}>
+          <div className="skeleton" style={{ height: 40, borderRadius: 6, marginBottom: 20 }} />
+          <div className="skeleton" style={{ height: 18, borderRadius: 6, width: '60%' }} />
+        </div>
+        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(250px, 1fr))', gap: 20, marginBottom: 40 }}>
+          {[...Array(4)].map((_, i) => (
+            <div key={i} style={{ padding: 20, borderRadius: 12, background: C.darkBlog, border: `1px solid ${C.border}` }}>
+              <div className="skeleton" style={{ height: 24, borderRadius: 6, marginBottom: 12 }} />
+              <div className="skeleton" style={{ height: 16, borderRadius: 6, width: '80%' }} />
+            </div>
+          ))}
+        </div>
       </div>
     );
   }

@@ -119,7 +119,20 @@ export default function FavoritesAndFollowing({ user, onNavigate }) {
 
       {/* Content */}
       {loading ? (
-        <div className="text-center text-gray-400 py-8">Loading...</div>
+        <div className="space-y-3">
+          {[...Array(5)].map((_, i) => (
+            <div key={i} style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: 16, borderRadius: 8, background: '#2b2d31', height: 72 }}>
+              <div style={{ display: 'flex', alignItems: 'center', gap: 12, flex: 1 }}>
+                <div className="skeleton" style={{ width: 48, height: 48, borderRadius: 8, flexShrink: 0 }} />
+                <div style={{ flex: 1 }}>
+                  <div className="skeleton" style={{ height: 14, borderRadius: 4, marginBottom: 8, width: '60%' }} />
+                  <div className="skeleton" style={{ height: 12, borderRadius: 4, width: '40%' }} />
+                </div>
+              </div>
+              <div className="skeleton" style={{ width: 28, height: 28, borderRadius: 6, flexShrink: 0 }} />
+            </div>
+          ))}
+        </div>
       ) : (
         <>
           {activeTab === 'favorites' && (

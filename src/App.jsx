@@ -18,12 +18,22 @@ const CreatorsPage = lazy(() => import('./pages/CreatorsPage'));
 const DashboardPage = lazy(() => import('./pages/DashboardPage'));
 const AdminDashboardPage = lazy(() => import('./pages/AdminDashboardPage'));
 const NewsPage = lazy(() => import('./pages/NewsPage'));
+const CollectionsPage = lazy(() => import('./pages/CollectionsPage'));
+const CollectionDetailPage = lazy(() => import('./pages/CollectionDetailPage'));
 
 // Loading component for lazy-loaded pages
 function PageLoadingSpinner() {
   return (
     <div className="flex items-center justify-center min-h-screen">
-      <div className="text-lg text-gray-600">Loading...</div>
+      <div style={{ display: 'flex', flexDirection: 'column', width: '100%', maxWidth: 1200, padding: 24, gap: 16 }}>
+        <div className="skeleton" style={{ height: 32, borderRadius: 6, width: '40%' }} />
+        <div className="skeleton" style={{ height: 16, borderRadius: 6, width: '60%' }} />
+        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(250px, 1fr))', gap: 16 }}>
+          {[...Array(3)].map((_, i) => (
+            <div key={i} className="skeleton" style={{ height: 200, borderRadius: 8 }} />
+          ))}
+        </div>
+      </div>
     </div>
   );
 }
@@ -34,6 +44,13 @@ export default function App() {
       const pathname = typeof window !== 'undefined' ? window.location.pathname || '' : '';
       if (pathname === '/' || pathname === '') return 'home';
       if (pathname.startsWith('/browse')) return 'browse';
+      if (pathname.startsWith('/collections')) {
+        // Check if it's a detail page
+        if (pathname.match(/^\/collections\/[^/]+$/) && pathname !== '/collections') {
+          return 'collection-detail';
+        }
+        return 'collections';
+      }
       if (pathname.startsWith('/creators')) return 'creators';
       if (pathname.startsWith('/news')) return 'news';
       if (pathname.startsWith('/dashboard')) return 'dashboard';
@@ -58,7 +75,7 @@ export default function App() {
   const navigate = (p, params = {}) => {
     setPage(p);
     setPageParams(params);
-    if (p !== 'detail' && p !== 'edit') setSelectedCmd(null);
+    if (p !== 'detail' && p !== 'edit' && p !== 'collection-detail') setSelectedCmd(null);
     try {
       window.scrollTo(0, 0);
     } catch {}
@@ -70,7 +87,10 @@ export default function App() {
       if (p === 'browse') newPath = '/browse';
       else if (p === 'creators') newPath = '/creators';
       else if (p === 'news') newPath = '/news';
-      else if (p === 'dashboard') newPath = '/dashboard';
+      else if (p === 'collections') newPath = '/collections';
+      else if (p === 'collection-detail' && params && params.id) {
+        newPath = `/collections/${encodeURIComponent(params.id)}`;
+      } else if (p === 'dashboard') newPath = '/dashboard';
       else if (p === 'admin') newPath = '/admin';
       else if (p === 'upload') newPath = '/upload';
       else if (p === 'profile') {
@@ -212,6 +232,7 @@ export default function App() {
           const editMatch = pathname.match(/^\/command\/(.+)\/edit$/);
           const cmdMatch = pathname.match(/^\/command\/(.+)$/);
           const profMatch = pathname.match(/^\/profile\/(.+)$/);
+          const collectionMatch = pathname.match(/^\/collections\/(.+)$/);
 
           if (editMatch) {
             const id = decodeURIComponent(editMatch[1]);
@@ -252,6 +273,10 @@ export default function App() {
           } else if (profMatch) {
             const id = decodeURIComponent(profMatch[1]);
             setPage('profile');
+            setPageParams({ id });
+          } else if (collectionMatch) {
+            const id = decodeURIComponent(collectionMatch[1]);
+            setPage('collection-detail');
             setPageParams({ id });
           }
         } catch (e) {
@@ -311,6 +336,7 @@ export default function App() {
         const editMatch = pathname.match(/^\/command\/(.+)\/edit$/);
         const cmdMatch = pathname.match(/^\/command\/(.+)$/);
         const profMatch = pathname.match(/^\/profile\/(.+)$/);
+        const collectionMatch = pathname.match(/^\/collections\/(.+)$/);
 
         if (editMatch) {
           const id = decodeURIComponent(editMatch[1]);
@@ -359,6 +385,14 @@ export default function App() {
           return;
         }
 
+        if (collectionMatch) {
+          const id = decodeURIComponent(collectionMatch[1]);
+          setPage('collection-detail');
+          setPageParams({ id });
+          setSelectedCmd(null);
+          return;
+        }
+
         // handle bare /profile when user is authenticated: canonicalize to /profile/:id
         if (pathname === '/profile' && user) {
           const pid = user.id;
@@ -372,6 +406,11 @@ export default function App() {
         // fallback: map path to pages
         if (pathname.startsWith('/browse')) {
           setPage('browse');
+          setSelectedCmd(null);
+          return;
+        }
+        if (pathname.startsWith('/collections')) {
+          setPage('collections');
           setSelectedCmd(null);
           return;
         }
@@ -468,6 +507,10 @@ export default function App() {
               />
             )}
             {page === 'creators' && <CreatorsPage onNavigate={navigate} />}
+            {page === 'collections' && <CollectionsPage user={user} onNavigate={navigate} />}
+            {page === 'collection-detail' && pageParams.id && (
+              <CollectionDetailPage key={pageParams.id} collectionId={pageParams.id} user={user} onNavigate={navigate} />
+            )}
             {page === 'upload' && <UploadPage user={user} onNavigate={navigate} />}
             {page === 'profile' && (
               <ProfilePage
