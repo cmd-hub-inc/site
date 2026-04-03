@@ -34,7 +34,7 @@ function getDetailTabFromHash() {
 export default function CommandDetailPage({ cmd, onBack, user, loading = false }) {
   if (loading || !cmd) {
     return (
-      <div style={{ maxWidth: 920, margin: '0 auto', padding: '44px 24px' }}>
+      <div style={{ maxWidth: 1200, margin: '0 auto', padding: '60px 24px' }}>
         <div style={{ marginBottom: 28 }}>
           <div className="skeleton" style={{ width: 140, height: 22, borderRadius: 8 }} />
         </div>
@@ -177,7 +177,7 @@ export default function CommandDetailPage({ cmd, onBack, user, loading = false }
         })}
       </Helmet>
 
-      <div style={{ maxWidth: 920, margin: '0 auto', padding: '44px 24px' }}>
+      <div style={{ maxWidth: 1200, margin: '0 auto', padding: '60px 24px' }}>
         {/* Approval Status Banner */}
         {cmd.approved !== undefined && (
           <div

@@ -49,10 +49,10 @@ export default function EditCommandPage({ user, pageParams }) {
     }
   }, [cmd, original]);
 
-  if (loading) return <div style={{ padding: 24 }}>Loading...</div>;
+  if (loading) return <div style={{ padding: '60px 24px', maxWidth: 1200, margin: '0 auto' }}>Loading...</div>;
   if (!user)
     return (
-      <div style={{ textAlign: 'center', padding: '100px 24px' }}>
+      <div style={{ textAlign: 'center', padding: '60px 24px', maxWidth: 1200, margin: '0 auto' }}>
         <div
           style={{
             width: 72,
@@ -105,7 +105,7 @@ export default function EditCommandPage({ user, pageParams }) {
         </a>
       </div>
     );
-  if (!cmd) return <div style={{ padding: 24 }}>Command not found.</div>;
+  if (!cmd) return <div style={{ padding: '60px 24px', maxWidth: 1200, margin: '0 auto' }}>Command not found.</div>;
 
   const handleChange = (k, v) => setCmd((s) => ({ ...s, [k]: v }));
 
@@ -167,7 +167,7 @@ export default function EditCommandPage({ user, pageParams }) {
   };
 
   return (
-    <div style={{ maxWidth: 1100, margin: '24px auto', padding: '12px 18px' }}>
+    <div style={{ maxWidth: 1200, margin: '0 auto', padding: '60px 24px' }}>
       <div
         style={{
           display: 'flex',

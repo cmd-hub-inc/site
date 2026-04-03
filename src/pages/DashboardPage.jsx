@@ -92,13 +92,13 @@ export default function DashboardPage({ user, onNavigate }) {
   if (!user) return null;
 
   return (
-    <div style={{ background: C.bg, minHeight: '100vh', padding: '40px 20px', color: C.text }}>
+    <div style={{ background: C.bg, minHeight: '100vh', padding: '60px 24px', color: C.text }}>
       <div style={{ maxWidth: 1200, margin: '0 auto' }}>
         {/* Header */}
         {!loading && (
           <div style={{ marginBottom: 40 }}>
             <div style={{ display: 'flex', alignItems: 'center', gap: 12, marginBottom: 8 }}>
-              <TrendingUp size={28} style={{ color: C.blurple }} />
+              <TrendingUp size={32} color={C.blurple} strokeWidth={2} />
               <h1 style={{ fontSize: 32, fontWeight: 700, margin: 0, color: C.text }}>
                 Creator Dashboard
               </h1>

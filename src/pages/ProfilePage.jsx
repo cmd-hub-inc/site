@@ -169,7 +169,7 @@ export default function ProfilePage({ user, profileId, onViewCommand, onNavigate
     // profileId and no authenticated user.
     if (profileId || user) {
       return (
-        <div style={{ maxWidth: 960, margin: '0 auto', padding: '44px 24px' }}>
+        <div style={{ maxWidth: 1200, margin: '0 auto', padding: '60px 24px' }}>
           <div
             style={{
               background: C.surface,
@@ -249,7 +249,7 @@ export default function ProfilePage({ user, profileId, onViewCommand, onNavigate
   // Show a skeleton while user auth state is loading
   if (user === undefined)
     return (
-      <div style={{ maxWidth: 960, margin: '0 auto', padding: '44px 24px' }}>
+      <div style={{ maxWidth: 1200, margin: '0 auto', padding: '60px 24px' }}>
         <div
           style={{
             background: C.surface,
@@ -360,7 +360,7 @@ export default function ProfilePage({ user, profileId, onViewCommand, onNavigate
     );
 
   return (
-    <div style={{ maxWidth: 960, margin: '0 auto', padding: '44px 24px' }}>
+    <div style={{ maxWidth: 1200, margin: '0 auto', padding: '60px 24px' }}>
       <div
         style={{
           background: C.surface,

@@ -258,8 +258,8 @@ export default function AdminDashboardPage({ user, onNavigate }) {
   // Show skeleton while checking admin status
   if (!adminRole) {
     return (
-      <div style={{ background: C.bg, minHeight: '100vh', padding: '40px 20px', color: C.text }}>
-        <div style={{ maxWidth: 1400, margin: '0 auto' }}>
+      <div style={{ background: C.bg, minHeight: '100vh', padding: '60px 24px', color: C.text }}>
+        <div style={{ maxWidth: 1200, margin: '0 auto' }}>
           {/* Title Skeleton */}
           <div style={{ marginBottom: 40, animation: 'pulse 2s infinite' }}>
             <div
@@ -350,8 +350,8 @@ export default function AdminDashboardPage({ user, onNavigate }) {
   }
 
   return (
-    <div style={{ background: C.bg, minHeight: '100vh', padding: '40px 20px', color: C.text }}>
-      <div style={{ maxWidth: 1400, margin: '0 auto' }}>
+    <div style={{ background: C.bg, minHeight: '100vh', padding: '60px 24px', color: C.text }}>
+      <div style={{ maxWidth: 1200, margin: '0 auto' }}>
         {!loading && (
           <>
             {/* Header */}

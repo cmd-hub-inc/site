@@ -55,7 +55,7 @@ export default function CreatorsPage({ onViewCreator, onNavigate }) {
 
   if (loading)
     return (
-      <div style={{ background: C.bg, minHeight: '100vh', padding: '40px 20px', color: C.text }}>
+      <div style={{ background: C.bg, minHeight: '100vh', padding: '60px 24px', color: C.text }}>
         <div style={{ maxWidth: 1200, margin: '0 auto' }}>
           {/* Header Skeleton */}
           <div style={{ marginBottom: 40, animation: 'pulse 2s infinite' }}>
@@ -131,11 +131,11 @@ export default function CreatorsPage({ onViewCreator, onNavigate }) {
     );
   if (!creators || creators.length === 0)
     return (
-      <div style={{ background: C.bg, minHeight: '100vh', padding: '40px 20px', color: C.text }}>
+      <div style={{ background: C.bg, minHeight: '100vh', padding: '60px 24px', color: C.text }}>
         <div style={{ maxWidth: 1200, margin: '0 auto' }}>
           <div style={{ marginBottom: 40 }}>
             <div style={{ display: 'flex', alignItems: 'center', gap: 12, marginBottom: 8 }}>
-              <Users size={28} style={{ color: C.blurple }} />
+              <Users size={32} color={C.blurple} strokeWidth={2} />
               <h1 style={{ fontSize: 32, fontWeight: 700, margin: 0, color: C.text }}>
                 Creators
               </h1>
@@ -161,12 +161,12 @@ export default function CreatorsPage({ onViewCreator, onNavigate }) {
     );
 
   return (
-    <div style={{ background: C.bg, minHeight: '100vh', padding: '40px 20px', color: C.text }}>
+    <div style={{ background: C.bg, minHeight: '100vh', padding: '60px 24px', color: C.text }}>
       <div style={{ maxWidth: 1200, margin: '0 auto' }}>
         {/* Header */}
         <div style={{ marginBottom: 40 }}>
           <div style={{ display: 'flex', alignItems: 'center', gap: 12, marginBottom: 8 }}>
-            <Users size={28} style={{ color: C.blurple }} />
+            <Users size={32} color={C.blurple} strokeWidth={2} />
             <h1 style={{ fontSize: 32, fontWeight: 700, margin: 0, color: C.text }}>
               Creators
             </h1>

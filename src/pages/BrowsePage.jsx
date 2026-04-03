@@ -118,19 +118,19 @@ export default function BrowsePage({ initialTag, onViewCommand }) {
       {/* Header Section */}
       <div style={{ marginBottom: 48 }}>
         <div style={{ display: 'flex', alignItems: 'center', gap: 14, marginBottom: 12 }}>
+          <Search size={32} strokeWidth={2} color={C.blurple} />
           <h1
             style={{
               fontFamily: "'Syne', sans-serif",
-              fontSize: 40,
-              fontWeight: 800,
+              fontSize: 32,
+              fontWeight: 700,
               color: C.white,
               margin: 0,
-              letterSpacing: '-1px',
+              letterSpacing: 0,
             }}
           >
             Browse Commands
           </h1>
-          <Search size={40} strokeWidth={1.5} color={C.blurple} style={{ opacity: 0.7 }} />
         </div>
         <p
           style={{

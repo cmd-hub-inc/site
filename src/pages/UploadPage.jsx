@@ -93,7 +93,7 @@ export default function UploadPage({ user, onNavigate }) {
 
   if (!user)
     return (
-      <div style={{ textAlign: 'center', padding: '100px 24px' }}>
+      <div style={{ textAlign: 'center', padding: '60px 24px', maxWidth: 1200, margin: '0 auto' }}>
         <div
           style={{
             width: 72,
@@ -147,7 +147,7 @@ export default function UploadPage({ user, onNavigate }) {
 
   if (submitted)
     return (
-      <div style={{ textAlign: 'center', padding: '100px 24px' }}>
+      <div style={{ textAlign: 'center', padding: '60px 24px', maxWidth: 1200, margin: '0 auto' }}>
         <div style={{ fontSize: 52, marginBottom: 18 }}>
           <Rocket size={52} style={{ color: C.blurple }} />
         </div>
@@ -359,21 +359,22 @@ export default function UploadPage({ user, onNavigate }) {
   };
 
   return (
-    <div style={{ maxWidth: 1400, margin: '0 auto', padding: '24px 16px' }}>
+    <div style={{ maxWidth: 1200, margin: '0 auto', padding: '60px 24px' }}>
       <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'start', marginBottom: 24, flexWrap: 'wrap', gap: 12 }}>
         <div>
           <h1
             style={{
               fontFamily: "'Syne', sans-serif",
-              fontSize: 'clamp(24px, 5vw, 30px)',
-              fontWeight: 800,
+              fontSize: 32,
+              fontWeight: 700,
               color: C.white,
               marginBottom: 6,
+              margin: 0,
             }}
           >
             Upload a Command
           </h1>
-          <p style={{ color: C.muted, marginBottom: 0, fontSize: 'clamp(13px, 3vw, 15px)' }}>
+          <p style={{ color: C.muted, marginBottom: 0, fontSize: 14, marginTop: 8 }}>
             Share your command raw data with the CmdHub community.
           </p>
         </div>

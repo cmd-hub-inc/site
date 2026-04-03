@@ -66,11 +66,11 @@ export default function NewsPage({ user, onReadStateChange }) {
   };
 
   return (
-    <div style={{ padding: '40px 20px', maxWidth: 900, margin: '0 auto' }}>
+    <div style={{ padding: '60px 24px', maxWidth: 1200, margin: '0 auto' }}>
       {/* Header */}
       <div style={{ marginBottom: 40 }}>
         <div style={{ display: 'flex', alignItems: 'center', gap: 12, marginBottom: 20 }}>
-          <Newspaper size={32} color={C.blurple} />
+          <Newspaper size={32} color={C.blurple} strokeWidth={2} />
           <h1 style={{ margin: 0, fontSize: 32, fontWeight: 700, color: C.lightText }}>
             News & Updates
           </h1>

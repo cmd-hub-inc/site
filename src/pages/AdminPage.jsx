@@ -22,7 +22,7 @@ export default function AdminPage({ user, onNavigate }) {
 
   if (loading) {
     return (
-      <div style={{ padding: '40px 20px', textAlign: 'center', color: C.muted }}>
+      <div style={{ padding: '60px 24px', textAlign: 'center', color: C.muted }}>
         <p>Loading...</p>
       </div>
     );
@@ -30,7 +30,7 @@ export default function AdminPage({ user, onNavigate }) {
 
   if (!isAdmin) {
     return (
-      <div style={{ padding: '40px 20px', maxWidth: 800, margin: '0 auto' }}>
+      <div style={{ padding: '60px 24px', maxWidth: 1200, margin: '0 auto' }}>
         <div
           style={{
             display: 'flex',
@@ -57,10 +57,10 @@ export default function AdminPage({ user, onNavigate }) {
   }
 
   return (
-    <div style={{ padding: '40px 20px', maxWidth: 1200, margin: '0 auto' }}>
+    <div style={{ padding: '60px 24px', maxWidth: 1200, margin: '0 auto' }}>
       <div style={{ marginBottom: 40 }}>
         <div style={{ display: 'flex', alignItems: 'center', gap: 12, marginBottom: 20 }}>
-          <Shield size={32} color={C.blurple} />
+          <Shield size={32} color={C.blurple} strokeWidth={2} />
           <h1 style={{ margin: 0, fontSize: 32, fontWeight: 700, color: C.lightText }}>
             Admin Dashboard
           </h1>
