@@ -158,6 +158,24 @@ export default function CommandDetailPage({ cmd, onBack, user, loading = false }
     }
   };
 
+  const handleDownloadJSON = async () => {
+    try {
+      await recordDownload();
+      const jsonString = JSON.stringify(cmd.rawData, null, 2);
+      const blob = new Blob([jsonString], { type: 'application/json' });
+      const url = URL.createObjectURL(blob);
+      const link = document.createElement('a');
+      link.href = url;
+      link.download = `${cmd.name}.json`;
+      document.body.appendChild(link);
+      link.click();
+      document.body.removeChild(link);
+      URL.revokeObjectURL(url);
+    } catch (e) {
+      console.error('Download failed', e);
+    }
+  };
+
   const dateStr = (s) =>
     new Date(s).toLocaleDateString('en-GB', { day: 'numeric', month: 'short', year: 'numeric' });
 
@@ -291,9 +309,7 @@ export default function CommandDetailPage({ cmd, onBack, user, loading = false }
 
           <div style={{ display: 'flex', flexDirection: 'column', gap: 8, minWidth: 180 }}>
             <button
-              onClick={() => {
-                recordDownload();
-              }}
+              onClick={handleDownloadJSON}
               style={{
                 background: C.blurple,
                 color: '#fff',
