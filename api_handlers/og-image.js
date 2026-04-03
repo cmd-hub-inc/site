@@ -35,45 +35,45 @@ export default async function ogImage(req, res) {
       return res.status(404).json({ error: 'Command not found' });
     }
 
-    // For now, return a simple placeholder OG image
-    // In production, you would generate an actual image using canvas or similar
+    // Generate a square avatar-sized OG image for Discord embeds
+    // 512x512 prevents stretching and displays as an avatar in Discord
     const svg = `
-      <svg width="1200" height="630" xmlns="http://www.w3.org/2000/svg">
+      <svg width="512" height="512" xmlns="http://www.w3.org/2000/svg">
         <defs>
           <linearGradient id="grad" x1="0%" y1="0%" x2="100%" y2="100%">
             <stop offset="0%" style="stop-color:#5865F2;stop-opacity:1" />
             <stop offset="100%" style="stop-color:#2E5CB8;stop-opacity:1" />
           </linearGradient>
         </defs>
-        <rect width="1200" height="630" fill="url(#grad)"/>
+        <rect width="512" height="512" fill="url(#grad)"/>
         
-        <!-- Command Name -->
-        <text x="60" y="200" font-size="72" font-weight="bold" fill="white" font-family="Arial, sans-serif">
-          ${escapeXml(command.name)}
+        <!-- Command Name (centered, larger text for square format) -->
+        <text x="256" y="160" font-size="48" font-weight="bold" fill="white" font-family="Arial, sans-serif" text-anchor="middle">
+          ${escapeXml(command.name.substring(0, 20))}
         </text>
         
-        <!-- Description -->
-        <text x="60" y="280" font-size="32" fill="#E0E1E6" font-family="Arial, sans-serif">
-          ${escapeXml(command.description.substring(0, 60))}${command.description.length > 60 ? '...' : ''}
+        <!-- Description (centered) -->
+        <text x="256" y="220" font-size="18" fill="#E0E1E6" font-family="Arial, sans-serif" text-anchor="middle">
+          ${escapeXml(command.description.substring(0, 40))}
         </text>
         
         <!-- Type Badge -->
-        <rect x="60" y="350" width="150" height="50" rx="8" fill="#ED4245" opacity="0.8"/>
-        <text x="85" y="385" font-size="20" fill="white" font-family="Arial, sans-serif">
+        <rect x="156" y="270" width="100" height="40" rx="6" fill="#ED4245" opacity="0.8"/>
+        <text x="206" y="300" font-size="16" fill="white" font-family="Arial, sans-serif" text-anchor="middle">
           ${escapeXml(command.type || 'Command')}
         </text>
         
         <!-- Framework Badge -->
         ${command.framework ? `
-          <rect x="240" y="350" width="180" height="50" rx="8" fill="#3BA55D" opacity="0.8"/>
-          <text x="260" y="385" font-size="20" fill="white" font-family="Arial, sans-serif">
+          <rect x="306" y="270" width="100" height="40" rx="6" fill="#3BA55D" opacity="0.8"/>
+          <text x="356" y="300" font-size="16" fill="white" font-family="Arial, sans-serif" text-anchor="middle">
             ${escapeXml(command.framework)}
           </text>
         ` : ''}
         
         <!-- Footer -->
-        <text x="60" y="600" font-size="18" fill="#80848E" font-family="Arial, sans-serif">
-          Discord Commands • discord.gg/commands
+        <text x="256" y="480" font-size="14" fill="#80848E" font-family="Arial, sans-serif" text-anchor="middle">
+          CmdHub
         </text>
       </svg>
     `;
@@ -86,12 +86,12 @@ export default async function ogImage(req, res) {
     return res.send(svg);
   } catch (error) {
     logError('Failed to generate OG image', error);
-    // Return a simple placeholder on error
+    // Return a simple placeholder on error (square format)
     return res.status(500).send(
-      `<svg width="1200" height="630" xmlns="http://www.w3.org/2000/svg">
-        <rect width="1200" height="630" fill="#5865F2"/>
-        <text x="600" y="315" text-anchor="middle" font-size="48" fill="white" font-family="Arial, sans-serif">
-          Discord Commands
+      `<svg width="512" height="512" xmlns="http://www.w3.org/2000/svg">
+        <rect width="512" height="512" fill="#5865F2"/>
+        <text x="256" y="256" text-anchor="middle" font-size="40" fill="white" font-family="Arial, sans-serif" dy=".3em">
+          CmdHub
         </text>
       </svg>`,
     );
