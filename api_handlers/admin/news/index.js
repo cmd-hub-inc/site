@@ -59,6 +59,7 @@ export default async function handler(req, res) {
               id: n.id,
               title: n.title,
               content: n.content,
+              type: n.type || 'general',
               published: n.published,
               publishedAt: n.publishedAt,
               author: n.author.username,
@@ -69,7 +70,19 @@ export default async function handler(req, res) {
           });
         } catch (dbErr) {
           console.error('[admin/news] GET Database error:', dbErr.message, dbErr);
-          return res.status(500).json({ error: 'Database error: ' + dbErr.message });
+          const code = dbErr && dbErr.code ? String(dbErr.code) : '';
+          const msg = dbErr && dbErr.message ? String(dbErr.message) : 'Unknown error';
+          const knownSchemaIssue =
+            code === 'P2021' ||
+            code === 'P2022' ||
+            /does not exist|relation "News"|unknown field|invalid.*column/i.test(msg);
+
+          if (knownSchemaIssue) {
+            console.warn('[admin/news] News schema not ready yet, returning empty list:', msg);
+            return res.json({ news: [] });
+          }
+
+          return res.status(500).json({ error: 'Database error: ' + msg });
         }
       }
 

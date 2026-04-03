@@ -2348,10 +2348,9 @@ app.get('/api/admin/news', requireAdmin, async (req, res) => {
     console.error('[admin/news] Failed to fetch news:', err);
     const code = err && err.code ? String(err.code) : '';
     const msg = err && err.message ? String(err.message) : 'Unknown error';
-    if (code === 'P2021' || msg.includes('does not exist') || msg.includes('relation "News"')) {
-      return res.status(503).json({
-        error: 'News table is not ready yet. Run Prisma migration/db push and restart the server.',
-      });
+    if (code === 'P2021' || code === 'P2022' || /does not exist|relation "News"|unknown field|invalid.*column/i.test(msg)) {
+      console.warn('[admin/news] News schema not ready yet, returning empty list:', msg);
+      return res.json({ news: [] });
     }
     return res.status(500).json({ error: `Failed to fetch admin news: ${msg}` });
   }

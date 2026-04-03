@@ -8,23 +8,23 @@ datasource db {
 }
 
 model User {
-  id               String     @id @default(uuid())
-  username         String     @unique
+  id               String       @id @default(uuid())
+  username         String       @unique
   avatar           String?
-  suspended        Boolean    @default(false)
-  isAdmin          Boolean    @default(false)
+  suspended        Boolean      @default(false)
+  isAdmin          Boolean      @default(false)
   adminRole        String? // "SUPER_ADMIN", "MODERATOR", "VIEWER"
-  sessionVersion   Int        @default(0)
-  adminNotes       String?    @default("")
-  warningCount     Int        @default(0)
+  sessionVersion   Int          @default(0)
+  adminNotes       String?      @default("")
+  warningCount     Int          @default(0)
   lastWarningAt    DateTime?
-  createdAt        DateTime   @default(now())
+  createdAt        DateTime     @default(now())
   commands         Command[]
   ratings          Rating[]
   favorites        Favorite[]
-  followers        Follow[]   @relation("followers")
-  following        Follow[]   @relation("following")
-  reportsSubmitted Report[]   @relation("reporter")
+  followers        Follow[]     @relation("followers")
+  following        Follow[]     @relation("following")
+  reportsSubmitted Report[]     @relation("reporter")
   news             News[]
   collections      Collection[]
 
@@ -34,33 +34,33 @@ model User {
 }
 
 model Command {
-  id             String            @id @default(uuid())
-  name           String            @unique
-  description    String
-  type           String
-  framework      String
-  uploadCategory String            @default("Framework")
-  version        String
-  tags           String[]          @default([])
-  githubUrl      String?
-  websiteUrl     String?
-  downloads      Int               @default(0)
-  rating         Float             @default(0)
-  ratingCount    Int               @default(0)
-  favourites     Int               @default(0)
-  views          Int               @default(0)
-  changelog      String?
-  rawData        String
-  approved       Boolean           @default(false)
-  approvedBy     String?
-  approvalReason String?
-  createdAt      DateTime          @default(now())
-  updatedAt      DateTime          @updatedAt
-  authorId       String
-  author         User              @relation(fields: [authorId], references: [id])
-  ratings        Rating[]
-  favorites      Favorite[]
-  analytics      CommandAnalytics?
+  id                 String              @id @default(uuid())
+  name               String              @unique
+  description        String
+  type               String
+  framework          String
+  uploadCategory     String              @default("Framework")
+  version            String
+  tags               String[]            @default([])
+  githubUrl          String?
+  websiteUrl         String?
+  downloads          Int                 @default(0)
+  rating             Float               @default(0)
+  ratingCount        Int                 @default(0)
+  favourites         Int                 @default(0)
+  views              Int                 @default(0)
+  changelog          String?
+  rawData            String
+  approved           Boolean             @default(false)
+  approvedBy         String?
+  approvalReason     String?
+  createdAt          DateTime            @default(now())
+  updatedAt          DateTime            @updatedAt
+  authorId           String
+  author             User                @relation(fields: [authorId], references: [id])
+  ratings            Rating[]
+  favorites          Favorite[]
+  analytics          CommandAnalytics?
   collectionCommands CollectionCommand[]
 
   @@index([authorId])
@@ -213,7 +213,7 @@ model Collection {
   creator     User     @relation(fields: [createdBy], references: [id], onDelete: Cascade)
   createdAt   DateTime @default(now())
   updatedAt   DateTime @updatedAt
-  
+
   collectionCommands CollectionCommand[]
 
   @@index([createdBy])
@@ -222,12 +222,12 @@ model Collection {
 }
 
 model CollectionCommand {
-  id           String   @id @default(uuid())
+  id           String     @id @default(uuid())
   collectionId String
   commandId    String
   collection   Collection @relation(fields: [collectionId], references: [id], onDelete: Cascade)
   command      Command    @relation(fields: [commandId], references: [id], onDelete: Cascade)
-  addedAt      DateTime @default(now())
+  addedAt      DateTime   @default(now())
 
   @@unique([collectionId, commandId])
   @@index([collectionId])
