@@ -4,7 +4,7 @@
   "private": true,
   "type": "module",
   "scripts": {
-    "dev": "concurrently \"vite\" \"npm:dev:server\"",
+    "dev": "concurrently \"docker-compose up\" \"vite\" \"npm:dev:server\"",
     "dev:server": "nodemon server/index.js --watch server --ext js,json",
     "db:ensure": "node scripts/dbEnsure.js",
     "build": "vite build",

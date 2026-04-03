@@ -1,9 +1,12 @@
 /**
- * Rate limiting middleware using Redis
+ * Rate limiting middleware using Redis (with in-memory fallback)
  */
 
 import { redis } from './cache.js';
 import { logWarn } from './logger.js';
+
+// In-memory rate limit store (fallback when Redis is unavailable)
+const inMemoryStore = new Map();
 
 /**
  * Create a rate limiter middleware
@@ -24,11 +27,39 @@ export function createRateLimiter(options = {}) {
   return async (req, res, next) => {
     try {
       const key = `rate-limit:${keyGenerator(req)}`;
-      const current = await redis.incr(key);
+      let current;
 
-      // Set expiry on first request
-      if (current === 1) {
-        await redis.pexpire(key, windowMs);
+      if (redis) {
+        // Use Redis for rate limiting
+        current = await redis.incr(key);
+
+        // Set expiry on first request
+        if (current === 1) {
+          await redis.pexpire(key, windowMs);
+        }
+      } else {
+        // Use in-memory fallback
+        const now = Date.now();
+        const entry = inMemoryStore.get(key);
+
+        if (!entry || now > entry.resetTime) {
+          // New window
+          inMemoryStore.set(key, { count: 1, resetTime: now + windowMs });
+          current = 1;
+        } else {
+          // Existing window
+          entry.count++;
+          current = entry.count;
+        }
+
+        // Cleanup old entries periodically
+        if (inMemoryStore.size > 10000) {
+          for (const [k, v] of inMemoryStore.entries()) {
+            if (now > v.resetTime) {
+              inMemoryStore.delete(k);
+            }
+          }
+        }
       }
 
       // Set rate limit headers

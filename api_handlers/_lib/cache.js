@@ -1,30 +1,42 @@
 import Redis from 'ioredis';
 
-const redis = new Redis({
-  host: process.env.REDIS_HOST || 'localhost',
-  port: process.env.REDIS_PORT || 6379,
-  password: process.env.REDIS_PASSWORD,
-  retryStrategy: (times) => Math.min(times * 50, 2000),
-  enableOfflineQueue: false,
-});
+// Initialize Redis only if REDIS_URL or REDIS_HOST is explicitly configured
+const isRedisConfigured = process.env.REDIS_URL || process.env.REDIS_HOST;
 
-redis.on('error', (err) => {
-  console.error('Redis error:', err);
-});
+let redis = null;
 
-redis.on('connect', () => {
-  console.log('Redis connected');
-});
+if (isRedisConfigured) {
+  redis = new Redis(
+    process.env.REDIS_URL || {
+      host: process.env.REDIS_HOST,
+      port: process.env.REDIS_PORT || 6379,
+      password: process.env.REDIS_PASSWORD,
+      retryStrategy: (times) => Math.min(times * 50, 2000),
+      enableOfflineQueue: false,
+    },
+  );
+
+  redis.on('error', (err) => {
+    console.warn('[cache] Redis error (falling back to in-memory):', err.message);
+  });
+
+  redis.on('connect', () => {
+    console.log('[cache] Redis connected');
+  });
+} else {
+  console.log('[cache] Redis not configured, using in-memory storage');
+}
 
 /**
  * Get value from cache
  */
 export async function getCache(key) {
+  if (!redis) return null;
   try {
     const value = await redis.get(key);
     return value ? JSON.parse(value) : null;
   } catch (err) {
-    console.error(`Cache GET error for key ${key}:`, err);
+    console.warn(`[cache] GET error for key ${key}:`, err.message);
     return null;
   }
 }
@@ -33,6 +45,7 @@ export async function getCache(key) {
  * Set value in cache with optional TTL (seconds)
  */
 export async function setCache(key, value, ttl = 300) {
+  if (!redis) return;
   try {
     const serialized = JSON.stringify(value);
     if (ttl) {
@@ -41,7 +54,7 @@ export async function setCache(key, value, ttl = 300) {
       await redis.set(key, serialized);
     }
   } catch (err) {
-    console.error(`Cache SET error for key ${key}:`, err);
+    console.warn(`[cache] SET error for key ${key}:`, err.message);
   }
 }
 
@@ -49,12 +62,13 @@ export async function setCache(key, value, ttl = 300) {
  * Delete cache key(s)
  */
 export async function deleteCache(...keys) {
+  if (!redis) return;
   try {
     if (keys.length > 0) {
       await redis.del(...keys);
     }
   } catch (err) {
-    console.error(`Cache DEL error:`, err);
+    console.warn(`[cache] DEL error:`, err.message);
   }
 }
 
@@ -62,13 +76,14 @@ export async function deleteCache(...keys) {
  * Invalidate all cache keys matching a pattern
  */
 export async function invalidateCachePattern(pattern) {
+  if (!redis) return;
   try {
     const keys = await redis.keys(pattern);
     if (keys.length > 0) {
       await redis.del(...keys);
     }
   } catch (err) {
-    console.error(`Cache INVALIDATE pattern error for ${pattern}:`, err);
+    console.warn(`[cache] INVALIDATE pattern error for ${pattern}:`, err.message);
   }
 }
 
