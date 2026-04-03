@@ -2061,8 +2061,18 @@ function NewsList({ news, isViewer, onNewsUpdate }) {
             </div>
           ))
         ) : (
-          <div style={{ textAlign: 'center', color: C.muted, padding: '40px' }}>
-            No news yet. {!isViewer && 'Create your first update!'}
+          <div
+            style={{
+              textAlign: 'center',
+              padding: '60px 20px',
+              color: C.muted,
+            }}
+          >
+            <Newspaper size={48} color={C.muted} style={{ marginBottom: 16, opacity: 0.5 }} />
+            <p style={{ fontSize: 16, margin: '0 0 8px 0' }}>No news yet</p>
+            <p style={{ fontSize: 14, margin: 0 }}>
+              {!isViewer && 'Create your first update!'}
+            </p>
           </div>
         )}
       </div>

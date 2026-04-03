@@ -124,22 +124,21 @@ export default function CollectionsPage({ user, onNavigate }) {
           </p>
         </div>
 
-        {error && (
+        {error && !loading && (
           <div
             style={{
               display: 'flex',
               alignItems: 'center',
-              gap: 8,
-              padding: '10px 12px',
-              background: 'rgba(237,66,69,0.14)',
-              border: '1px solid rgba(237,66,69,0.35)',
-              borderRadius: 8,
-              color: C.red,
-              marginBottom: 14,
+              gap: 12,
+              padding: 20,
+              background: C.blurpleDim,
+              borderRadius: 12,
+              border: `1px solid ${C.blurple}`,
+              marginBottom: 20,
             }}
           >
-            <AlertCircle size={18} />
-            <span>{error}</span>
+            <AlertCircle size={20} color={C.blurple} />
+            <p style={{ margin: 0, color: C.blurple }}>{error}</p>
           </div>
         )}
 
@@ -339,39 +338,41 @@ export default function CollectionsPage({ user, onNavigate }) {
           <div
             style={{
               textAlign: 'center',
-              border: `1px dashed ${C.border}`,
-              borderRadius: 12,
-              padding: '42px 12px',
+              padding: '60px 20px',
               color: C.muted,
             }}
           >
-            <BookOpen size={40} color={C.faint} style={{ marginBottom: 12 }} />
-            <p style={{ margin: 0 }}>
+            <BookOpen size={48} color={C.muted} style={{ marginBottom: 16, opacity: 0.5 }} />
+            <p style={{ fontSize: 16, margin: '0 0 8px 0' }}>
               {filterUserId ? "You haven't created any collections yet." : 'No collections found.'}
             </p>
             {user && filterUserId === user.id && (
-              <button
-                onClick={() => {
-                  setEditingCollection(null);
-                  setShowCreateModal(true);
-                }}
-                style={{
-                  marginTop: 12,
-                  border: 'none',
-                  borderRadius: 10,
-                  padding: '10px 12px',
-                  background: C.blurple,
-                  color: C.white,
-                  fontWeight: 700,
-                  cursor: 'pointer',
-                  display: 'inline-flex',
-                  alignItems: 'center',
-                  gap: 8,
-                }}
-              >
-                <Plus size={16} />
-                Create Your First Collection
-              </button>
+              <>
+                <p style={{ fontSize: 14, margin: '0 0 16px 0' }}>
+                  Start organizing your commands into collections.
+                </p>
+                <button
+                  onClick={() => {
+                    setEditingCollection(null);
+                    setShowCreateModal(true);
+                  }}
+                  style={{
+                    border: 'none',
+                    borderRadius: 10,
+                    padding: '10px 12px',
+                    background: C.blurple,
+                    color: C.white,
+                    fontWeight: 700,
+                    cursor: 'pointer',
+                    display: 'inline-flex',
+                    alignItems: 'center',
+                    gap: 8,
+                  }}
+                >
+                  <Plus size={16} />
+                  Create Your First Collection
+                </button>
+              </>
             )}
           </div>
         )}

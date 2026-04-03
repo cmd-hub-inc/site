@@ -552,7 +552,23 @@ export default function DashboardPage({ user, onNavigate }) {
         )}
 
         {/* Error State */}
-        {error && <div style={{ textAlign: 'center', color: '#FF6B6B', padding: '40px' }}>{error}</div>}
+        {error && !loading && (
+          <div
+            style={{
+              display: 'flex',
+              alignItems: 'center',
+              gap: 12,
+              padding: 20,
+              background: C.blurpleDim,
+              borderRadius: 12,
+              border: `1px solid ${C.blurple}`,
+              marginBottom: 20,
+            }}
+          >
+            <AlertCircle size={20} color={C.blurple} />
+            <p style={{ margin: 0, color: C.blurple }}>{error}</p>
+          </div>
+        )}
 
         {/* Analytics Content */}
         {!loading && !error && analytics && (
@@ -764,18 +780,38 @@ export default function DashboardPage({ user, onNavigate }) {
               </div>
             )}
 
+            {error && !loading && (
+              <div
+                style={{
+                  display: 'flex',
+                  alignItems: 'center',
+                  gap: 12,
+                  padding: 20,
+                  background: C.blurpleDim,
+                  borderRadius: 12,
+                  border: `1px solid ${C.blurple}`,
+                  marginBottom: 20,
+                }}
+              >
+                <AlertCircle size={20} color={C.blurple} />
+                <p style={{ margin: 0, color: C.blurple }}>{error}</p>
+              </div>
+            )}
+
             {/* Empty State */}
-            {analytics.commands.length === 0 && (
-              <div style={{
-                background: C.surface,
-                border: `1px solid ${C.border}`,
-                borderRadius: 12,
-                padding: 60,
-                textAlign: 'center',
-                color: C.muted
-              }}>
-                <BarChart3 size={48} style={{ marginBottom: 16, opacity: 0.5, margin: '0 auto 16px' }} />
-                <p style={{ margin: 0, fontSize: 14 }}>No commands yet. Create one to start tracking analytics!</p>
+            {!error && analytics.commands.length === 0 && (
+              <div
+                style={{
+                  textAlign: 'center',
+                  padding: '60px 20px',
+                  color: C.muted,
+                }}
+              >
+                <BarChart3 size={48} color={C.muted} style={{ marginBottom: 16, opacity: 0.5 }} />
+                <p style={{ fontSize: 16, margin: '0 0 8px 0' }}>No commands yet</p>
+                <p style={{ fontSize: 14, margin: 0 }}>
+                  Create one to start tracking analytics.
+                </p>
               </div>
             )}
           </>

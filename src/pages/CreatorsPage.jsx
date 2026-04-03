@@ -1,11 +1,12 @@
 import React, { useEffect, useState } from 'react';
 import { C } from '../constants';
-import { Users, Package, Download, ChevronLeft, ChevronRight } from 'lucide-react';
+import { Users, Package, Download, ChevronLeft, ChevronRight, AlertCircle } from 'lucide-react';
 
 export default function CreatorsPage({ onViewCreator, onNavigate }) {
   const API_BASE = import.meta.env.VITE_API_BASE ?? (import.meta.env.DEV ? '' : '');
   const [creators, setCreators] = useState(null);
   const [loading, setLoading] = useState(true);
+  const [error, setError] = useState(null);
   const [page, setPage] = useState(1);
   const [total, setTotal] = useState(0);
 
@@ -35,17 +36,24 @@ export default function CreatorsPage({ onViewCreator, onNavigate }) {
         const r = await fetch(`${API_BASE}/api/users?page=${page}&limit=20`);
         if (!r.ok) {
           console.warn('[creators] fetch /api/users returned', r.status);
-          if (!cancelled) setCreators([]);
+          if (!cancelled) {
+            setError(`Failed to load creators: HTTP ${r.status}`);
+            setCreators([]);
+          }
           return;
         }
         const j = await r.json();
         if (!cancelled) {
           setCreators(j.users || []);
           setTotal(j.total || 0);
+          setError(null);
         }
       } catch (e) {
         console.warn('[creators] fetch error', e && e.message ? e.message : e);
-        if (!cancelled) setCreators([]);
+        if (!cancelled) {
+          setError('Failed to load creators: ' + (e && e.message ? e.message : e));
+          setCreators([]);
+        }
       } finally {
         if (!cancelled) setLoading(false);
       }
@@ -145,16 +153,36 @@ export default function CreatorsPage({ onViewCreator, onNavigate }) {
             </p>
           </div>
 
-          <div style={{
-            background: C.surface,
-            border: `1px solid ${C.border}`,
-            borderRadius: 12,
-            padding: 60,
-            textAlign: 'center',
-            color: C.muted
-          }}>
-            <Users size={48} style={{ marginBottom: 16, opacity: 0.5, margin: '0 auto 16px' }} />
-            <p style={{ margin: 0, fontSize: 14 }}>No creators found yet.</p>
+          {error && (
+            <div
+              style={{
+                display: 'flex',
+                alignItems: 'center',
+                gap: 12,
+                padding: 20,
+                background: C.blurpleDim,
+                borderRadius: 12,
+                border: `1px solid ${C.blurple}`,
+                marginBottom: 20,
+              }}
+            >
+              <AlertCircle size={20} color={C.blurple} />
+              <p style={{ margin: 0, color: C.blurple }}>{error}</p>
+            </div>
+          )}
+
+          <div
+            style={{
+              textAlign: 'center',
+              padding: '60px 20px',
+              color: C.muted,
+            }}
+          >
+            <Users size={48} color={C.muted} style={{ marginBottom: 16, opacity: 0.5 }} />
+            <p style={{ fontSize: 16, margin: '0 0 8px 0' }}>No creators found yet</p>
+            <p style={{ fontSize: 14, margin: 0 }}>
+              Check back soon for more creators.
+            </p>
           </div>
         </div>
       </div>

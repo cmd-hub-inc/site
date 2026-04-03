@@ -1,6 +1,7 @@
 import React, { useEffect, useState } from 'react';
-import { Search, Filter, X, Flame, Command } from 'lucide-react';
+import { Search, Filter, X, Flame, Command, Zap, AlertCircle } from 'lucide-react';
 import CommandCard from '../components/CommandCard';
+import SavedSearches from '../components/SavedSearches';
 import { C, ALL_TAGS, FRAMEWORKS, CMD_TYPES } from '../constants';
 import { MOCK_COMMANDS } from '../data/mockCommands';
 import { TagBadge } from '../components/Badges';
@@ -13,10 +14,31 @@ export default function BrowsePage({ initialTag, initialUploadCategory, onViewCo
   const [selectedCategory, setSelectedCategory] = useState(initialUploadCategory || '');
   const [sort, setSort] = useState('downloads');
   const [showFilters, setShowFilters] = useState(false);
+  const [trendingTimeframe, setTrendingTimeframe] = useState('weekly');
+  const [trendingCommands, setTrendingCommands] = useState([]);
+  const [loadingTrending, setLoadingTrending] = useState(true);
+  const [userToken, setUserToken] = useState(null);
 
   const API_BASE = import.meta.env.VITE_API_BASE ?? (import.meta.env.DEV ? '' : '');
   const [commands, setCommands] = useState([]);
   const [loadingCommands, setLoadingCommands] = useState(true);
+  const [errorCommands, setErrorCommands] = useState(null);
+
+  // Get user token from session
+  useEffect(() => {
+    const getToken = async () => {
+      try {
+        const res = await fetch(`${API_BASE}/api/me`, { credentials: 'include' });
+        if (res.ok) {
+          const data = await res.json();
+          setUserToken(data.token || 'user_authenticated');
+        }
+      } catch (err) {
+        // User not authenticated, that's fine
+      }
+    };
+    getToken();
+  }, [API_BASE]);
 
   useEffect(() => {
     if (initialTag) setSelectedTags([initialTag]);
@@ -25,6 +47,32 @@ export default function BrowsePage({ initialTag, initialUploadCategory, onViewCo
   useEffect(() => {
     if (initialUploadCategory) setSelectedCategory(initialUploadCategory);
   }, [initialUploadCategory]);
+
+  // Fetch trending commands
+  useEffect(() => {
+    let cancelled = false;
+    (async () => {
+      try {
+        setLoadingTrending(true);
+        const res = await fetch(`${API_BASE}/api/trending?timeWindow=${trendingTimeframe}&limit=6`, {
+          credentials: 'include',
+        });
+        if (res.ok) {
+          const data = await res.json();
+          if (!cancelled && Array.isArray(data)) {
+            setTrendingCommands(data.slice(0, 6));
+          }
+        }
+      } catch (err) {
+        console.error('Failed to fetch trending commands:', err);
+      } finally {
+        if (!cancelled) setLoadingTrending(false);
+      }
+    })();
+    return () => {
+      cancelled = true;
+    };
+  }, [trendingTimeframe, API_BASE]);
 
   const toggleTag = (t) =>
     setSelectedTags((prev) => (prev.includes(t) ? prev.filter((x) => x !== t) : [...prev, t]));
@@ -58,24 +106,35 @@ export default function BrowsePage({ initialTag, initialUploadCategory, onViewCo
       // Now fetch commands with a few short retries
       const maxAttempts = 6;
       const backoff = 250; // ms
+      let lastError = null;
       for (let i = 0; i < maxAttempts && !cancelled; i++) {
         try {
           const r = await fetch(`${API_BASE}/api/commands`);
           if (r.ok) {
             const data = await r.json();
-            if (!cancelled && Array.isArray(data)) setCommands(data);
+            if (!cancelled && Array.isArray(data)) {
+              setCommands(data);
+              setErrorCommands(null);
+            }
             break;
           }
+          lastError = `HTTP ${r.status}`;
           if (r.status === 503) {
             await new Promise((r) => setTimeout(r, backoff));
             continue;
           }
           break;
         } catch (e) {
+          lastError = e && e.message ? e.message : String(e);
           await new Promise((r) => setTimeout(r, backoff));
         }
       }
-      if (!cancelled) setLoadingCommands(false);
+      if (!cancelled) {
+        if (lastError && commands.length === 0) {
+          setErrorCommands('Failed to load commands: ' + lastError);
+        }
+        setLoadingCommands(false);
+      }
     })();
     return () => {
       cancelled = true;
@@ -151,6 +210,88 @@ export default function BrowsePage({ initialTag, initialUploadCategory, onViewCo
           Discover powerful commands to enhance your Discord server
         </p>
       </div>
+
+      {/* Saved Searches Section */}
+      <SavedSearches 
+        onSelectSearch={(query) => setSearch(query)}
+        userToken={userToken}
+      />
+
+      {/* Trending by Timeframe Section */}
+      {trendingCommands.length > 0 && (
+        <div style={{ marginBottom: 48 }}>
+          <div style={{
+            display: 'flex',
+            justifyContent: 'space-between',
+            alignItems: 'center',
+            marginBottom: 20,
+          }}>
+            <div>
+              <div style={{ display: 'flex', alignItems: 'center', gap: 10, marginBottom: 4 }}>
+                <Zap size={24} color={C.blurple} strokeWidth={2} />
+                <h2 style={{
+                  color: C.white,
+                  fontSize: 22,
+                  fontWeight: 800,
+                  margin: 0,
+                }}>
+                  Trending Now
+                </h2>
+              </div>
+              <p style={{ color: C.muted, fontSize: 13, margin: 0 }}>
+                Most popular commands
+              </p>
+            </div>
+            <div style={{ display: 'flex', gap: 8 }}>
+              {['daily', 'weekly', 'monthly'].map((tf) => (
+                <button
+                  key={tf}
+                  onClick={() => setTrendingTimeframe(tf)}
+                  style={{
+                    background: trendingTimeframe === tf ? C.blurple : 'rgba(255,255,255,0.06)',
+                    border: `1px solid ${trendingTimeframe === tf ? C.blurple : 'transparent'}`,
+                    color: trendingTimeframe === tf ? C.white : C.muted,
+                    borderRadius: 6,
+                    padding: '6px 12px',
+                    fontSize: 12,
+                    fontWeight: 600,
+                    cursor: 'pointer',
+                    transition: 'all 0.2s ease',
+                    textTransform: 'capitalize',
+                  }}
+                  onMouseEnter={(e) => {
+                    if (trendingTimeframe !== tf) {
+                      e.target.style.background = 'rgba(255,255,255,0.12)';
+                      e.target.style.color = C.text;
+                    }
+                  }}
+                  onMouseLeave={(e) => {
+                    if (trendingTimeframe !== tf) {
+                      e.target.style.background = 'rgba(255,255,255,0.06)';
+                      e.target.style.color = C.muted;
+                    }
+                  }}
+                >
+                  {tf}
+                </button>
+              ))}
+            </div>
+          </div>
+          <div className="command-grid" style={{
+            display: 'grid',
+            gridTemplateColumns: 'repeat(auto-fill, minmax(min(100%, 260px), 1fr))',
+            gap: 14,
+          }}>
+            {loadingTrending
+              ? [1, 2, 3].map((i) => (
+                  <CommandCard key={`trending-skel-${i}`} loading={true} cmd={{}} onClick={() => {}} />
+                ))
+              : trendingCommands.map((cmd) => (
+                  <CommandCard key={`trending-${cmd.id}`} cmd={cmd} onClick={onViewCommand} />
+                ))}
+          </div>
+        </div>
+      )}
 
       {/* Search & Controls Bar */}
       <div
@@ -565,6 +706,24 @@ export default function BrowsePage({ initialTag, initialUploadCategory, onViewCo
             {filtered.length} command{filtered.length !== 1 ? 's' : ''} found
           </p>
         </div>
+
+        {errorCommands && !loadingCommands && (
+          <div
+            style={{
+              display: 'flex',
+              alignItems: 'center',
+              gap: 12,
+              padding: 20,
+              background: C.blurpleDim,
+              borderRadius: 12,
+              border: `1px solid ${C.blurple}`,
+              marginBottom: 20,
+            }}
+          >
+            <AlertCircle size={20} color={C.blurple} />
+            <p style={{ margin: 0, color: C.blurple }}>{errorCommands}</p>
+          </div>
+        )}
 
         {loadingCommands ? (
           <div
