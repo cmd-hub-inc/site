@@ -178,36 +178,6 @@ export default function Navbar({ page, user, pageParams, newsHasUnread, onNaviga
                 <Shield size={15} />
                 Admin
               </button>
-              <button
-                onClick={() => onNavigate('admin', { hash: 'news' })}
-                title="Post News"
-                className="nav-btn"
-                style={{
-                  background:
-                    page === 'admin' && typeof window !== 'undefined' && window.location.hash === '#news'
-                      ? C.blurpleDim
-                      : 'none',
-                  border: 'none',
-                  cursor: 'pointer',
-                  borderRadius: 8,
-                  padding: '6px 14px',
-                  display: 'flex',
-                  alignItems: 'center',
-                  gap: 6,
-                  color:
-                    page === 'admin' && typeof window !== 'undefined' && window.location.hash === '#news'
-                      ? C.blurple
-                      : C.muted,
-                  fontSize: 14,
-                  fontWeight:
-                    page === 'admin' && typeof window !== 'undefined' && window.location.hash === '#news'
-                      ? 600
-                      : 400,
-                }}
-              >
-                <Newspaper size={15} />
-                Post News
-              </button>
             </>
           )}
           <button
