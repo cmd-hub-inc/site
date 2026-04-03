@@ -14,15 +14,23 @@ export default function NewsPage({ user, onReadStateChange }) {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
   const [readIds, setReadIds] = useState(() => new Set());
+  const [selectedType, setSelectedType] = useState('all');
 
   const unreadCount = getUnreadNewsCount(news, user);
+
+  // Get unique post types from news
+  const postTypes = ['all', ...new Set(news.map((item) => item.type || 'general').filter(Boolean))];
 
   useEffect(() => {
     const fetchNews = async () => {
       try {
         setLoading(true);
         console.log('[news] Fetching published news...');
-        const res = await fetch('/api/news', { credentials: 'include' });
+        const url = new URL('/api/news', window.location.origin);
+        if (selectedType !== 'all') {
+          url.searchParams.set('type', selectedType);
+        }
+        const res = await fetch(url.toString(), { credentials: 'include' });
         console.log('[news] Response status:', res.status);
         if (!res.ok) {
           const errData = await res.json().catch(() => ({}));
@@ -48,7 +56,7 @@ export default function NewsPage({ user, onReadStateChange }) {
     };
 
     fetchNews();
-  }, [user, onReadStateChange]);
+  }, [user, onReadStateChange, selectedType]);
 
   const handleMarkRead = (newsItem) => {
     markNewsAsRead(newsItem, user);
@@ -143,6 +151,37 @@ export default function NewsPage({ user, onReadStateChange }) {
           <p style={{ fontSize: 14, margin: 0 }}>
             Check back soon for updates and announcements.
           </p>
+        </div>
+      )}
+
+      {/* Filter by Post Type */}
+      {!loading && !error && news.length > 0 && (
+        <div style={{ marginBottom: 24 }}>
+          <p style={{ margin: '0 0 12px 0', fontSize: 13, fontWeight: 600, color: C.muted, textTransform: 'uppercase' }}>
+            Filter by type
+          </p>
+          <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap' }}>
+            {postTypes.map((type) => (
+              <button
+                key={type}
+                onClick={() => setSelectedType(type)}
+                style={{
+                  padding: '8px 14px',
+                  borderRadius: 8,
+                  border: `1px solid ${selectedType === type ? C.blurple : C.border}`,
+                  background: selectedType === type ? C.blurpleDim : 'transparent',
+                  color: selectedType === type ? C.blurple : C.muted,
+                  fontSize: 13,
+                  fontWeight: 600,
+                  cursor: 'pointer',
+                  transition: 'all 0.2s ease',
+                  textTransform: 'capitalize',
+                }}
+              >
+                {type === 'all' ? 'All Posts' : type}
+              </button>
+            ))}
+          </div>
         </div>
       )}
 
@@ -276,6 +315,21 @@ function NewsCard({ news, isRead, onMarkRead }) {
         >
           {parsed.category}
         </span>
+        {news.type && news.type !== 'general' && (
+          <span
+            style={{
+              fontSize: 11,
+              padding: '3px 7px',
+              borderRadius: 999,
+              background: 'rgba(88,150,242,0.14)',
+              color: '#5896f2',
+              fontWeight: 600,
+              textTransform: 'capitalize',
+            }}
+          >
+            {news.type}
+          </span>
+        )}
         {parsed.important && (
           <span
             style={{
