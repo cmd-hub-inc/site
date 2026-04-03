@@ -32,47 +32,28 @@ function getDetailTabFromHash() {
 }
 
 export default function CommandDetailPage({ cmd, onBack, user, loading = false }) {
-  if (loading || !cmd) {
-    return (
-      <div style={{ maxWidth: 1200, margin: '0 auto', padding: '60px 24px' }}>
-        <div style={{ marginBottom: 28 }}>
-          <div className="skeleton" style={{ width: 140, height: 22, borderRadius: 8 }} />
-        </div>
-        <div
-          className="skeleton"
-          style={{
-            background: C.surface,
-            border: `1px solid ${C.border}`,
-            borderRadius: 16,
-            padding: 28,
-            minHeight: 300,
-          }}
-        />
-      </div>
-    );
-  }
-
+  const commandId = cmd?.id;
   const [copied, setCopied] = useState(false);
   const [faved, setFaved] = useState(null);
-  const [favCount, setFavCount] = useState(cmd.favourites || 0);
-  const [downloadCount, setDownloadCount] = useState(cmd.downloads || 0);
+  const [favCount, setFavCount] = useState(cmd?.favourites || 0);
+  const [downloadCount, setDownloadCount] = useState(cmd?.downloads || 0);
   const [userRating, setUserRating] = useState(0);
   const [hoverRating, setHoverRating] = useState(0);
-  const [aggRating, setAggRating] = useState(cmd.rating || 0);
-  const [aggRatingCount, setAggRatingCount] = useState(cmd.ratingCount || 0);
+  const [aggRating, setAggRating] = useState(cmd?.rating || 0);
+  const [aggRatingCount, setAggRatingCount] = useState(cmd?.ratingCount || 0);
   const [activeTab, setActiveTab] = useState(() => getDetailTabFromHash());
   const API_BASE = import.meta.env.VITE_API_BASE ?? (import.meta.env.DEV ? '' : '');
 
-  const canEdit = Boolean(user && (user.id === (cmd.author && cmd.author.id) || user.isAdmin));
+  const canEdit = Boolean(user && (user.id === (cmd?.author && cmd.author.id) || user.isAdmin));
 
   useEffect(() => {
     let mounted = true;
     (async () => {
-      if (!user) return;
+      if (!user || !commandId) return;
       setFaved(null);
       try {
         const r = await fetch(
-          `${API_BASE}/api/commands/${encodeURIComponent(cmd.id)}/is-favourited`,
+          `${API_BASE}/api/commands/${encodeURIComponent(commandId)}/is-favourited`,
           {
             credentials: 'include',
           },
@@ -86,18 +67,18 @@ export default function CommandDetailPage({ cmd, onBack, user, loading = false }
       }
     })();
     return () => (mounted = false);
-  }, [cmd.id, user]);
+  }, [commandId, user, API_BASE]);
 
   useEffect(() => {
     let mounted = true;
     (async () => {
-      if (!user) return;
-      if (cmd && cmd.myRating != null) {
+      if (!user || !commandId) return;
+      if (cmd?.myRating != null) {
         if (mounted) setUserRating(Number(cmd.myRating) || 0);
         return;
       }
       try {
-        const r = await fetch(`${API_BASE}/api/commands/${encodeURIComponent(cmd.id)}/my-rating`, {
+        const r = await fetch(`${API_BASE}/api/commands/${encodeURIComponent(commandId)}/my-rating`, {
           credentials: 'include',
         });
         if (r.ok) {
@@ -109,13 +90,14 @@ export default function CommandDetailPage({ cmd, onBack, user, loading = false }
       }
     })();
     return () => (mounted = false);
-  }, [cmd.id, user]);
+  }, [commandId, user, API_BASE, cmd?.myRating]);
 
   useEffect(() => {
-    setAggRating(cmd.rating || 0);
-    setAggRatingCount(cmd.ratingCount || 0);
-    if (cmd && cmd.myRating != null) setUserRating(Number(cmd.myRating) || 0);
-  }, [cmd.id, cmd.rating, cmd.ratingCount, cmd.myRating]);
+    if (!commandId) return;
+    setAggRating(cmd?.rating || 0);
+    setAggRatingCount(cmd?.ratingCount || 0);
+    if (cmd?.myRating != null) setUserRating(Number(cmd.myRating) || 0);
+  }, [commandId, cmd?.rating, cmd?.ratingCount, cmd?.myRating]);
 
   useEffect(() => {
     const onHashChange = () => {
@@ -180,6 +162,26 @@ export default function CommandDetailPage({ cmd, onBack, user, loading = false }
     new Date(s).toLocaleDateString('en-GB', { day: 'numeric', month: 'short', year: 'numeric' });
 
   const metaTags = getCommandMetaTags(cmd);
+
+  if (loading || !cmd) {
+    return (
+      <div style={{ maxWidth: 1200, margin: '0 auto', padding: '60px 24px' }}>
+        <div style={{ marginBottom: 28 }}>
+          <div className="skeleton" style={{ width: 140, height: 22, borderRadius: 8 }} />
+        </div>
+        <div
+          className="skeleton"
+          style={{
+            background: C.surface,
+            border: `1px solid ${C.border}`,
+            borderRadius: 16,
+            padding: 28,
+            minHeight: 300,
+          }}
+        />
+      </div>
+    );
+  }
 
   return (
     <>
