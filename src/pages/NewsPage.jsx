@@ -1,11 +1,20 @@
 import React, { useState, useEffect } from 'react';
 import { Newspaper, AlertCircle } from 'lucide-react';
 import { C } from '../constants';
+import {
+  getUnreadNewsCount,
+  isNewsRead,
+  markAllNewsAsRead,
+  markNewsAsRead,
+} from '../lib/newsReadState';
 
-export default function NewsPage() {
+export default function NewsPage({ user, onReadStateChange }) {
   const [news, setNews] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
+  const [readIds, setReadIds] = useState(() => new Set());
+
+  const unreadCount = getUnreadNewsCount(news, user);
 
   useEffect(() => {
     const fetchNews = async () => {
@@ -21,7 +30,11 @@ export default function NewsPage() {
         }
         const data = await res.json();
         console.log('[news] Loaded', data.news?.length || 0, 'news items');
-        setNews(data.news || []);
+        const items = data.news || [];
+        setNews(items);
+        const nextReadIds = new Set(items.filter((item) => isNewsRead(item.id, user)).map((item) => String(item.id)));
+        setReadIds(nextReadIds);
+        onReadStateChange?.(getUnreadNewsCount(items, user) > 0);
         setError(null);
       } catch (err) {
         console.error('[news] Error fetching news:', err);
@@ -32,7 +45,22 @@ export default function NewsPage() {
     };
 
     fetchNews();
-  }, []);
+  }, [user, onReadStateChange]);
+
+  const handleMarkRead = (newsId) => {
+    markNewsAsRead(newsId, user);
+    const next = new Set(readIds);
+    next.add(String(newsId));
+    setReadIds(next);
+    const unreadAfter = news.filter((item) => !next.has(String(item.id))).length;
+    onReadStateChange?.(unreadAfter > 0);
+  };
+
+  const handleMarkAllRead = () => {
+    markAllNewsAsRead(news, user);
+    setReadIds(new Set(news.map((item) => String(item.id))));
+    onReadStateChange?.(false);
+  };
 
   return (
     <div style={{ padding: '40px 20px', maxWidth: 900, margin: '0 auto' }}>
@@ -47,6 +75,29 @@ export default function NewsPage() {
         <p style={{ margin: 0, color: C.muted, fontSize: 15 }}>
           Stay updated with the latest news and announcements from CmdHub.
         </p>
+        {!loading && !error && news.length > 0 && (
+          <div style={{ marginTop: 14, display: 'flex', alignItems: 'center', gap: 12 }}>
+            <span style={{ color: C.muted, fontSize: 13 }}>
+              {unreadCount} unread update{unreadCount === 1 ? '' : 's'}
+            </span>
+            <button
+              onClick={handleMarkAllRead}
+              disabled={unreadCount === 0}
+              style={{
+                padding: '6px 10px',
+                borderRadius: 8,
+                border: `1px solid ${C.border}`,
+                background: unreadCount > 0 ? C.blurpleDim : 'transparent',
+                color: unreadCount > 0 ? C.blurple : C.muted,
+                cursor: unreadCount > 0 ? 'pointer' : 'not-allowed',
+                fontSize: 12,
+                fontWeight: 600,
+              }}
+            >
+              Mark all as read
+            </button>
+          </div>
+        )}
       </div>
 
       {/* Loading state */}
@@ -95,14 +146,19 @@ export default function NewsPage() {
       {/* News list */}
       <div style={{ display: 'flex', flexDirection: 'column', gap: 24 }}>
         {news.map((item) => (
-          <NewsCard key={item.id} news={item} />
+          <NewsCard
+            key={item.id}
+            news={item}
+            isRead={readIds.has(String(item.id))}
+            onMarkRead={() => handleMarkRead(item.id)}
+          />
         ))}
       </div>
     </div>
   );
 }
 
-function NewsCard({ news }) {
+function NewsCard({ news, isRead, onMarkRead }) {
   const publishedDate = news.publishedAt
     ? new Date(news.publishedAt).toLocaleDateString('en-US', {
         year: 'numeric',
@@ -130,16 +186,35 @@ function NewsCard({ news }) {
       }}
     >
       {/* Title */}
-      <h2
-        style={{
-          margin: '0 0 16px 0',
-          fontSize: 22,
-          fontWeight: 700,
-          color: C.lightText,
-        }}
-      >
-        {news.title}
-      </h2>
+      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 10, marginBottom: 16 }}>
+        <h2
+          style={{
+            margin: 0,
+            fontSize: 22,
+            fontWeight: 700,
+            color: C.lightText,
+          }}
+        >
+          {news.title}
+        </h2>
+        <button
+          onClick={onMarkRead}
+          disabled={isRead}
+          style={{
+            padding: '6px 10px',
+            borderRadius: 8,
+            border: `1px solid ${isRead ? C.border : C.blurple}`,
+            background: isRead ? 'transparent' : C.blurpleDim,
+            color: isRead ? C.muted : C.blurple,
+            fontSize: 12,
+            fontWeight: 600,
+            cursor: isRead ? 'default' : 'pointer',
+            whiteSpace: 'nowrap',
+          }}
+        >
+          {isRead ? 'Read' : 'Mark as read'}
+        </button>
+      </div>
 
       {/* Meta */}
       <div

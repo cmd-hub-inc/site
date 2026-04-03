@@ -2,11 +2,12 @@ import React, { useState } from 'react';
 import { Home, Grid, Upload, LogOut, Users, BarChart3, Code2, Menu, X, Shield, Newspaper } from 'lucide-react';
 import { C } from '../constants';
 
-export default function Navbar({ page, user, pageParams, onNavigate, onLogin, onLogout }) {
+export default function Navbar({ page, user, pageParams, newsHasUnread, onNavigate, onLogin, onLogout }) {
   const [mobileOpen, setMobileOpen] = useState(false);
 
   const navBtn = (id, label, icon) => {
     const active = page === id;
+    const showUnreadDot = id === 'news' && newsHasUnread;
     return (
       <button
         key={id}
@@ -29,6 +30,18 @@ export default function Navbar({ page, user, pageParams, onNavigate, onLogin, on
           fontWeight: active ? 600 : 400,
         }}
       >
+        {showUnreadDot && (
+          <span
+            style={{
+              width: 8,
+              height: 8,
+              borderRadius: '50%',
+              background: '#ed4245',
+              marginRight: 6,
+              flex: '0 0 auto',
+            }}
+          />
+        )}
         {icon} {label}
       </button>
     );

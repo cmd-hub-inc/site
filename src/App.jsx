@@ -4,6 +4,7 @@ import ErrorBoundary from './components/ErrorBoundary';
 import Footer from './components/Footer';
 import { MOCK_USER } from './constants';
 import { getReturnTo, clearReturnTo, saveReturnTo } from './lib/authHelpers';
+import { getUnreadNewsCount } from './lib/newsReadState';
 
 // Code splitting: lazy load page components
 const HomePage = lazy(() => import('./pages/HomePage'));
@@ -52,6 +53,7 @@ export default function App() {
   // `undefined` = loading, `null` = not authenticated, object = authenticated
   const [user, setUser] = useState(undefined);
   const [selectedCmd, setSelectedCmd] = useState(null);
+  const [newsHasUnread, setNewsHasUnread] = useState(false);
 
   const navigate = (p, params = {}) => {
     setPage(p);
@@ -278,6 +280,27 @@ export default function App() {
     };
   }, []);
 
+  useEffect(() => {
+    let cancelled = false;
+    const computeUnreadNews = async () => {
+      try {
+        const res = await fetch(`${API_BASE}/api/news`, { credentials: 'include' });
+        if (!res.ok) return;
+        const data = await res.json();
+        if (cancelled) return;
+        const unread = getUnreadNewsCount(data.news || [], user);
+        setNewsHasUnread(unread > 0);
+      } catch {
+        // ignore errors while computing badge state
+      }
+    };
+
+    computeUnreadNews();
+    return () => {
+      cancelled = true;
+    };
+  }, [user, page]);
+
   // Handle browser back/forward for shareable links
   useEffect(() => {
     let mounted = true;
@@ -410,6 +433,7 @@ export default function App() {
         page={page}
         user={user}
         pageParams={pageParams}
+        newsHasUnread={newsHasUnread}
         onNavigate={navigate}
         onLogin={() => {
           // Save the current page as the return destination
@@ -461,7 +485,12 @@ export default function App() {
             {page === 'edit' && <EditCommandPage user={user} pageParams={pageParams} />}
             {page === 'dashboard' && <DashboardPage user={user} onNavigate={navigate} />}
             {page === 'admin' && <AdminDashboardPage user={user} onNavigate={navigate} />}
-            {page === 'news' && <NewsPage />}
+            {page === 'news' && (
+              <NewsPage
+                user={user}
+                onReadStateChange={(hasUnread) => setNewsHasUnread(Boolean(hasUnread))}
+              />
+            )}
             {page === 'notfound' && <NotFound />}
           </Suspense>
         </ErrorBoundary>
