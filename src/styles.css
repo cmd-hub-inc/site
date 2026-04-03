@@ -262,6 +262,53 @@ button {
   grid-auto-flow: row !important;
 }
 
+/* Browse page mobile responsiveness */
+@media (max-width: 900px) {
+  .browse-controls {
+    grid-template-columns: 1fr 1fr !important;
+  }
+
+  .browse-search-wrap {
+    grid-column: 1 / -1 !important;
+  }
+}
+
+@media (max-width: 640px) {
+  .browse-page {
+    padding: 40px 16px !important;
+  }
+
+  .browse-controls {
+    grid-template-columns: 1fr !important;
+    gap: 10px !important;
+  }
+
+  .browse-sort-select,
+  .browse-filters-toggle {
+    width: 100% !important;
+  }
+
+  .browse-filters-panel {
+    padding: 18px !important;
+  }
+
+  .browse-page .command-grid {
+    gap: 12px !important;
+  }
+}
+
+@media (max-width: 480px) {
+  .browse-page .browse-chip-btn,
+  .browse-page .browse-clear-filters,
+  .browse-page .browse-filters-toggle {
+    width: auto !important;
+  }
+
+  .browse-page .browse-filters-toggle {
+    width: 100% !important;
+  }
+}
+
 @media (max-width: 768px) {
   .upload-form-grid {
     grid-template-columns: 1fr !important;

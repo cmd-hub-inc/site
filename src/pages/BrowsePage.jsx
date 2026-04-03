@@ -122,7 +122,7 @@ export default function BrowsePage({ initialTag, initialUploadCategory, onViewCo
     : [...commands].sort((a, b) => (b.downloads || 0) - (a.downloads || 0)).slice(0, 4);
 
   return (
-    <div style={{ maxWidth: 1200, margin: '0 auto', padding: '60px 24px' }}>
+    <div className="browse-page" style={{ maxWidth: 1200, margin: '0 auto', padding: '60px 24px' }}>
       {/* Header Section */}
       <div style={{ marginBottom: 48 }}>
         <div style={{ display: 'flex', alignItems: 'center', gap: 14, marginBottom: 12 }}>
@@ -154,6 +154,7 @@ export default function BrowsePage({ initialTag, initialUploadCategory, onViewCo
 
       {/* Search & Controls Bar */}
       <div
+        className="browse-controls"
         style={{
           display: 'grid',
           gridTemplateColumns: '2fr 1fr 1fr',
@@ -164,6 +165,7 @@ export default function BrowsePage({ initialTag, initialUploadCategory, onViewCo
       >
         {/* Search Input */}
         <div
+          className="browse-search-wrap"
           style={{
             gridColumn: 'span 1',
             display: 'flex',
@@ -201,6 +203,7 @@ export default function BrowsePage({ initialTag, initialUploadCategory, onViewCo
 
         {/* Sort Dropdown */}
         <select
+          className="browse-sort-select"
           value={sort}
           onChange={(e) => setSort(e.target.value)}
           style={{
@@ -228,6 +231,7 @@ export default function BrowsePage({ initialTag, initialUploadCategory, onViewCo
 
         {/* Filters Button */}
         <button
+          className="browse-filters-toggle"
           onClick={() => setShowFilters(!showFilters)}
           style={{
             background: showFilters ? C.blurple : C.surface,
@@ -282,6 +286,7 @@ export default function BrowsePage({ initialTag, initialUploadCategory, onViewCo
       {/* Filters Panel */}
       {showFilters && (
         <div
+          className="browse-filters-panel"
           style={{
             background: `linear-gradient(135deg, ${C.surface} 0%, rgba(88,101,242,0.03) 100%)`,
             border: `1px solid rgba(88,101,242,0.2)`,
@@ -324,6 +329,7 @@ export default function BrowsePage({ initialTag, initialUploadCategory, onViewCo
             <div style={{ display: 'flex', flexWrap: 'wrap', gap: 8 }}>
               {FRAMEWORKS.map((fw) => (
                 <button
+                  className="browse-chip-btn"
                   key={fw}
                   onClick={() => setSelectedFW(selectedFW === fw ? '' : fw)}
                   style={{
@@ -389,6 +395,7 @@ export default function BrowsePage({ initialTag, initialUploadCategory, onViewCo
             <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap' }}>
               {CMD_TYPES.map((t) => (
                 <button
+                  className="browse-chip-btn"
                   key={t}
                   onClick={() => setSelectedType(selectedType === t ? '' : t)}
                   style={{
@@ -450,6 +457,7 @@ export default function BrowsePage({ initialTag, initialUploadCategory, onViewCo
           {/* Clear Filters */}
           {activeFilterCount > 0 && (
             <button
+              className="browse-clear-filters"
               onClick={() => {
                 setSelectedTags([]);
                 setSelectedFW('');
@@ -522,7 +530,7 @@ export default function BrowsePage({ initialTag, initialUploadCategory, onViewCo
               className="command-grid"
               style={{
                 display: 'grid',
-                gridTemplateColumns: 'repeat(auto-fill, minmax(260px, 1fr))',
+                gridTemplateColumns: 'repeat(auto-fill, minmax(min(100%, 260px), 1fr))',
                 gap: 14,
               }}
             >
@@ -563,7 +571,7 @@ export default function BrowsePage({ initialTag, initialUploadCategory, onViewCo
             className="command-grid"
             style={{
               display: 'grid',
-              gridTemplateColumns: 'repeat(auto-fill, minmax(290px, 1fr))',
+              gridTemplateColumns: 'repeat(auto-fill, minmax(min(100%, 290px), 1fr))',
               gap: 16,
             }}
           >
@@ -576,7 +584,7 @@ export default function BrowsePage({ initialTag, initialUploadCategory, onViewCo
             className="command-grid"
             style={{
               display: 'grid',
-              gridTemplateColumns: 'repeat(auto-fill, minmax(290px, 1fr))',
+              gridTemplateColumns: 'repeat(auto-fill, minmax(min(100%, 290px), 1fr))',
               gap: 16,
             }}
           >
