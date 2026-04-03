@@ -1831,17 +1831,37 @@ app.post('/api/admin/news', requireAdmin, async (req, res) => {
   }
 
   try {
-    const created = await prisma.news.create({
-      data: {
-        title,
-        content,
-        hideAuthor: Boolean(hideAuthor),
-        published: Boolean(published),
-        publishedAt: published ? new Date() : null,
-        createdBy: sessionUser.id,
-      },
-      include: { author: { select: { id: true, username: true, avatar: true } } },
-    });
+    let created;
+    try {
+      created = await prisma.news.create({
+        data: {
+          title,
+          content,
+          hideAuthor: Boolean(hideAuthor),
+          published: Boolean(published),
+          publishedAt: published ? new Date() : null,
+          createdBy: sessionUser.id,
+        },
+        include: { author: { select: { id: true, username: true, avatar: true } } },
+      });
+    } catch (createErr) {
+      const msg = createErr && createErr.message ? String(createErr.message) : '';
+      if (msg.includes('Unknown argument `hideAuthor`')) {
+        // Prisma client may be stale; retry without hideAuthor.
+        created = await prisma.news.create({
+          data: {
+            title,
+            content,
+            published: Boolean(published),
+            publishedAt: published ? new Date() : null,
+            createdBy: sessionUser.id,
+          },
+          include: { author: { select: { id: true, username: true, avatar: true } } },
+        });
+      } else {
+        throw createErr;
+      }
+    }
 
     return res.status(201).json({
       id: created.id,
@@ -1887,7 +1907,18 @@ app.put('/api/admin/news/:id', requireAdmin, async (req, res) => {
         : {}),
     };
 
-    const updated = await prisma.news.update({ where: { id }, data });
+    let updated;
+    try {
+      updated = await prisma.news.update({ where: { id }, data });
+    } catch (updateErr) {
+      const msg = updateErr && updateErr.message ? String(updateErr.message) : '';
+      if (msg.includes('Unknown argument `hideAuthor`')) {
+        const { hideAuthor: _ignored, ...fallbackData } = data;
+        updated = await prisma.news.update({ where: { id }, data: fallbackData });
+      } else {
+        throw updateErr;
+      }
+    }
     return res.json(updated);
   } catch (err) {
     console.error('[admin/news] Failed to update news:', err);
