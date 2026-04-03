@@ -10,26 +10,28 @@ import {
 } from '../lib/newsReadState';
 
 export default function NewsPage({ user, onReadStateChange }) {
-  const [news, setNews] = useState([]);
+  const [allNews, setAllNews] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
   const [readIds, setReadIds] = useState(() => new Set());
   const [selectedType, setSelectedType] = useState('all');
 
-  const unreadCount = getUnreadNewsCount(news, user);
+  // Get unique post types from all news
+  const postTypes = ['all', ...new Set(allNews.map((item) => item.type || 'general').filter(Boolean))];
 
-  // Get unique post types from news
-  const postTypes = ['all', ...new Set(news.map((item) => item.type || 'general').filter(Boolean))];
+  // Filter news based on selected type
+  const news = selectedType === 'all' 
+    ? allNews 
+    : allNews.filter((item) => (item.type || 'general') === selectedType);
+
+  const unreadCount = getUnreadNewsCount(news, user);
 
   useEffect(() => {
     const fetchNews = async () => {
       try {
         setLoading(true);
-        console.log('[news] Fetching published news...');
+        console.log('[news] Fetching all published news...');
         const url = new URL('/api/news', window.location.origin);
-        if (selectedType !== 'all') {
-          url.searchParams.set('type', selectedType);
-        }
         const res = await fetch(url.toString(), { credentials: 'include' });
         console.log('[news] Response status:', res.status);
         if (!res.ok) {
@@ -40,7 +42,7 @@ export default function NewsPage({ user, onReadStateChange }) {
         const data = await res.json();
         console.log('[news] Loaded', data.news?.length || 0, 'news items');
         const items = data.news || [];
-        setNews(items);
+        setAllNews(items);
         const nextReadIds = new Set(
           items.filter((item) => isNewsRead(item, user)).map((item) => getNewsReadToken(item)),
         );
@@ -56,7 +58,7 @@ export default function NewsPage({ user, onReadStateChange }) {
     };
 
     fetchNews();
-  }, [user, onReadStateChange, selectedType]);
+  }, [user, onReadStateChange]);
 
   const handleMarkRead = (newsItem) => {
     markNewsAsRead(newsItem, user);
@@ -112,7 +114,7 @@ export default function NewsPage({ user, onReadStateChange }) {
       </div>
 
       {/* Loading state */}
-      {loading && (
+      {loading && news.length === 0 && (
         <div style={{ textAlign: 'center', padding: '40px 20px', color: C.muted }}>
           <p>Loading news...</p>
         </div>
