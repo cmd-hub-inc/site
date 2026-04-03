@@ -162,6 +162,8 @@ export default function NewsPage({ user, onReadStateChange }) {
 }
 
 function NewsCard({ news, isRead, onMarkRead }) {
+  const [hovered, setHovered] = useState(false);
+
   const parseNewsMeta = (rawTitle) => {
     let title = String(rawTitle || '');
     let category = 'General';
@@ -194,19 +196,13 @@ function NewsCard({ news, isRead, onMarkRead }) {
     <article
       style={{
         padding: 24,
-        background: C.darkBlog,
+        background: hovered ? C.blurpleDim : C.darkBlog,
         borderRadius: 12,
-        border: `1px solid ${parsed.important ? C.red : C.border}`,
+        border: `1px solid ${hovered ? C.blurple : parsed.important ? C.red : C.border}`,
         transition: 'all 0.2s ease',
       }}
-      onMouseEnter={(e) => {
-        e.currentTarget.style.borderColor = C.blurple;
-        e.currentTarget.style.background = C.blurpleDim;
-      }}
-      onMouseLeave={(e) => {
-        e.currentTarget.style.borderColor = C.border;
-        e.currentTarget.style.background = C.darkBlog;
-      }}
+      onMouseEnter={() => setHovered(true)}
+      onMouseLeave={() => setHovered(false)}
     >
       {/* Title */}
       <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 10, marginBottom: 16 }}>
