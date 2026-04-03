@@ -1088,6 +1088,8 @@ function NewsList({ news, isViewer, onNewsUpdate }) {
   });
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState(null);
+  const [editingId, setEditingId] = useState(null);
+  const [editForm, setEditForm] = useState(null);
 
   const parseNewsMeta = (rawTitle) => {
     let title = String(rawTitle || '');
@@ -1108,6 +1110,36 @@ function NewsList({ news, isViewer, onNewsUpdate }) {
     return { title, category, important };
   };
 
+  const parseNewsContent = (rawContent) => {
+    const content = String(rawContent || '');
+    const linkMatch = content.match(/(?:^|\n)More info:\s*(https?:\/\/\S+)\s*$/i);
+    if (!linkMatch) {
+      return { content: content.trim(), referenceUrl: '' };
+    }
+
+    const referenceUrl = linkMatch[1];
+    const withoutLink = content.replace(/(?:^|\n)More info:\s*https?:\/\/\S+\s*$/i, '').trim();
+    return { content: withoutLink, referenceUrl };
+  };
+
+  const composeNewsPayload = (data) => {
+    const normalizedTitle = String(data.title || '').trim();
+    const normalizedContent = String(data.content || '').trim();
+
+    let composedTitle = normalizedTitle;
+    if (data.category && data.category !== 'General') {
+      composedTitle = `[${data.category}] ${composedTitle}`;
+    }
+    if (data.priority === 'important') {
+      composedTitle = `IMPORTANT: ${composedTitle}`;
+    }
+
+    const link = String(data.referenceUrl || '').trim();
+    const composedContent = link ? `${normalizedContent}\n\nMore info: ${link}` : normalizedContent;
+
+    return { title: composedTitle, content: composedContent };
+  };
+
   const handleCreateNews = async (e) => {
     e.preventDefault();
     if (!formData.title || !formData.content) {
@@ -1118,29 +1150,15 @@ function NewsList({ news, isViewer, onNewsUpdate }) {
     setLoading(true);
     setError(null);
     try {
-      const normalizedTitle = String(formData.title || '').trim();
-      const normalizedContent = String(formData.content || '').trim();
-
-      let composedTitle = normalizedTitle;
-      if (formData.category && formData.category !== 'General') {
-        composedTitle = `[${formData.category}] ${composedTitle}`;
-      }
-      if (formData.priority === 'important') {
-        composedTitle = `IMPORTANT: ${composedTitle}`;
-      }
-
-      const link = String(formData.referenceUrl || '').trim();
-      const composedContent = link
-        ? `${normalizedContent}\n\nMore info: ${link}`
-        : normalizedContent;
+      const payload = composeNewsPayload(formData);
 
       const res = await fetch('/api/admin/news', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         credentials: 'include',
         body: JSON.stringify({
-          title: composedTitle,
-          content: composedContent,
+          title: payload.title,
+          content: payload.content,
           hideAuthor: formData.hideAuthor,
           published: formData.publishNow,
         }),
@@ -1234,6 +1252,61 @@ function NewsList({ news, isViewer, onNewsUpdate }) {
     } catch (err) {
       console.error('Error updating author visibility:', err);
       alert('Error updating author visibility');
+    }
+  };
+
+  const handleStartEdit = (item) => {
+    const parsedTitle = parseNewsMeta(item.title);
+    const parsedContent = parseNewsContent(item.content);
+    setEditingId(item.id);
+    setEditForm({
+      title: parsedTitle.title,
+      content: parsedContent.content,
+      category: parsedTitle.category,
+      priority: parsedTitle.important ? 'important' : 'normal',
+      referenceUrl: parsedContent.referenceUrl,
+      hideAuthor: Boolean(item.hideAuthor),
+      published: Boolean(item.published),
+    });
+  };
+
+  const handleCancelEdit = () => {
+    setEditingId(null);
+    setEditForm(null);
+  };
+
+  const handleSaveEdit = async (newsId) => {
+    if (!editForm || !editForm.title || !editForm.content) {
+      alert('Title and content are required');
+      return;
+    }
+
+    try {
+      const payload = composeNewsPayload(editForm);
+      const res = await fetch(`/api/admin/news/${newsId}`, {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        credentials: 'include',
+        body: JSON.stringify({
+          title: payload.title,
+          content: payload.content,
+          hideAuthor: editForm.hideAuthor,
+          published: editForm.published,
+        }),
+      });
+
+      if (!res.ok) {
+        const errData = await res.json();
+        alert(errData.error || 'Failed to save changes');
+        return;
+      }
+
+      setEditingId(null);
+      setEditForm(null);
+      onNewsUpdate();
+    } catch (err) {
+      console.error('Error saving news edit:', err);
+      alert('Error saving changes');
     }
   };
 
@@ -1544,8 +1617,173 @@ function NewsList({ news, isViewer, onNewsUpdate }) {
                 </span>
               </div>
 
+              {editingId === item.id && editForm && (
+                <div
+                  style={{
+                    marginTop: 10,
+                    padding: 14,
+                    borderRadius: 8,
+                    border: `1px solid ${C.border}`,
+                    background: C.bg,
+                    display: 'flex',
+                    flexDirection: 'column',
+                    gap: 10,
+                  }}
+                >
+                  <input
+                    type="text"
+                    value={editForm.title}
+                    onChange={(e) => setEditForm({ ...editForm, title: e.target.value })}
+                    placeholder="Title"
+                    style={{
+                      width: '100%',
+                      padding: '9px 10px',
+                      background: C.surface,
+                      border: `1px solid ${C.border}`,
+                      borderRadius: 6,
+                      color: C.text,
+                      fontSize: 13,
+                      boxSizing: 'border-box',
+                    }}
+                  />
+                  <textarea
+                    value={editForm.content}
+                    onChange={(e) => setEditForm({ ...editForm, content: e.target.value })}
+                    placeholder="Content"
+                    style={{
+                      width: '100%',
+                      minHeight: 100,
+                      padding: '9px 10px',
+                      background: C.surface,
+                      border: `1px solid ${C.border}`,
+                      borderRadius: 6,
+                      color: C.text,
+                      fontSize: 13,
+                      boxSizing: 'border-box',
+                      resize: 'vertical',
+                    }}
+                  />
+                  <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 10 }}>
+                    <select
+                      value={editForm.category}
+                      onChange={(e) => setEditForm({ ...editForm, category: e.target.value })}
+                      style={{
+                        width: '100%',
+                        padding: '9px 10px',
+                        background: C.surface,
+                        border: `1px solid ${C.border}`,
+                        borderRadius: 6,
+                        color: C.text,
+                        fontSize: 13,
+                      }}
+                    >
+                      <option value="General">General</option>
+                      <option value="Announcement">Announcement</option>
+                      <option value="Feature">Feature</option>
+                      <option value="Maintenance">Maintenance</option>
+                      <option value="Security">Security</option>
+                    </select>
+                    <select
+                      value={editForm.priority}
+                      onChange={(e) => setEditForm({ ...editForm, priority: e.target.value })}
+                      style={{
+                        width: '100%',
+                        padding: '9px 10px',
+                        background: C.surface,
+                        border: `1px solid ${C.border}`,
+                        borderRadius: 6,
+                        color: C.text,
+                        fontSize: 13,
+                      }}
+                    >
+                      <option value="normal">Normal</option>
+                      <option value="important">Important</option>
+                    </select>
+                  </div>
+                  <input
+                    type="url"
+                    value={editForm.referenceUrl}
+                    onChange={(e) => setEditForm({ ...editForm, referenceUrl: e.target.value })}
+                    placeholder="Reference URL (optional)"
+                    style={{
+                      width: '100%',
+                      padding: '9px 10px',
+                      background: C.surface,
+                      border: `1px solid ${C.border}`,
+                      borderRadius: 6,
+                      color: C.text,
+                      fontSize: 13,
+                      boxSizing: 'border-box',
+                    }}
+                  />
+                  <label style={{ display: 'flex', gap: 8, alignItems: 'center', fontSize: 12, color: C.text }}>
+                    <input
+                      type="checkbox"
+                      checked={editForm.hideAuthor}
+                      onChange={(e) => setEditForm({ ...editForm, hideAuthor: e.target.checked })}
+                    />
+                    Hide author (show as Site Admin)
+                  </label>
+                  <label style={{ display: 'flex', gap: 8, alignItems: 'center', fontSize: 12, color: C.text }}>
+                    <input
+                      type="checkbox"
+                      checked={editForm.published}
+                      onChange={(e) => setEditForm({ ...editForm, published: e.target.checked })}
+                    />
+                    Published
+                  </label>
+                  <div style={{ display: 'flex', gap: 8 }}>
+                    <button
+                      onClick={() => handleSaveEdit(item.id)}
+                      style={{
+                        padding: '6px 12px',
+                        background: C.green,
+                        color: 'white',
+                        border: 'none',
+                        borderRadius: 4,
+                        cursor: 'pointer',
+                        fontSize: 12,
+                        fontWeight: 600,
+                      }}
+                    >
+                      Save Changes
+                    </button>
+                    <button
+                      onClick={handleCancelEdit}
+                      style={{
+                        padding: '6px 12px',
+                        background: 'transparent',
+                        color: C.text,
+                        border: `1px solid ${C.border}`,
+                        borderRadius: 4,
+                        cursor: 'pointer',
+                        fontSize: 12,
+                        fontWeight: 600,
+                      }}
+                    >
+                      Cancel
+                    </button>
+                  </div>
+                </div>
+              )}
+
               {!isViewer && (
                 <div style={{ display: 'flex', gap: 8, marginTop: 12 }}>
+                  <button
+                    onClick={() => handleStartEdit(item)}
+                    style={{
+                      padding: '6px 12px',
+                      background: 'transparent',
+                      color: C.blurple,
+                      border: `1px solid ${C.blurple}`,
+                      borderRadius: 4,
+                      cursor: 'pointer',
+                      fontSize: 12,
+                      fontWeight: 600,
+                    }}
+                  >
+                    Edit
+                  </button>
                   <button
                     onClick={() => handlePublishNews(item.id, item.published)}
                     style={{

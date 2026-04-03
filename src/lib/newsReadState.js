@@ -20,24 +20,30 @@ export function getReadNewsIds(user) {
   return new Set(safeParseArray(raw));
 }
 
-export function isNewsRead(newsId, user) {
-  return getReadNewsIds(user).has(String(newsId));
+export function getNewsReadToken(newsItem) {
+  const id = newsItem && newsItem.id ? String(newsItem.id) : '';
+  const publishedAt = newsItem && newsItem.publishedAt ? String(newsItem.publishedAt) : '';
+  return `${id}:${publishedAt}`;
 }
 
-export function markNewsAsRead(newsId, user) {
+export function isNewsRead(newsItem, user) {
+  return getReadNewsIds(user).has(getNewsReadToken(newsItem));
+}
+
+export function markNewsAsRead(newsItem, user) {
   if (typeof window === 'undefined') return;
   const ids = getReadNewsIds(user);
-  ids.add(String(newsId));
+  ids.add(getNewsReadToken(newsItem));
   window.localStorage.setItem(getStorageKey(user), JSON.stringify(Array.from(ids)));
 }
 
 export function markAllNewsAsRead(newsItems, user) {
   if (typeof window === 'undefined') return;
-  const ids = (newsItems || []).map((item) => String(item.id));
+  const ids = (newsItems || []).map((item) => getNewsReadToken(item));
   window.localStorage.setItem(getStorageKey(user), JSON.stringify(ids));
 }
 
 export function getUnreadNewsCount(newsItems, user) {
   const readIds = getReadNewsIds(user);
-  return (newsItems || []).filter((item) => !readIds.has(String(item.id))).length;
+  return (newsItems || []).filter((item) => !readIds.has(getNewsReadToken(item))).length;
 }

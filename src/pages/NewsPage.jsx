@@ -2,6 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { Newspaper, AlertCircle } from 'lucide-react';
 import { C } from '../constants';
 import {
+  getNewsReadToken,
   getUnreadNewsCount,
   isNewsRead,
   markAllNewsAsRead,
@@ -32,7 +33,9 @@ export default function NewsPage({ user, onReadStateChange }) {
         console.log('[news] Loaded', data.news?.length || 0, 'news items');
         const items = data.news || [];
         setNews(items);
-        const nextReadIds = new Set(items.filter((item) => isNewsRead(item.id, user)).map((item) => String(item.id)));
+        const nextReadIds = new Set(
+          items.filter((item) => isNewsRead(item, user)).map((item) => getNewsReadToken(item)),
+        );
         setReadIds(nextReadIds);
         onReadStateChange?.(getUnreadNewsCount(items, user) > 0);
         setError(null);
@@ -47,18 +50,18 @@ export default function NewsPage({ user, onReadStateChange }) {
     fetchNews();
   }, [user, onReadStateChange]);
 
-  const handleMarkRead = (newsId) => {
-    markNewsAsRead(newsId, user);
+  const handleMarkRead = (newsItem) => {
+    markNewsAsRead(newsItem, user);
     const next = new Set(readIds);
-    next.add(String(newsId));
+    next.add(getNewsReadToken(newsItem));
     setReadIds(next);
-    const unreadAfter = news.filter((item) => !next.has(String(item.id))).length;
+    const unreadAfter = news.filter((item) => !next.has(getNewsReadToken(item))).length;
     onReadStateChange?.(unreadAfter > 0);
   };
 
   const handleMarkAllRead = () => {
     markAllNewsAsRead(news, user);
-    setReadIds(new Set(news.map((item) => String(item.id))));
+    setReadIds(new Set(news.map((item) => getNewsReadToken(item))));
     onReadStateChange?.(false);
   };
 
@@ -149,8 +152,8 @@ export default function NewsPage({ user, onReadStateChange }) {
           <NewsCard
             key={item.id}
             news={item}
-            isRead={readIds.has(String(item.id))}
-            onMarkRead={() => handleMarkRead(item.id)}
+            isRead={readIds.has(getNewsReadToken(item))}
+            onMarkRead={() => handleMarkRead(item)}
           />
         ))}
       </div>
