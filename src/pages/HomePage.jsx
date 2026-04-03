@@ -2,6 +2,7 @@ import React, { useEffect, useState } from 'react';
 import { Helmet } from 'react-helmet-async';
 import { Zap, ChevronRight, TrendingUp, Bell } from 'lucide-react';
 import CommandCard from '../components/CommandCard';
+import Recommendations from '../components/Recommendations';
 import { C } from '../constants';
 import { MOCK_COMMANDS } from '../data/mockCommands';
 import CountUp from '../components/CountUp';
@@ -346,6 +347,10 @@ export default function HomePage({ onNavigate, onViewCommand }) {
             ? [0, 1, 2].map((i) => <CommandCard key={i} loading />)
             : featured.map((cmd) => <CommandCard key={cmd.id} cmd={cmd} onClick={onViewCommand} />)}
         </div>
+      </div>
+
+      <div style={{ maxWidth: 960, margin: '0 auto', padding: '0 24px 72px' }}>
+        <Recommendations onViewCommand={onViewCommand} />
       </div>
 
       <div style={{ maxWidth: 960, margin: '0 auto', padding: '0 24px clamp(36px, 10vw, 72px)' }}>

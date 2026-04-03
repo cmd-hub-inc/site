@@ -27,6 +27,8 @@ model User {
   reportsSubmitted Report[]     @relation("reporter")
   news             News[]
   collections      Collection[]
+  savedSearches    SavedSearch[]
+  browseHistory    BrowseHistory[]
 
   @@index([createdAt])
   @@index([suspended])
@@ -62,6 +64,7 @@ model Command {
   favorites          Favorite[]
   analytics          CommandAnalytics?
   collectionCommands CollectionCommand[]
+  browseHistory      BrowseHistory[]
 
   @@index([authorId])
   @@index([approved])
@@ -203,6 +206,37 @@ model News {
   @@index([createdBy])
   @@index([createdAt])
   @@index([type])
+}
+
+model SavedSearch {
+  id        String   @id @default(uuid())
+  userId    String
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  name      String // e.g., "My Favorite Middleware"
+  query     String // the search parameters as JSON
+  filters   String? // additional filters as JSON
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+  lastUsed  DateTime @default(now())
+
+  @@unique([userId, name])
+  @@index([userId])
+  @@index([lastUsed])
+  @@index([createdAt])
+}
+
+model BrowseHistory {
+  id        String   @id @default(uuid())
+  userId    String
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  commandId String
+  command   Command  @relation(fields: [commandId], references: [id], onDelete: Cascade)
+  viewedAt  DateTime @default(now())
+
+  @@index([userId])
+  @@index([commandId])
+  @@index([userId, viewedAt])
+  @@index([viewedAt])
 }
 
 model Collection {

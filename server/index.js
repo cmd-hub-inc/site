@@ -14,6 +14,8 @@ import { rateLimiters } from '../api_handlers/_lib/rateLimiter.js';
 import { scheduleAnalyticsFlush } from '../api_handlers/_lib/analytics.js';
 import { scheduleTrendingComputation } from '../api_handlers/trending.js';
 import { verifyToken } from '../api_handlers/_lib/jwt.js';
+import * as savedSearchesHandler from '../api_handlers/saved-searches.js';
+import * as recommendationsHandler from '../api_handlers/recommendations.js';
 
 dotenv.config();
 const app = express();
@@ -2485,6 +2487,23 @@ app.delete('/api/admin/news/:id', requireAdmin, async (req, res) => {
     return res.status(500).json({ error: `Failed to delete news: ${msg}` });
   }
 });
+
+// ============================================
+// SAVED SEARCHES API
+// ============================================
+app.get('/api/saved-searches', requireDbReady, requireAuth, savedSearchesHandler.listSavedSearches);
+app.post('/api/saved-searches', requireDbReady, requireAuth, savedSearchesHandler.createSavedSearch);
+app.get('/api/saved-searches/:id', requireDbReady, requireAuth, savedSearchesHandler.getSavedSearch);
+app.patch('/api/saved-searches/:id', requireDbReady, requireAuth, savedSearchesHandler.updateSavedSearch);
+app.delete('/api/saved-searches/:id', requireDbReady, requireAuth, savedSearchesHandler.deleteSavedSearch);
+
+// ============================================
+// RECOMMENDATIONS API
+// ============================================
+app.post('/api/recommendations/track-view', requireDbReady, recommendationsHandler.trackView);
+app.get('/api/recommendations', requireDbReady, recommendationsHandler.getRecommendations);
+app.get('/api/recommendations/similar/:commandId', requireDbReady, recommendationsHandler.getSimilarCommands);
+app.get('/api/recommendations/history', requireDbReady, requireAuth, recommendationsHandler.getBrowseHistory);
 
 // Start server immediately; dbEnsure runs in background (db-dependent routes will return 503 until ready)
 

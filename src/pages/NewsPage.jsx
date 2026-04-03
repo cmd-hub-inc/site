@@ -115,8 +115,10 @@ export default function NewsPage({ user, onReadStateChange }) {
 
       {/* Loading state */}
       {loading && news.length === 0 && (
-        <div style={{ textAlign: 'center', padding: '40px 20px', color: C.muted }}>
-          <p>Loading news...</p>
+        <div style={{ display: 'flex', flexDirection: 'column', gap: 24 }}>
+          {[1, 2, 3].map((i) => (
+            <NewsCardSkeleton key={i} />
+          ))}
         </div>
       )}
 
@@ -359,6 +361,42 @@ function NewsCard({ news, isRead, onMarkRead }) {
         }}
       >
         {news.content}
+      </div>
+    </article>
+  );
+}
+
+function NewsCardSkeleton() {
+  return (
+    <article
+      style={{
+        padding: 24,
+        background: C.darkBlog,
+        borderRadius: 12,
+        border: `1px solid ${C.border}`,
+      }}
+    >
+      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 12, marginBottom: 16 }}>
+        <div className="skeleton" style={{ width: '60%', height: 26, borderRadius: 8 }} />
+        <div className="skeleton" style={{ width: 100, height: 30, borderRadius: 8 }} />
+      </div>
+
+      <div style={{ display: 'flex', alignItems: 'center', gap: 10, marginBottom: 14 }}>
+        <div className="skeleton" style={{ width: 24, height: 24, borderRadius: '50%' }} />
+        <div className="skeleton" style={{ width: 120, height: 14, borderRadius: 6 }} />
+        <div className="skeleton" style={{ width: 70, height: 14, borderRadius: 6 }} />
+      </div>
+
+      <div style={{ display: 'flex', gap: 8, marginBottom: 16 }}>
+        <div className="skeleton" style={{ width: 72, height: 20, borderRadius: 999 }} />
+        <div className="skeleton" style={{ width: 92, height: 20, borderRadius: 999 }} />
+      </div>
+
+      <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
+        <div className="skeleton" style={{ width: '100%', height: 14, borderRadius: 6 }} />
+        <div className="skeleton" style={{ width: '96%', height: 14, borderRadius: 6 }} />
+        <div className="skeleton" style={{ width: '88%', height: 14, borderRadius: 6 }} />
+        <div className="skeleton" style={{ width: '72%', height: 14, borderRadius: 6 }} />
       </div>
     </article>
   );
