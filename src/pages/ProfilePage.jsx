@@ -34,6 +34,9 @@ export default function ProfilePage({ user, profileId, onViewCommand, onNavigate
   const [visibleCollections, setVisibleCollections] = useState(6);
   const totalDownloads = userCmds.reduce((a, c) => a + (c.downloads || 0), 0);
   const totalFavs = userCmds.reduce((a, c) => a + (c.favourites || 0), 0);
+  const responsivePagePadding = 'clamp(28px, 6vw, 60px) clamp(12px, 4vw, 24px)';
+  const responsiveCardPadding = 'clamp(16px, 4vw, 30px)';
+  const responsiveGridColumns = 'repeat(auto-fill, minmax(min(100%, 290px), 1fr))';
 
   // Fetch profile data when viewing another user's profile
   useEffect(() => {
@@ -187,13 +190,13 @@ export default function ProfilePage({ user, profileId, onViewCommand, onNavigate
     // profileId and no authenticated user.
     if (profileId || user) {
       return (
-        <div style={{ maxWidth: 1200, margin: '0 auto', padding: '60px 24px' }}>
+        <div style={{ maxWidth: 1200, margin: '0 auto', padding: responsivePagePadding }}>
           <div
             style={{
               background: C.surface,
               border: `1px solid ${C.border}`,
               borderRadius: 16,
-              padding: 30,
+              padding: responsiveCardPadding,
               marginBottom: 26,
             }}
           >
@@ -206,7 +209,7 @@ export default function ProfilePage({ user, profileId, onViewCommand, onNavigate
                 />
                 <div className="skeleton" style={{ width: 120, height: 14, borderRadius: 6 }} />
               </div>
-              <div style={{ display: 'flex', gap: 28 }}>
+              <div style={{ display: 'flex', gap: 16, rowGap: 12, flexWrap: 'wrap', maxWidth: '100%' }}>
                 {[1, 2, 3].map((i) => (
                   <div key={i} style={{ textAlign: 'center' }}>
                     <div className="skeleton" style={{ width: 64, height: 22, borderRadius: 6 }} />
@@ -220,7 +223,7 @@ export default function ProfilePage({ user, profileId, onViewCommand, onNavigate
           <div
             style={{
               display: 'grid',
-              gridTemplateColumns: 'repeat(auto-fill, minmax(290px, 1fr))',
+              gridTemplateColumns: responsiveGridColumns,
               gap: 16,
             }}
           >
@@ -267,13 +270,13 @@ export default function ProfilePage({ user, profileId, onViewCommand, onNavigate
   // Show a skeleton while user auth state is loading
   if (user === undefined)
     return (
-      <div style={{ maxWidth: 1200, margin: '0 auto', padding: '60px 24px' }}>
+      <div style={{ maxWidth: 1200, margin: '0 auto', padding: responsivePagePadding }}>
         <div
           style={{
             background: C.surface,
             border: `1px solid ${C.border}`,
             borderRadius: 16,
-            padding: 30,
+            padding: responsiveCardPadding,
             marginBottom: 26,
           }}
         >
@@ -286,7 +289,7 @@ export default function ProfilePage({ user, profileId, onViewCommand, onNavigate
               />
               <div className="skeleton" style={{ width: 120, height: 14, borderRadius: 6 }} />
             </div>
-            <div style={{ display: 'flex', gap: 28 }}>
+            <div style={{ display: 'flex', gap: 16, rowGap: 12, flexWrap: 'wrap', maxWidth: '100%' }}>
               {[1, 2, 3].map((i) => (
                 <div key={i} style={{ textAlign: 'center' }}>
                   <div className="skeleton" style={{ width: 64, height: 22, borderRadius: 6 }} />
@@ -320,7 +323,7 @@ export default function ProfilePage({ user, profileId, onViewCommand, onNavigate
         <div
           style={{
             display: 'grid',
-            gridTemplateColumns: 'repeat(auto-fill, minmax(290px, 1fr))',
+            gridTemplateColumns: responsiveGridColumns,
             gap: 16,
           }}
         >
@@ -360,7 +363,7 @@ export default function ProfilePage({ user, profileId, onViewCommand, onNavigate
           <div
             style={{
               display: 'grid',
-              gridTemplateColumns: 'repeat(auto-fill, minmax(290px, 1fr))',
+              gridTemplateColumns: responsiveGridColumns,
               gap: 16,
             }}
           >
@@ -378,13 +381,13 @@ export default function ProfilePage({ user, profileId, onViewCommand, onNavigate
     );
 
   return (
-    <div style={{ maxWidth: 1200, margin: '0 auto', padding: '60px 24px' }}>
+    <div style={{ maxWidth: 1200, margin: '0 auto', padding: responsivePagePadding }}>
       <div
         style={{
           background: C.surface,
           border: `1px solid ${C.border}`,
           borderRadius: 16,
-          padding: 30,
+          padding: responsiveCardPadding,
           marginBottom: 26,
         }}
       >
@@ -439,13 +442,13 @@ export default function ProfilePage({ user, profileId, onViewCommand, onNavigate
               Discord Verified Member
             </div>
           </div>
-          <div style={{ display: 'flex', gap: 28 }}>
+          <div style={{ display: 'flex', gap: 16, rowGap: 12, flexWrap: 'wrap', maxWidth: '100%' }}>
             {[
               { label: 'Commands', value: loadingUserCmds ? null : userCmds.length, icon: Package, accentColor: '#3b82f6' },
               { label: 'Downloads', value: loadingUserCmds ? null : totalDownloads, icon: Download, accentColor: '#10b981' },
               { label: 'Favourites', value: loadingUserCmds ? null : totalFavs, icon: Heart, accentColor: '#ef4444' },
             ].map((s) => (
-              <div key={s.label} style={{ textAlign: 'center', minWidth: 90 }}>
+              <div key={s.label} style={{ textAlign: 'center', minWidth: 80, flex: '0 1 92px' }}>
                 <div
                   style={{
                     width: '100%',
@@ -510,6 +513,8 @@ export default function ProfilePage({ user, profileId, onViewCommand, onNavigate
           alignItems: 'center',
           marginBottom: 18,
           marginTop: 32,
+          flexWrap: 'wrap',
+          gap: 12,
         }}
       >
         <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
@@ -642,7 +647,7 @@ export default function ProfilePage({ user, profileId, onViewCommand, onNavigate
         <div
           style={{
             display: 'grid',
-            gridTemplateColumns: 'repeat(auto-fill, minmax(290px, 1fr))',
+            gridTemplateColumns: responsiveGridColumns,
             gap: 16,
           }}
         >
@@ -716,7 +721,7 @@ export default function ProfilePage({ user, profileId, onViewCommand, onNavigate
           <div
             style={{
               display: 'grid',
-              gridTemplateColumns: 'repeat(auto-fill, minmax(290px, 1fr))',
+              gridTemplateColumns: responsiveGridColumns,
               gap: 16,
             }}
           >
@@ -762,6 +767,8 @@ export default function ProfilePage({ user, profileId, onViewCommand, onNavigate
             justifyContent: 'space-between',
             alignItems: 'center',
             marginBottom: 18,
+            flexWrap: 'wrap',
+            gap: 12,
           }}
         >
           <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
@@ -795,7 +802,7 @@ export default function ProfilePage({ user, profileId, onViewCommand, onNavigate
           <div
             style={{
               display: 'grid',
-              gridTemplateColumns: 'repeat(auto-fill, minmax(290px, 1fr))',
+              gridTemplateColumns: responsiveGridColumns,
               gap: 16,
             }}
           >
@@ -861,7 +868,7 @@ export default function ProfilePage({ user, profileId, onViewCommand, onNavigate
             <div
               style={{
                 display: 'grid',
-                gridTemplateColumns: 'repeat(auto-fill, minmax(290px, 1fr))',
+                gridTemplateColumns: responsiveGridColumns,
                 gap: 16,
               }}
             >
@@ -912,6 +919,8 @@ export default function ProfilePage({ user, profileId, onViewCommand, onNavigate
             justifyContent: 'space-between',
             alignItems: 'center',
             marginBottom: 18,
+            flexWrap: 'wrap',
+            gap: 12,
           }}
         >
           <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
@@ -945,7 +954,7 @@ export default function ProfilePage({ user, profileId, onViewCommand, onNavigate
           <div
             style={{
               display: 'grid',
-              gridTemplateColumns: 'repeat(auto-fill, minmax(290px, 1fr))',
+              gridTemplateColumns: responsiveGridColumns,
               gap: 16,
             }}
           >
@@ -990,7 +999,7 @@ export default function ProfilePage({ user, profileId, onViewCommand, onNavigate
             <div
               style={{
                 display: 'grid',
-                gridTemplateColumns: 'repeat(auto-fill, minmax(290px, 1fr))',
+                gridTemplateColumns: responsiveGridColumns,
                 gap: 16,
               }}
             >
