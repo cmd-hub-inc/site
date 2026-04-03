@@ -9,7 +9,7 @@
 export function getCommandMetaTags(command, baseUrl = window.location.origin) {
   if (!command) return [];
 
-  const commandUrl = `${baseUrl}/commands/${command.id}`;
+  const commandUrl = `${baseUrl}/command/${command.id}`;
   const imageUrl = `${baseUrl}/api/og-image?commandId=${encodeURIComponent(command.id)}`;
 
   return [
@@ -38,6 +38,36 @@ export function getCommandMetaTags(command, baseUrl = window.location.origin) {
     { name: 'author', content: command.author?.username || 'Unknown' },
     { property: 'article:published_time', content: command.createdAt },
     { property: 'article:modified_time', content: command.updatedAt },
+  ];
+}
+
+/**
+ * Generate meta tags for a collection page
+ */
+export function getCollectionMetaTags(collection, baseUrl = window.location.origin) {
+  if (!collection) return [];
+
+  const collectionUrl = `${baseUrl}/collections/${collection.id}`;
+  const imageUrl = `${baseUrl}/icons/icon.png`;
+  const commandCount = Number(collection.commandCount || 0);
+  const fallbackDescription = `A collection by ${collection.creator?.username || 'Unknown'} with ${commandCount} command${commandCount === 1 ? '' : 's'}.`;
+  const description = collection.description || fallbackDescription;
+
+  return [
+    { name: 'description', content: description },
+    { property: 'og:type', content: 'website' },
+    { property: 'og:url', content: collectionUrl },
+    { property: 'og:title', content: `${collection.name} - Collection` },
+    { property: 'og:description', content: description },
+    { property: 'og:image', content: imageUrl },
+    { property: 'og:image:width', content: '1200' },
+    { property: 'og:image:height', content: '630' },
+    { property: 'og:site_name', content: 'CmdHub' },
+    { name: 'twitter:card', content: 'summary_large_image' },
+    { name: 'twitter:url', content: collectionUrl },
+    { name: 'twitter:title', content: `${collection.name} - Collection` },
+    { name: 'twitter:description', content: description },
+    { name: 'twitter:image', content: imageUrl },
   ];
 }
 

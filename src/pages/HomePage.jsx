@@ -1,4 +1,5 @@
 import React, { useEffect, useState } from 'react';
+import { Helmet } from 'react-helmet-async';
 import { Zap, ChevronRight, TrendingUp, Bell } from 'lucide-react';
 import CommandCard from '../components/CommandCard';
 import { C } from '../constants';
@@ -7,6 +8,8 @@ import CountUp from '../components/CountUp';
 
 export default function HomePage({ onNavigate, onViewCommand }) {
   const API_BASE = import.meta.env.VITE_API_BASE ?? (import.meta.env.DEV ? '' : '');
+  const origin = typeof window !== 'undefined' ? window.location.origin : 'https://cmd-hub.com';
+  const homeImageUrl = `${origin}/icons/icon.png`;
 
   const [featured, setFeatured] = useState(null);
   const [commandsList, setCommandsList] = useState(null);
@@ -120,7 +123,32 @@ export default function HomePage({ onNavigate, onViewCommand }) {
   }, []);
 
   return (
-    <div>
+    <>
+      <Helmet>
+        <title>CmdHub - Discord Command Library</title>
+        <meta
+          name="description"
+          content="Discover, share, and browse Discord bot commands, collections, and creators on CmdHub."
+        />
+        <meta property="og:type" content="website" />
+        <meta property="og:site_name" content="CmdHub" />
+        <meta property="og:title" content="CmdHub - Discord Command Library" />
+        <meta
+          property="og:description"
+          content="Discover, share, and browse Discord bot commands, collections, and creators on CmdHub."
+        />
+        <meta property="og:url" content={origin} />
+        <meta property="og:image" content={homeImageUrl} />
+        <meta name="twitter:card" content="summary_large_image" />
+        <meta name="twitter:title" content="CmdHub - Discord Command Library" />
+        <meta
+          name="twitter:description"
+          content="Discover, share, and browse Discord bot commands, collections, and creators on CmdHub."
+        />
+        <meta name="twitter:image" content={homeImageUrl} />
+      </Helmet>
+
+      <div>
       <div
         style={{
           textAlign: 'center',
@@ -679,6 +707,7 @@ export default function HomePage({ onNavigate, onViewCommand }) {
           </div>
         </div>
       </div>
-    </div>
+      </div>
+    </>
   );
 }

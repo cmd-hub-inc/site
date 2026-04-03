@@ -1,9 +1,11 @@
 import React, { useState, useEffect } from 'react';
+import { Helmet } from 'react-helmet-async';
 import { ArrowLeft, AlertCircle, Edit2, Trash2, BookOpen } from 'lucide-react';
 import { fetchCollection, deleteCollection } from '../api';
 import CollectionCommandManager from '../components/CollectionCommandManager';
 import CollectionManager from '../components/CollectionManager';
 import { C } from '../constants';
+import { getCollectionMetaTags } from '../lib/metaTags';
 
 export default function CollectionDetailPage({ collectionId, user, onNavigate }) {
   const [collection, setCollection] = useState(null);
@@ -181,9 +183,20 @@ export default function CollectionDetailPage({ collectionId, user, onNavigate })
     return null;
   }
 
+  const metaTags = getCollectionMetaTags(collection);
+
   return (
-    <div style={{ background: C.bg, minHeight: '100vh', color: C.text, padding: '56px 24px' }}>
-      <div style={{ maxWidth: 1000, margin: '0 auto' }}>
+    <>
+      <Helmet>
+        <title>{collection.name} - CmdHub Collection</title>
+        {metaTags.map((tag, idx) => {
+          const { property, ...rest } = tag;
+          return property ? <meta key={idx} property={property} {...rest} /> : <meta key={idx} {...rest} />;
+        })}
+      </Helmet>
+
+      <div style={{ background: C.bg, minHeight: '100vh', color: C.text, padding: '56px 24px' }}>
+        <div style={{ maxWidth: 1000, margin: '0 auto' }}>
         <button
           onClick={() => onNavigate && onNavigate('collections')}
           style={{
@@ -301,15 +314,16 @@ export default function CollectionDetailPage({ collectionId, user, onNavigate })
             isOwner={isOwner}
           />
         </div>
-      </div>
+        </div>
 
-      {showEditModal && (
-        <CollectionManager
-          collection={collection}
-          onClose={() => setShowEditModal(false)}
-          onSuccess={handleUpdate}
-        />
-      )}
-    </div>
+        {showEditModal && (
+          <CollectionManager
+            collection={collection}
+            onClose={() => setShowEditModal(false)}
+            onSuccess={handleUpdate}
+          />
+        )}
+      </div>
+    </>
   );
 }

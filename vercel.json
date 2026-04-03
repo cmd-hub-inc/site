@@ -2,6 +2,18 @@
   "version": 2,
   "routes": [
     {
+      "src": "/$",
+      "dest": "/api/share-meta?path=/"
+    },
+    {
+      "src": "/command/([^/]+)$",
+      "dest": "/api/share-meta?path=/command/$1"
+    },
+    {
+      "src": "/collections/([^/]+)$",
+      "dest": "/api/share-meta?path=/collections/$1"
+    },
+    {
       "src": "/api/(.*)",
       "dest": "/api/[...server].js",
       "headers": {
