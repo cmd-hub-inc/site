@@ -91,6 +91,7 @@ export default function Navbar({ page, user, pageParams, onNavigate, onLogin, on
         {navBtn('home', 'Home', <Home size={15} />)}
         {navBtn('browse', 'Browse', <Grid size={15} />)}
         {navBtn('creators', 'Creators', <Users size={15} />)}
+        {navBtn('news', 'News', <Newspaper size={15} />)}
         {navBtn('upload', 'Upload', <Upload size={15} />)}
       </div>
 
@@ -192,7 +193,7 @@ export default function Navbar({ page, user, pageParams, onNavigate, onLogin, on
                 }}
               >
                 <Newspaper size={15} />
-                News
+                Post News
               </button>
             </>
           )}
@@ -304,6 +305,7 @@ export default function Navbar({ page, user, pageParams, onNavigate, onLogin, on
             {navBtn('home', 'Home', <Home size={15} />)}
             {navBtn('browse', 'Browse', <Grid size={15} />)}
             {navBtn('creators', 'Creators', <Users size={15} />)}
+            {navBtn('news', 'News', <Newspaper size={15} />)}
             {navBtn('upload', 'Upload', <Upload size={15} />)}
           </div>
 
@@ -347,7 +349,7 @@ export default function Navbar({ page, user, pageParams, onNavigate, onLogin, on
                     }}
                   >
                     <Newspaper size={15} />
-                    <span style={{ marginLeft: 8 }}>News</span>
+                    <span style={{ marginLeft: 8 }}>Post News</span>
                   </button>
                 )}
                 <button

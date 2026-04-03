@@ -9,9 +9,9 @@ const prisma = new PrismaClient();
 async function ensure() {
   console.log(`[dbEnsure] Checking database tables...`);
   try {
-    const needed = ['User', 'Command', 'Favorite', 'Rating', 'News'];
+    const needed = ['User', 'Command', 'Favorite', 'Rating', 'Report', 'News'];
     const aliases = { Favorite: ['Favorite', 'Favourite'] };
-    const queryTables = ['User', 'Command', 'Favorite', 'Favourite', 'Rating', 'News'];
+    const queryTables = ['User', 'Command', 'Favorite', 'Favourite', 'Rating', 'Report', 'News'];
     console.log(`[dbEnsure] Querying information_schema for tables: ${queryTables.join(', ')}`);
     const rows = await prisma.$queryRaw`
       SELECT table_name FROM information_schema.tables
@@ -73,6 +73,36 @@ async function ensure() {
         console.warn(
           '[dbEnsure] Failed to check/add Command.uploadCategory column:',
           colErr && colErr.message ? colErr.message : colErr,
+        );
+      }
+
+      // Ensure Report table columns exist (schema drift guard).
+      try {
+        await prisma.$executeRawUnsafe(
+          `ALTER TABLE "Report" ADD COLUMN IF NOT EXISTS "commandId" text`,
+        );
+        await prisma.$executeRawUnsafe(
+          `ALTER TABLE "Report" ADD COLUMN IF NOT EXISTS "userId" text`,
+        );
+        await prisma.$executeRawUnsafe(
+          `ALTER TABLE "Report" ADD COLUMN IF NOT EXISTS "reportType" text DEFAULT 'other'`,
+        );
+        await prisma.$executeRawUnsafe(
+          `ALTER TABLE "Report" ADD COLUMN IF NOT EXISTS "resolved" boolean DEFAULT false`,
+        );
+        await prisma.$executeRawUnsafe(
+          `ALTER TABLE "Report" ADD COLUMN IF NOT EXISTS "resolvedBy" text`,
+        );
+        await prisma.$executeRawUnsafe(
+          `ALTER TABLE "Report" ADD COLUMN IF NOT EXISTS "resolutionNote" text`,
+        );
+        await prisma.$executeRawUnsafe(
+          `ALTER TABLE "Report" ADD COLUMN IF NOT EXISTS "resolvedAt" timestamptz`,
+        );
+      } catch (reportErr) {
+        console.warn(
+          '[dbEnsure] Failed to ensure Report columns:',
+          reportErr && reportErr.message ? reportErr.message : reportErr,
         );
       }
 
@@ -229,6 +259,24 @@ async function ensure() {
           PRIMARY KEY ("userId", "commandId"),
           CONSTRAINT fk_rating_user FOREIGN KEY ("userId") REFERENCES "User"(id) ON DELETE CASCADE,
           CONSTRAINT fk_rating_command FOREIGN KEY ("commandId") REFERENCES "Command"(id) ON DELETE CASCADE
+        )
+      `);
+
+      // Create Report table for moderation
+      await prisma.$executeRawUnsafe(`
+        CREATE TABLE IF NOT EXISTS "Report" (
+          "id" text PRIMARY KEY,
+          "reporterId" text NOT NULL,
+          "commandId" text,
+          "userId" text,
+          "reason" text NOT NULL,
+          "reportType" text DEFAULT 'other',
+          "resolved" boolean DEFAULT false,
+          "resolvedBy" text,
+          "resolutionNote" text,
+          "createdAt" timestamptz DEFAULT now(),
+          "resolvedAt" timestamptz,
+          CONSTRAINT fk_report_reporter FOREIGN KEY ("reporterId") REFERENCES "User"(id) ON DELETE CASCADE
         )
       `);
 
