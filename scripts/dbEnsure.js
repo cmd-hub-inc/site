@@ -31,6 +31,7 @@ async function ensure() {
             "id" text PRIMARY KEY,
             "title" text NOT NULL,
             "content" text NOT NULL,
+            "hideAuthor" boolean NOT NULL DEFAULT false,
             "published" boolean NOT NULL DEFAULT false,
             "publishedAt" timestamptz,
             "createdBy" text NOT NULL,
@@ -39,6 +40,9 @@ async function ensure() {
             CONSTRAINT fk_news_author FOREIGN KEY ("createdBy") REFERENCES "User"(id) ON DELETE CASCADE
           )
         `);
+        await prisma.$executeRawUnsafe(
+          `ALTER TABLE "News" ADD COLUMN IF NOT EXISTS "hideAuthor" boolean NOT NULL DEFAULT false`,
+        );
       } catch (newsErr) {
         console.warn(
           '[dbEnsure] Failed to ensure News table:',
@@ -286,6 +290,7 @@ async function ensure() {
           "id" text PRIMARY KEY,
           "title" text NOT NULL,
           "content" text NOT NULL,
+          "hideAuthor" boolean NOT NULL DEFAULT false,
           "published" boolean NOT NULL DEFAULT false,
           "publishedAt" timestamptz,
           "createdBy" text NOT NULL,

@@ -1508,9 +1508,10 @@ app.get('/api/news', requireDbReady, async (req, res) => {
         id: n.id,
         title: n.title,
         content: n.content,
-        author: n.author?.username,
+        author: n.hideAuthor ? 'Site Admin' : n.author?.username,
         authorId: n.author?.id,
-        authorAvatar: n.author?.avatar,
+        authorAvatar: n.hideAuthor ? null : n.author?.avatar,
+        hideAuthor: Boolean(n.hideAuthor),
         publishedAt: n.publishedAt,
       })),
     });
@@ -1794,6 +1795,7 @@ app.get('/api/admin/news', requireAdmin, async (req, res) => {
         id: n.id,
         title: n.title,
         content: n.content,
+        hideAuthor: Boolean(n.hideAuthor),
         published: n.published,
         publishedAt: n.publishedAt,
         author: n.author?.username,
@@ -1821,7 +1823,7 @@ app.post('/api/admin/news', requireAdmin, async (req, res) => {
     return res.status(403).json({ error: 'Viewers cannot create news' });
   }
 
-  const { title, content, published } = req.body || {};
+  const { title, content, published, hideAuthor } = req.body || {};
   const sessionUser = req.session && req.session.user;
 
   if (!title || !content) {
@@ -1833,6 +1835,7 @@ app.post('/api/admin/news', requireAdmin, async (req, res) => {
       data: {
         title,
         content,
+        hideAuthor: Boolean(hideAuthor),
         published: Boolean(published),
         publishedAt: published ? new Date() : null,
         createdBy: sessionUser.id,
@@ -1844,6 +1847,7 @@ app.post('/api/admin/news', requireAdmin, async (req, res) => {
       id: created.id,
       title: created.title,
       content: created.content,
+      hideAuthor: Boolean(created.hideAuthor),
       published: created.published,
       publishedAt: created.publishedAt,
       author: created.author?.username,
@@ -1865,7 +1869,7 @@ app.put('/api/admin/news/:id', requireAdmin, async (req, res) => {
   }
 
   const { id } = req.params;
-  const { title, content, published } = req.body || {};
+  const { title, content, published, hideAuthor } = req.body || {};
 
   try {
     const existing = await prisma.news.findUnique({ where: { id } });
@@ -1876,6 +1880,7 @@ app.put('/api/admin/news/:id', requireAdmin, async (req, res) => {
     const data = {
       ...(title !== undefined ? { title } : {}),
       ...(content !== undefined ? { content } : {}),
+      ...(hideAuthor !== undefined ? { hideAuthor: Boolean(hideAuthor) } : {}),
       ...(published !== undefined ? { published: nextPublished } : {}),
       ...(published !== undefined
         ? { publishedAt: nextPublished ? existing.publishedAt || new Date() : null }

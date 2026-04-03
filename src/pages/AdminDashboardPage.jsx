@@ -1077,7 +1077,7 @@ function ReportsList({ reports, isViewer, onResolve }) {
 
 function NewsList({ news, isViewer, onNewsUpdate }) {
   const [showForm, setShowForm] = useState(false);
-  const [formData, setFormData] = useState({ title: '', content: '' });
+  const [formData, setFormData] = useState({ title: '', content: '', hideAuthor: false });
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState(null);
 
@@ -1098,6 +1098,7 @@ function NewsList({ news, isViewer, onNewsUpdate }) {
         body: JSON.stringify({
           title: formData.title,
           content: formData.content,
+          hideAuthor: formData.hideAuthor,
           published: false,
         }),
       });
@@ -1108,7 +1109,7 @@ function NewsList({ news, isViewer, onNewsUpdate }) {
         return;
       }
 
-      setFormData({ title: '', content: '' });
+      setFormData({ title: '', content: '', hideAuthor: false });
       setShowForm(false);
       onNewsUpdate();
     } catch (err) {
@@ -1160,6 +1161,28 @@ function NewsList({ news, isViewer, onNewsUpdate }) {
     } catch (err) {
       console.error('Error updating news:', err);
       alert('Error updating news');
+    }
+  };
+
+  const handleToggleAuthorHidden = async (newsId, hideAuthor) => {
+    try {
+      const res = await fetch(`/api/admin/news/${newsId}`, {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        credentials: 'include',
+        body: JSON.stringify({ hideAuthor: !hideAuthor }),
+      });
+
+      if (!res.ok) {
+        const errData = await res.json();
+        alert(errData.error || 'Failed to update author visibility');
+        return;
+      }
+
+      onNewsUpdate();
+    } catch (err) {
+      console.error('Error updating author visibility:', err);
+      alert('Error updating author visibility');
     }
   };
 
@@ -1247,6 +1270,23 @@ function NewsList({ news, isViewer, onNewsUpdate }) {
                   }}
                 />
               </div>
+              <label
+                style={{
+                  display: 'flex',
+                  alignItems: 'center',
+                  gap: 8,
+                  fontSize: 13,
+                  color: C.text,
+                  cursor: 'pointer',
+                }}
+              >
+                <input
+                  type="checkbox"
+                  checked={formData.hideAuthor}
+                  onChange={(e) => setFormData({ ...formData, hideAuthor: e.target.checked })}
+                />
+                Post anonymously as <strong style={{ color: C.lightText }}>Site Admin</strong>
+              </label>
               <div style={{ display: 'flex', gap: 8 }}>
                 <button
                   type="submit"
@@ -1306,7 +1346,7 @@ function NewsList({ news, isViewer, onNewsUpdate }) {
                     {item.title}
                   </h3>
                   <p style={{ margin: '0 0 12px 0', fontSize: 13, color: C.muted }}>
-                    by {item.author} • {new Date(item.createdAt).toLocaleDateString()}
+                    by {item.hideAuthor ? 'Site Admin (hidden)' : item.author} • {new Date(item.createdAt).toLocaleDateString()}
                   </p>
                   <p
                     style={{
@@ -1375,6 +1415,21 @@ function NewsList({ news, isViewer, onNewsUpdate }) {
                   >
                     <Trash2 size={12} />
                     Delete
+                  </button>
+                  <button
+                    onClick={() => handleToggleAuthorHidden(item.id, item.hideAuthor)}
+                    style={{
+                      padding: '6px 12px',
+                      background: item.hideAuthor ? C.blurple : 'transparent',
+                      color: item.hideAuthor ? 'white' : C.blurple,
+                      border: `1px solid ${C.blurple}`,
+                      borderRadius: 4,
+                      cursor: 'pointer',
+                      fontSize: 12,
+                      fontWeight: 600,
+                    }}
+                  >
+                    {item.hideAuthor ? 'Show Author' : 'Hide Author'}
                   </button>
                 </div>
               )}
