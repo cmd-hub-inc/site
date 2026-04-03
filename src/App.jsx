@@ -461,7 +461,11 @@ export default function App() {
           <Suspense fallback={<PageLoadingSpinner />}>
             {page === 'home' && <HomePage onNavigate={navigate} onViewCommand={viewCommand} />}
             {page === 'browse' && (
-              <BrowsePage initialTag={pageParams.tag} onViewCommand={viewCommand} />
+              <BrowsePage
+                initialTag={pageParams.tag}
+                initialUploadCategory={pageParams.uploadCategory}
+                onViewCommand={viewCommand}
+              />
             )}
             {page === 'creators' && <CreatorsPage onNavigate={navigate} />}
             {page === 'upload' && <UploadPage user={user} onNavigate={navigate} />}

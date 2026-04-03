@@ -14,6 +14,7 @@ export default function HomePage({ onNavigate, onViewCommand }) {
     latest: null,
     creators: null,
     frameworks: null,
+    tools: null,
     tags: null,
     recent: null,
   });
@@ -71,14 +72,27 @@ export default function HomePage({ onNavigate, onViewCommand }) {
             .sort((a, b) => b.count - a.count)
             .slice(0, 6);
 
-          // frameworks counts
-          const fwMap = cmds.reduce((acc, c) => {
-            const fw = c.framework || 'Other';
-            acc[fw] = (acc[fw] || 0) + 1;
+          // framework and bot tool counts
+          const itemName = (c) => (c.framework || 'Other').trim();
+          const frameworkMap = cmds.reduce((acc, c) => {
+            const category = String(c.uploadCategory || 'Framework').toLowerCase();
+            if (category !== 'framework') return acc;
+            const name = itemName(c);
+            acc[name] = (acc[name] || 0) + 1;
             return acc;
           }, {});
-          const frameworks = Object.keys(fwMap)
-            .map((k) => ({ name: k, count: fwMap[k] }))
+          const toolMap = cmds.reduce((acc, c) => {
+            const category = String(c.uploadCategory || 'Framework').toLowerCase();
+            if (category !== 'bot tool') return acc;
+            const name = itemName(c);
+            acc[name] = (acc[name] || 0) + 1;
+            return acc;
+          }, {});
+          const frameworks = Object.keys(frameworkMap)
+            .map((k) => ({ name: k, count: frameworkMap[k] }))
+            .sort((a, b) => b.count - a.count);
+          const tools = Object.keys(toolMap)
+            .map((k) => ({ name: k, count: toolMap[k] }))
             .sort((a, b) => b.count - a.count);
 
           // trending tags
@@ -93,7 +107,7 @@ export default function HomePage({ onNavigate, onViewCommand }) {
 
           const recent = latest.slice(0, 6);
 
-          if (!cancelled) setDerived({ latest, creators, frameworks, tags, recent });
+          if (!cancelled) setDerived({ latest, creators, frameworks, tools, tags, recent });
         }
         // leave as null (show skeleton) if response not ok
       } catch (e) {
@@ -221,7 +235,8 @@ export default function HomePage({ onNavigate, onViewCommand }) {
         {[
           { label: 'Commands', value: stats?.commands ?? null, color: C.blurple },
           { label: 'Downloads', value: stats?.downloads ?? null, color: C.green },
-          { label: 'Frameworks & Tools', value: derived.frameworks?.length ?? null, color: C.yellow },
+          { label: 'Frameworks', value: derived.frameworks?.length ?? null, color: C.yellow },
+          { label: 'Tools', value: derived.tools?.length ?? null, color: C.yellow },
         ].map((s) => (
           <div
             key={s.label}
@@ -474,7 +489,7 @@ export default function HomePage({ onNavigate, onViewCommand }) {
                         {derived.frameworks.slice(0, 12).map((f) => (
                           <button
                             key={f.name}
-                            onClick={() => onNavigate('browse', { framework: f.name })}
+                            onClick={() => onNavigate('browse', { framework: f.name, uploadCategory: 'Framework' })}
                             style={{
                               display: 'flex',
                               flexDirection: 'column',
@@ -512,6 +527,76 @@ export default function HomePage({ onNavigate, onViewCommand }) {
                                   width: `${Math.round((f.count / maxFw) * 100)}%`,
                                   height: '100%',
                                   background: C.green,
+                                  borderRadius: 6,
+                                }}
+                              />
+                            </div>
+                          </button>
+                        ))}
+                      </div>
+                    );
+                  })()}
+            </div>
+          </div>
+
+          <div>
+            <h3 style={{ fontSize: 'clamp(16px, 3vw, 18px)', color: C.white, marginBottom: 8 }}>Browse by Tool</h3>
+            <div
+              style={{
+                background: C.surface,
+                border: `1px solid ${C.border}`, 
+                borderRadius: 12,
+                padding: 12,
+              }}
+            >
+              {derived.tools == null
+                ? [0, 1, 2, 3].map((i) => (
+                    <div key={i} className="skeleton" style={{ height: 48, marginBottom: 8, borderRadius: 6 }} />
+                  ))
+                : (() => {
+                    const maxTool = Math.max(1, ...derived.tools.map((t) => t.count));
+                    return (
+                      <div
+                        style={{
+                          display: 'grid',
+                          gridTemplateColumns: 'repeat(auto-fill, minmax(130px, 1fr))',
+                          gap: 10,
+                        }}
+                      >
+                        {derived.tools.slice(0, 12).map((t) => (
+                          <button
+                            key={t.name}
+                            onClick={() => onNavigate('browse', { framework: t.name, uploadCategory: 'Bot Tool' })}
+                            style={{
+                              display: 'flex',
+                              flexDirection: 'column',
+                              alignItems: 'flex-start',
+                              gap: 6,
+                              padding: 10,
+                              background: C.surface2,
+                              border: `1px solid ${C.border}`,
+                              borderRadius: 10,
+                              cursor: 'pointer',
+                            }}
+                          >
+                            <div style={{ display: 'flex', alignItems: 'center', gap: 8, width: '100%' }}>
+                              <div style={{ fontWeight: 700, color: C.white }}>{t.name}</div>
+                              <div style={{ marginLeft: 'auto', color: C.muted }}>{t.count}</div>
+                            </div>
+                            <div
+                              style={{
+                                width: '100%',
+                                height: 8,
+                                background: C.surface,
+                                borderRadius: 6,
+                                overflow: 'hidden',
+                              }}
+                            >
+                              <div
+                                style={{
+                                  width: `${Math.round((t.count / maxTool) * 100)}%`,
+                                  height: '100%',
+                                  background: C.yellow,
                                   borderRadius: 6,
                                 }}
                               />

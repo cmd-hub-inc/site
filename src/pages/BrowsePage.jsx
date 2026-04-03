@@ -5,11 +5,12 @@ import { C, ALL_TAGS, FRAMEWORKS, CMD_TYPES } from '../constants';
 import { MOCK_COMMANDS } from '../data/mockCommands';
 import { TagBadge } from '../components/Badges';
 
-export default function BrowsePage({ initialTag, onViewCommand }) {
+export default function BrowsePage({ initialTag, initialUploadCategory, onViewCommand }) {
   const [search, setSearch] = useState('');
   const [selectedTags, setSelectedTags] = useState(initialTag ? [initialTag] : []);
   const [selectedFW, setSelectedFW] = useState('');
   const [selectedType, setSelectedType] = useState('');
+  const [selectedCategory, setSelectedCategory] = useState(initialUploadCategory || '');
   const [sort, setSort] = useState('downloads');
   const [showFilters, setShowFilters] = useState(false);
 
@@ -20,6 +21,11 @@ export default function BrowsePage({ initialTag, onViewCommand }) {
   useEffect(() => {
     if (initialTag) setSelectedTags([initialTag]);
   }, [initialTag]);
+
+  useEffect(() => {
+    if (initialUploadCategory) setSelectedCategory(initialUploadCategory);
+  }, [initialUploadCategory]);
+
   const toggleTag = (t) =>
     setSelectedTags((prev) => (prev.includes(t) ? prev.filter((x) => x !== t) : [...prev, t]));
 
@@ -86,6 +92,8 @@ export default function BrowsePage({ initialTag, onViewCommand }) {
       }
       if (selectedTags.length && !selectedTags.every((t) => (cmd.tags || []).includes(t)))
         return false;
+      if (selectedCategory && String(cmd.uploadCategory || 'Framework').toLowerCase() !== String(selectedCategory).toLowerCase())
+        return false;
       if (selectedFW && cmd.framework !== selectedFW) return false;
       if (selectedType && cmd.type !== selectedType) return false;
       return true;
@@ -97,7 +105,7 @@ export default function BrowsePage({ initialTag, onViewCommand }) {
       return 0;
     });
 
-  const activeFilterCount = selectedTags.length + (selectedFW ? 1 : 0) + (selectedType ? 1 : 0);
+  const activeFilterCount = selectedTags.length + (selectedFW ? 1 : 0) + (selectedType ? 1 : 0) + (selectedCategory ? 1 : 0);
 
   const inp = {
     background: C.surface,
