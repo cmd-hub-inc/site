@@ -1,9 +1,49 @@
 :root {
   --bg: #1e1f22;
   --surface: #2b2d31;
+  --surface2: #313338;
+  --surface3: #383a40;
   --text: #dbdee1;
   --muted: #949ba4;
+  --faint: #5c5f66;
   --blurple: #5865f2;
+  --blurple-hover: #4752c4;
+  --blurple-dim: rgba(88, 101, 242, 0.15);
+  --green: #57f287;
+  --green-dim: rgba(87, 242, 135, 0.12);
+  --red: #ed4245;
+  --yellow: #fee75c;
+  --border: rgba(255, 255, 255, 0.06);
+  --white: #ffffff;
+  --nav-hover: rgba(255, 255, 255, 0.03);
+  --skeleton-a: rgba(255, 255, 255, 0.02);
+  --skeleton-b: rgba(255, 255, 255, 0.06);
+  --skeleton-line: rgba(255, 255, 255, 0.03);
+  color-scheme: dark;
+}
+
+:root[data-theme='light'] {
+  --bg: #f6f8fc;
+  --surface: #ffffff;
+  --surface2: #f3f5f9;
+  --surface3: #e9edf5;
+  --text: #1d2430;
+  --muted: #5c6677;
+  --faint: #8b93a3;
+  --blurple: #4752c4;
+  --blurple-hover: #3b44a6;
+  --blurple-dim: rgba(71, 82, 196, 0.14);
+  --green: #2d9d68;
+  --green-dim: rgba(45, 157, 104, 0.14);
+  --red: #c53d3f;
+  --yellow: #c08f1a;
+  --border: rgba(17, 24, 39, 0.12);
+  --white: #1d2430;
+  --nav-hover: rgba(29, 36, 48, 0.06);
+  --skeleton-a: rgba(29, 36, 48, 0.06);
+  --skeleton-b: rgba(29, 36, 48, 0.12);
+  --skeleton-line: rgba(29, 36, 48, 0.1);
+  color-scheme: light;
 }
 html,
 body,
@@ -15,6 +55,7 @@ body {
   color: var(--text);
   font-family: 'DM Sans', sans-serif;
   margin: 0;
+  transition: background-color 180ms ease, color 180ms ease;
 }
 a {
   color: inherit;
@@ -32,15 +73,15 @@ a {
   overflow: hidden;
   background: linear-gradient(
     90deg,
-    rgba(255, 255, 255, 0.02) 0%,
-    rgba(255, 255, 255, 0.06) 50%,
-    rgba(255, 255, 255, 0.02) 100%
+    var(--skeleton-a) 0%,
+    var(--skeleton-b) 50%,
+    var(--skeleton-a) 100%
   );
   background-size: 200% 100%;
   animation: shimmer 1.2s linear infinite;
 }
 .skeleton-line {
-  background: rgba(255, 255, 255, 0.03);
+  background: var(--skeleton-line);
   border-radius: 6px;
 }
 
@@ -97,13 +138,13 @@ a {
   }
 
   .mobile-menu button:hover {
-    background: rgba(255,255,255,0.02);
+    background: var(--nav-hover);
   }
 }
 
 /* Desktop hover for right-side nav buttons */
 .site-nav .nav-right .nav-btn:hover {
-  background: rgba(255,255,255,0.02) !important;
+  background: var(--nav-hover) !important;
 }
 
 /* Make .nav-btn generally have a small transition */
@@ -126,7 +167,7 @@ a {
   }
 
   .mobile-menu .nav-btn:hover {
-    background: rgba(255,255,255,0.03) !important;
+    background: var(--nav-hover) !important;
   }
 }
 

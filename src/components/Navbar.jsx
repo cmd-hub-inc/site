@@ -1,8 +1,8 @@
 import React, { useState } from 'react';
-import { Home, Grid, Upload, LogOut, Users, BarChart3, Code2, Menu, X, Shield, Newspaper, BookOpen } from 'lucide-react';
+import { Grid, Upload, LogOut, Users, BarChart3, Code2, Menu, X, Shield, Newspaper, BookOpen, Sun, Moon } from 'lucide-react';
 import { C } from '../constants';
 
-export default function Navbar({ page, user, pageParams, newsHasUnread, onNavigate, onLogin, onLogout }) {
+export default function Navbar({ theme, page, user, pageParams, newsHasUnread, onNavigate, onToggleTheme, onLogin, onLogout }) {
   const [mobileOpen, setMobileOpen] = useState(false);
 
   const navBtn = (id, label, icon) => {
@@ -101,7 +101,6 @@ export default function Navbar({ page, user, pageParams, newsHasUnread, onNaviga
       </button>
       </div>
       <div className="nav-center" style={{ display: 'flex', gap: 2, flex: 1 }}>
-        {navBtn('home', 'Home', <Home size={15} />)}
         {navBtn('browse', 'Browse', <Grid size={15} />)}
         {navBtn('collections', 'Collections', <BookOpen size={15} />)}
         {navBtn('creators', 'Creators', <Users size={15} />)}
@@ -125,6 +124,29 @@ export default function Navbar({ page, user, pageParams, newsHasUnread, onNaviga
           }}
         >
           {mobileOpen ? <X size={18} color={C.text} /> : <Menu size={18} color={C.text} />}
+        </button>
+
+        <button
+          className="nav-btn"
+          onClick={onToggleTheme}
+          title={theme === 'dark' ? 'Switch to light mode' : 'Switch to dark mode'}
+          aria-label={theme === 'dark' ? 'Switch to light mode' : 'Switch to dark mode'}
+          style={{
+            background: 'none',
+            border: `1px solid ${C.border}`,
+            cursor: 'pointer',
+            borderRadius: 8,
+            padding: '6px 10px',
+            color: C.text,
+            display: 'inline-flex',
+            alignItems: 'center',
+            gap: 6,
+            fontSize: 13,
+            fontWeight: 600,
+          }}
+        >
+          {theme === 'dark' ? <Sun size={15} /> : <Moon size={15} />}
+          {theme === 'dark' ? 'Light' : 'Dark'}
         </button>
 
       
@@ -286,7 +308,6 @@ export default function Navbar({ page, user, pageParams, newsHasUnread, onNaviga
           }}
         >
           <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
-            {navBtn('home', 'Home', <Home size={15} />)}
             {navBtn('browse', 'Browse', <Grid size={15} />)}
             {navBtn('collections', 'Collections', <BookOpen size={15} />)}
             {navBtn('creators', 'Creators', <Users size={15} />)}
@@ -297,6 +318,27 @@ export default function Navbar({ page, user, pageParams, newsHasUnread, onNaviga
           <div style={{ height: 1, background: C.border, margin: '12px 0' }} />
 
           <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
+            <button
+              className="nav-btn"
+              onClick={() => {
+                onToggleTheme();
+                setMobileOpen(false);
+              }}
+              style={{
+                background: 'none',
+                border: 'none',
+                color: C.text,
+                textAlign: 'left',
+                padding: '8px 6px',
+                cursor: 'pointer',
+                display: 'flex',
+                alignItems: 'center',
+                gap: 8,
+              }}
+            >
+              {theme === 'dark' ? <Sun size={15} /> : <Moon size={15} />}
+              <span>{theme === 'dark' ? 'Light mode' : 'Dark mode'}</span>
+            </button>
             {user ? (
               <>
                 <button

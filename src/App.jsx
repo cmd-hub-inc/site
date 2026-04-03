@@ -39,6 +39,15 @@ function PageLoadingSpinner() {
 }
 
 export default function App() {
+  const [theme, setTheme] = useState(() => {
+    try {
+      const saved = window.localStorage.getItem('cmdhub-theme');
+      if (saved === 'dark' || saved === 'light') return saved;
+      return window.matchMedia && window.matchMedia('(prefers-color-scheme: light)').matches ? 'light' : 'dark';
+    } catch {
+      return 'dark';
+    }
+  });
   const [page, setPage] = useState(() => {
     try {
       const pathname = typeof window !== 'undefined' ? window.location.pathname || '' : '';
@@ -71,6 +80,15 @@ export default function App() {
   const [user, setUser] = useState(undefined);
   const [selectedCmd, setSelectedCmd] = useState(null);
   const [newsHasUnread, setNewsHasUnread] = useState(false);
+
+  useEffect(() => {
+    try {
+      document.documentElement.setAttribute('data-theme', theme);
+      window.localStorage.setItem('cmdhub-theme', theme);
+    } catch {
+      // ignore localStorage errors in private mode
+    }
+  }, [theme]);
 
   const navigate = (p, params = {}) => {
     setPage(p);
@@ -463,17 +481,19 @@ export default function App() {
     <div
       style={{
         minHeight: '100vh',
-        background: '#1e1f22',
+        background: 'var(--bg)',
         display: 'flex',
         flexDirection: 'column',
       }}
     >
       <Navbar
+        theme={theme}
         page={page}
         user={user}
         pageParams={pageParams}
         newsHasUnread={newsHasUnread}
         onNavigate={navigate}
+        onToggleTheme={() => setTheme((prev) => (prev === 'dark' ? 'light' : 'dark'))}
         onLogin={() => {
           // Save the current page as the return destination
           if (page === 'upload') {
