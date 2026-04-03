@@ -16,6 +16,7 @@ function getSectionFromHash() {
 export default function AdminDashboardPage({ user, onNavigate }) {
   const [stats, setStats] = useState(null);
   const [section, setSection] = useState(() => getSectionFromHash()); // overview, commands, users, reports, news
+  const [contentSection, setContentSection] = useState(() => getSectionFromHash());
   const [filter, setFilter] = useState('all'); // for commands: all, pending, approved
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
@@ -117,6 +118,7 @@ export default function AdminDashboardPage({ user, onNavigate }) {
             const data = await res.json();
             console.log('[admin] News loaded:', data);
             setStats(data);
+            setContentSection(section);
             setError(null);
           } catch (jsonErr) {
             console.error('[admin] Failed to parse news response:', jsonErr);
@@ -140,6 +142,7 @@ export default function AdminDashboardPage({ user, onNavigate }) {
             const data = await res.json();
             console.log('[admin] Data loaded:', data);
             setStats(data);
+            setContentSection(section);
             setError(null);
           } catch (jsonErr) {
             console.error('[admin] Failed to parse data response:', jsonErr);
@@ -170,6 +173,7 @@ export default function AdminDashboardPage({ user, onNavigate }) {
         }
         const data = await res.json();
         setStats((prevStats) => ({ ...(prevStats || {}), news: data.news }));
+        setContentSection(overrideSection);
         setError(null);
       } else {
         const res = await fetch(`/api/admin/data?section=${overrideSection}&filter=${overrideFilter}`, { credentials: 'include' });
@@ -179,6 +183,7 @@ export default function AdminDashboardPage({ user, onNavigate }) {
         }
         const data = await res.json();
         setStats(data);
+        setContentSection(overrideSection);
         setError(null);
       }
     } catch (err) {
@@ -384,7 +389,7 @@ export default function AdminDashboardPage({ user, onNavigate }) {
   return (
     <div style={{ background: C.bg, minHeight: '100vh', padding: '60px 24px', color: C.text }}>
       <div style={{ maxWidth: 1200, margin: '0 auto' }}>
-        {!loading && (
+        {(!loading || stats) && (
           <>
             {/* Header */}
             <div style={{ marginBottom: 40 }}>
@@ -451,7 +456,7 @@ export default function AdminDashboardPage({ user, onNavigate }) {
           </>
         )}
 
-        {loading && (
+        {loading && !stats && (
           <div>
             {/* Title & Navigation Skeleton */}
             <div style={{ marginBottom: 40, animation: 'pulse 2s infinite' }}>
@@ -693,10 +698,18 @@ export default function AdminDashboardPage({ user, onNavigate }) {
         )}
         {error && <div style={{ color: '#FF6B6B', textAlign: 'center', padding: '40px' }}>{error}</div>}
 
-        {!loading && !error && stats && (
+        {loading && stats && (
+          <div style={{ marginBottom: 16, display: 'flex', justifyContent: 'flex-end' }}>
+            <div style={{ padding: '8px 12px', borderRadius: 999, background: C.surface, border: `1px solid ${C.border}`, color: C.muted, fontSize: 12 }}>
+              Refreshing {contentSection}...
+            </div>
+          </div>
+        )}
+
+        {!error && stats && (
           <>
             {/* OVERVIEW SECTION */}
-            {section === 'overview' && (
+            {contentSection === 'overview' && (
               <div>
                 <div style={{
                   display: 'grid',
@@ -746,22 +759,22 @@ export default function AdminDashboardPage({ user, onNavigate }) {
             )}
 
             {/* COMMANDS SECTION */}
-            {section === 'commands' && (
+            {contentSection === 'commands' && (
               <CommandsList commands={stats.commands} onNavigate={onNavigate} isViewer={isViewer} onApprove={handleCommandApprove} onReject={handleCommandReject} />
             )}
 
             {/* USERS SECTION */}
-            {section === 'users' && (
+            {contentSection === 'users' && (
               <UsersList users={stats.users} isViewer={isViewer} onUsersUpdate={() => loadSectionData('users', filter)} />
             )}
 
             {/* REPORTS SECTION */}
-            {section === 'reports' && (
+            {contentSection === 'reports' && (
               <ReportsList reports={stats.reports} isViewer={isViewer} onResolve={handleReportResolve} />
             )}
 
             {/* NEWS SECTION */}
-            {section === 'news' && (
+            {contentSection === 'news' && (
               <NewsList news={stats.news} isViewer={isViewer} onNewsUpdate={() => {
                 // Refresh news after create/update/delete
                 loadSectionData('news', filter);
