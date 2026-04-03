@@ -26,6 +26,10 @@ export function createRateLimiter(options = {}) {
 
   return async (req, res, next) => {
     try {
+      if (process.env.NODE_ENV !== 'production') {
+        return next();
+      }
+
       const key = `rate-limit:${keyGenerator(req)}`;
       let current;
 

@@ -80,6 +80,19 @@ async function ensure() {
         );
       }
 
+      // Ensure User moderation columns exist.
+      try {
+        await prisma.$executeRawUnsafe(`ALTER TABLE "User" ADD COLUMN IF NOT EXISTS "adminNotes" text DEFAULT ''`);
+        await prisma.$executeRawUnsafe(`ALTER TABLE "User" ADD COLUMN IF NOT EXISTS "warningCount" integer NOT NULL DEFAULT 0`);
+        await prisma.$executeRawUnsafe(`ALTER TABLE "User" ADD COLUMN IF NOT EXISTS "lastWarningAt" timestamptz`);
+        await prisma.$executeRawUnsafe(`ALTER TABLE "User" ADD COLUMN IF NOT EXISTS "sessionVersion" integer NOT NULL DEFAULT 0`);
+      } catch (userModErr) {
+        console.warn(
+          '[dbEnsure] Failed to ensure User moderation columns:',
+          userModErr && userModErr.message ? userModErr.message : userModErr,
+        );
+      }
+
       // Ensure Report table columns exist (schema drift guard).
       try {
         await prisma.$executeRawUnsafe(

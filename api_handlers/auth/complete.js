@@ -44,7 +44,12 @@ export default async function handler(req, res) {
     }
 
     // create session JWT
-    const sessionToken = signSession({ id: user.id, username: user.username, avatar: user.avatar });
+    const sessionToken = signSession({
+      id: user.id,
+      username: user.username,
+      avatar: user.avatar,
+      sessionVersion: user.sessionVersion || 0,
+    });
     const isProd = process.env.NODE_ENV === 'production';
     const cookie = cookieHeader('session', sessionToken, {
       maxAge: 7 * 24 * 60 * 60,

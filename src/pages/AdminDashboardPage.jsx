@@ -157,6 +157,38 @@ export default function AdminDashboardPage({ user, onNavigate }) {
     fetchData();
   }, [adminRole, section, filter]);
 
+  const loadSectionData = async (overrideSection = section, overrideFilter = filter) => {
+    if (!adminRole) return;
+
+    try {
+      setLoading(true);
+      if (overrideSection === 'news') {
+        const res = await fetch('/api/admin/news', { credentials: 'include' });
+        if (!res.ok) {
+          setError('Failed to load news');
+          return;
+        }
+        const data = await res.json();
+        setStats((prevStats) => ({ ...(prevStats || {}), news: data.news }));
+        setError(null);
+      } else {
+        const res = await fetch(`/api/admin/data?section=${overrideSection}&filter=${overrideFilter}`, { credentials: 'include' });
+        if (!res.ok) {
+          setError('Failed to load data');
+          return;
+        }
+        const data = await res.json();
+        setStats(data);
+        setError(null);
+      }
+    } catch (err) {
+      console.error('[admin] Refresh error:', err);
+      setError('Error loading admin data: ' + err.message);
+    } finally {
+      setLoading(false);
+    }
+  };
+
   if (!user) return null;
 
   const isViewer = adminRole === 'VIEWER';
@@ -720,7 +752,7 @@ export default function AdminDashboardPage({ user, onNavigate }) {
 
             {/* USERS SECTION */}
             {section === 'users' && (
-              <UsersList users={stats.users} isViewer={isViewer} onSuspend={handleUserSuspend} />
+              <UsersList users={stats.users} isViewer={isViewer} onUsersUpdate={() => loadSectionData('users', filter)} />
             )}
 
             {/* REPORTS SECTION */}
@@ -732,25 +764,7 @@ export default function AdminDashboardPage({ user, onNavigate }) {
             {section === 'news' && (
               <NewsList news={stats.news} isViewer={isViewer} onNewsUpdate={() => {
                 // Refresh news after create/update/delete
-                const fetchNews = async () => {
-                  try {
-                    setLoading(true);
-                    const res = await fetch('/api/admin/news', { credentials: 'include' });
-                    if (!res.ok) {
-                      setError('Failed to load news');
-                      return;
-                    }
-                    const data = await res.json();
-                    setStats(prevStats => ({ ...prevStats, news: data.news }));
-                    setError(null);
-                  } catch (err) {
-                    console.error('[admin] Fetch error:', err);
-                    setError('Error loading news: ' + err.message);
-                  } finally {
-                    setLoading(false);
-                  }
-                };
-                fetchNews();
+                loadSectionData('news', filter);
               }} />
             )}
           </>
@@ -908,92 +922,288 @@ function CommandsList({ commands, onNavigate, isViewer, onApprove, onReject }) {
   );
 }
 
-function UsersList({ users, isViewer, onSuspend }) {
+function UsersList({ users, isViewer, onUsersUpdate }) {
   const [actionLoading, setActionLoading] = useState(null);
+  const [query, setQuery] = useState('');
+  const [statusFilter, setStatusFilter] = useState('all');
+  const [roleFilter, setRoleFilter] = useState('all');
+  const [selectedIds, setSelectedIds] = useState([]);
+  const [bulkRole, setBulkRole] = useState('MODERATOR');
+  const [bulkNote, setBulkNote] = useState('');
+  const [notesDrafts, setNotesDrafts] = useState({});
+
+  const filteredUsers = (users || []).filter((u) => {
+    const matchesQuery = [u.username, u.id].some((value) => String(value || '').toLowerCase().includes(query.toLowerCase()));
+    const matchesStatus =
+      statusFilter === 'all'
+        ? true
+        : statusFilter === 'active'
+          ? !u.suspended
+          : statusFilter === 'suspended'
+            ? Boolean(u.suspended)
+            : statusFilter === 'admins'
+              ? Boolean(u.isAdmin)
+              : true;
+    const matchesRole = roleFilter === 'all' ? true : String(u.adminRole || 'none') === roleFilter;
+    return matchesQuery && matchesStatus && matchesRole;
+  });
+
+  const selectedCount = selectedIds.length;
+
+  const refresh = async () => {
+    await onUsersUpdate?.();
+  };
+
+  const toggleSelected = (userId) => {
+    setSelectedIds((current) =>
+      current.includes(userId) ? current.filter((id) => id !== userId) : [...current, userId],
+    );
+  };
+
+  const selectAllVisible = () => {
+    const ids = filteredUsers.map((u) => u.id);
+    setSelectedIds(ids);
+  };
+
+  const clearSelection = () => setSelectedIds([]);
 
   const handleSuspend = async (userId) => {
     if (isViewer) return;
-    const confirm = window.confirm('Suspend this user? They can still log in but with a warning.');
+    const confirm = window.confirm('Suspend this user?');
     if (!confirm) return;
     setActionLoading(`suspend-${userId}`);
     try {
-      await onSuspend(userId);
+      const res = await fetch(`/api/admin/users/${userId}/suspend`, { method: 'POST' });
+      if (!res.ok) throw new Error('Failed to suspend');
+      await refresh();
     } finally {
       setActionLoading(null);
     }
   };
 
+  const handleUnsuspend = async (userId) => {
+    if (isViewer) return;
+    setActionLoading(`unsuspend-${userId}`);
+    try {
+      const res = await fetch(`/api/admin/users/${userId}/unsuspend`, { method: 'POST' });
+      if (!res.ok) throw new Error('Failed to unsuspend');
+      await refresh();
+    } finally {
+      setActionLoading(null);
+    }
+  };
+
+  const handleRoleChange = async (userId, role) => {
+    if (isViewer) return;
+    setActionLoading(`role-${userId}`);
+    try {
+      const res = await fetch(`/api/admin/users/${userId}/role`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ role: role === 'none' ? null : role }),
+      });
+      if (!res.ok) throw new Error('Failed to update role');
+      await refresh();
+    } finally {
+      setActionLoading(null);
+    }
+  };
+
+  const handleWarn = async (userId, note) => {
+    if (isViewer) return;
+    setActionLoading(`warn-${userId}`);
+    try {
+      const res = await fetch(`/api/admin/users/${userId}/warn`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ note }),
+      });
+      if (!res.ok) throw new Error('Failed to warn');
+      await refresh();
+    } finally {
+      setActionLoading(null);
+    }
+  };
+
+  const handleSaveNotes = async (userId, notes) => {
+    if (isViewer) return;
+    setActionLoading(`notes-${userId}`);
+    try {
+      const res = await fetch(`/api/admin/users/${userId}/notes`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ notes }),
+      });
+      if (!res.ok) throw new Error('Failed to save notes');
+      await refresh();
+    } finally {
+      setActionLoading(null);
+    }
+  };
+
+  const handleBulk = async (action, explicitIds = null) => {
+    const userIds = explicitIds || selectedIds;
+    if (isViewer || userIds.length === 0) return;
+    setActionLoading(`bulk-${action}`);
+    try {
+      const res = await fetch('/api/admin/users/bulk', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          userIds,
+          action,
+          role: bulkRole === 'none' ? null : bulkRole,
+          note: bulkNote,
+        }),
+      });
+      if (!res.ok) throw new Error('Failed bulk action');
+      setBulkNote('');
+      await refresh();
+      clearSelection();
+    } finally {
+      setActionLoading(null);
+    }
+  };
+
+  const exportUsers = () => {
+    window.location.href = '/api/admin/users/export';
+  };
+
   return (
-    <div style={{ overflowX: 'auto' }}>
-      <table style={{
-        width: '100%',
-        borderCollapse: 'collapse',
-        background: C.surface,
-        borderRadius: 12,
-        overflow: 'hidden',
-        border: `1px solid ${C.border}`
-      }}>
-        <thead>
-          <tr style={{ background: 'rgba(0, 0, 0, 0.2)', borderBottom: `1px solid ${C.border}` }}>
-            <th style={{ padding: '12px 16px', textAlign: 'left', fontSize: 13, fontWeight: 600 }}>Username</th>
-            <th style={{ padding: '12px 16px', textAlign: 'center', fontSize: 13, fontWeight: 600 }}>Commands</th>
-            <th style={{ padding: '12px 16px', textAlign: 'center', fontSize: 13, fontWeight: 600 }}>Status</th>
-            <th style={{ padding: '12px 16px', textAlign: 'center', fontSize: 13, fontWeight: 600 }}>Joined</th>
-            {!isViewer && <th style={{ padding: '12px 16px', textAlign: 'center', fontSize: 13, fontWeight: 600 }}>Actions</th>}
-          </tr>
-        </thead>
-        <tbody>
-          {users?.map(u => (
-            <tr key={u.id} style={{ borderBottom: `1px solid ${C.border}` }}>
-              <td style={{ padding: '12px 16px', fontSize: 13 }}>
-                <div style={{ display: 'flex', gap: 8, alignItems: 'center' }}>
-                  {u.avatar && <img src={u.avatar} alt={u.username} style={{ width: 24, height: 24, borderRadius: '50%' }} />}
-                  <span>{u.username}</span>
-                </div>
-              </td>
-              <td style={{ padding: '12px 16px', textAlign: 'center', fontSize: 13, color: C.text }}>{u._count?.commands || 0}</td>
-              <td style={{ padding: '12px 16px', textAlign: 'center', fontSize: 13 }}>
-                <span style={{
-                  display: 'inline-block',
-                  padding: '4px 8px',
-                  borderRadius: 4,
-                  fontSize: 11,
-                  fontWeight: 600,
-                  background: u.suspended ? 'rgba(237, 66, 69, 0.15)' : 'rgba(87, 242, 135, 0.15)',
-                  color: u.suspended ? C.red : C.green,
-                }}>
-                  {u.suspended ? 'Suspended' : 'Active'}
-                </span>
-              </td>
-              <td style={{ padding: '12px 16px', textAlign: 'center', fontSize: 13, color: C.muted }}>
-                {new Date(u.createdAt).toLocaleDateString()}
-              </td>
+    <div style={{ display: 'flex', flexDirection: 'column', gap: 16 }}>
+      <div style={{ display: 'flex', flexWrap: 'wrap', gap: 12, alignItems: 'center' }}>
+        <input
+          value={query}
+          onChange={(e) => setQuery(e.target.value)}
+          placeholder="Search users by name or ID"
+          style={{
+            flex: '1 1 260px',
+            padding: '10px 12px',
+            background: C.surface,
+            border: `1px solid ${C.border}`,
+            borderRadius: 8,
+            color: C.text,
+          }}
+        />
+        <select value={statusFilter} onChange={(e) => setStatusFilter(e.target.value)} style={{ padding: '10px 12px', background: C.surface, border: `1px solid ${C.border}`, borderRadius: 8, color: C.text }}>
+          <option value="all">All statuses</option>
+          <option value="active">Active</option>
+          <option value="suspended">Suspended</option>
+          <option value="admins">Admins</option>
+        </select>
+        <select value={roleFilter} onChange={(e) => setRoleFilter(e.target.value)} style={{ padding: '10px 12px', background: C.surface, border: `1px solid ${C.border}`, borderRadius: 8, color: C.text }}>
+          <option value="all">All roles</option>
+          <option value="SUPER_ADMIN">SUPER_ADMIN</option>
+          <option value="MODERATOR">MODERATOR</option>
+          <option value="VIEWER">VIEWER</option>
+          <option value="none">No role</option>
+        </select>
+        <button onClick={exportUsers} style={{ padding: '10px 12px', background: 'transparent', border: `1px solid ${C.border}`, borderRadius: 8, color: C.text, cursor: 'pointer' }}>
+          Export CSV
+        </button>
+      </div>
+
+      {!isViewer && selectedCount > 0 && (
+        <div style={{ padding: 14, borderRadius: 12, border: `1px solid ${C.border}`, background: C.surface, display: 'flex', flexWrap: 'wrap', gap: 10, alignItems: 'center' }}>
+          <strong>{selectedCount} selected</strong>
+          <select value={bulkRole} onChange={(e) => setBulkRole(e.target.value)} style={{ padding: '8px 10px', background: C.bg, border: `1px solid ${C.border}`, borderRadius: 8, color: C.text }}>
+            <option value="SUPER_ADMIN">SUPER_ADMIN</option>
+            <option value="MODERATOR">MODERATOR</option>
+            <option value="VIEWER">VIEWER</option>
+            <option value="none">Clear role</option>
+          </select>
+          <input value={bulkNote} onChange={(e) => setBulkNote(e.target.value)} placeholder="Bulk warning/note" style={{ flex: '1 1 220px', padding: '8px 10px', background: C.bg, border: `1px solid ${C.border}`, borderRadius: 8, color: C.text }} />
+          <button onClick={() => handleBulk('suspend')} style={{ padding: '8px 12px', background: C.red, color: 'white', border: 'none', borderRadius: 8, cursor: 'pointer' }}>Suspend</button>
+          <button onClick={() => handleBulk('unsuspend')} style={{ padding: '8px 12px', background: C.green, color: 'white', border: 'none', borderRadius: 8, cursor: 'pointer' }}>Unsuspend</button>
+          <button onClick={() => handleBulk('logout')} style={{ padding: '8px 12px', background: '#f59e0b', color: '#111827', border: 'none', borderRadius: 8, cursor: 'pointer' }}>Force Logout</button>
+          <button onClick={() => handleBulk('role')} style={{ padding: '8px 12px', background: C.blurple, color: 'white', border: 'none', borderRadius: 8, cursor: 'pointer' }}>Apply Role</button>
+          <button onClick={() => handleBulk('warn')} style={{ padding: '8px 12px', background: 'transparent', color: C.blurple, border: `1px solid ${C.blurple}`, borderRadius: 8, cursor: 'pointer' }}>Warn</button>
+          <button onClick={clearSelection} style={{ padding: '8px 12px', background: 'transparent', color: C.text, border: `1px solid ${C.border}`, borderRadius: 8, cursor: 'pointer' }}>Clear</button>
+        </div>
+      )}
+
+      <div style={{ overflowX: 'auto' }}>
+        <table style={{ width: '100%', borderCollapse: 'collapse', background: C.surface, borderRadius: 12, overflow: 'hidden', border: `1px solid ${C.border}` }}>
+          <thead>
+            <tr style={{ background: 'rgba(0, 0, 0, 0.2)', borderBottom: `1px solid ${C.border}` }}>
               {!isViewer && (
-                <td style={{ padding: '12px 16px', textAlign: 'center', fontSize: 13 }}>
-                  {!u.suspended && (
-                    <button
-                      onClick={() => handleSuspend(u.id)}
-                      disabled={actionLoading === `suspend-${u.id}`}
-                      style={{
-                        padding: '4px 12px',
-                        background: C.red,
-                        color: 'white',
-                        border: 'none',
-                        borderRadius: 4,
-                        cursor: 'pointer',
-                        fontSize: 11,
-                        fontWeight: 600
-                      }}
-                    >
-                      Suspend
-                    </button>
-                  )}
-                </td>
+                <th style={{ padding: '12px 16px', textAlign: 'center', fontSize: 13, fontWeight: 600 }}>
+                  <input type="checkbox" checked={filteredUsers.length > 0 && selectedIds.length === filteredUsers.length} onChange={() => (selectedIds.length === filteredUsers.length ? clearSelection() : selectAllVisible())} />
+                </th>
               )}
+              <th style={{ padding: '12px 16px', textAlign: 'left', fontSize: 13, fontWeight: 600 }}>User</th>
+              <th style={{ padding: '12px 16px', textAlign: 'center', fontSize: 13, fontWeight: 600 }}>Commands</th>
+              <th style={{ padding: '12px 16px', textAlign: 'center', fontSize: 13, fontWeight: 600 }}>Status</th>
+              <th style={{ padding: '12px 16px', textAlign: 'center', fontSize: 13, fontWeight: 600 }}>Role</th>
+              <th style={{ padding: '12px 16px', textAlign: 'center', fontSize: 13, fontWeight: 600 }}>Warnings</th>
+              <th style={{ padding: '12px 16px', textAlign: 'center', fontSize: 13, fontWeight: 600 }}>Joined</th>
+              {!isViewer && <th style={{ padding: '12px 16px', textAlign: 'center', fontSize: 13, fontWeight: 600 }}>Actions</th>}
             </tr>
-          ))}
-        </tbody>
-      </table>
+          </thead>
+          <tbody>
+            {filteredUsers.map((u) => (
+              <tr key={u.id} style={{ borderBottom: `1px solid ${C.border}` }}>
+                {!isViewer && (
+                  <td style={{ padding: '12px 16px', textAlign: 'center' }}>
+                    <input type="checkbox" checked={selectedIds.includes(u.id)} onChange={() => toggleSelected(u.id)} />
+                  </td>
+                )}
+                <td style={{ padding: '12px 16px', fontSize: 13 }}>
+                  <div style={{ display: 'flex', gap: 8, alignItems: 'center' }}>
+                    {u.avatar && <img src={u.avatar} alt={u.username} style={{ width: 24, height: 24, borderRadius: '50%' }} />}
+                    <div>
+                      <div style={{ fontWeight: 600 }}>{u.username}</div>
+                      <div style={{ fontSize: 11, color: C.muted }}>{u.id}</div>
+                    </div>
+                  </div>
+                </td>
+                <td style={{ padding: '12px 16px', textAlign: 'center', fontSize: 13, color: C.text }}>{u._count?.commands || 0}</td>
+                <td style={{ padding: '12px 16px', textAlign: 'center', fontSize: 13 }}>
+                  <span style={{ display: 'inline-block', padding: '4px 8px', borderRadius: 4, fontSize: 11, fontWeight: 600, background: u.suspended ? 'rgba(237, 66, 69, 0.15)' : 'rgba(87, 242, 135, 0.15)', color: u.suspended ? C.red : C.green }}>
+                    {u.suspended ? 'Suspended' : 'Active'}
+                  </span>
+                </td>
+                <td style={{ padding: '12px 16px', textAlign: 'center', fontSize: 13 }}>
+                  <select value={u.adminRole || 'none'} onChange={(e) => handleRoleChange(u.id, e.target.value)} disabled={isViewer || actionLoading === `role-${u.id}`} style={{ background: C.bg, border: `1px solid ${C.border}`, borderRadius: 8, color: C.text, padding: '6px 8px' }}>
+                    <option value="none">None</option>
+                    <option value="SUPER_ADMIN">SUPER_ADMIN</option>
+                    <option value="MODERATOR">MODERATOR</option>
+                    <option value="VIEWER">VIEWER</option>
+                  </select>
+                </td>
+                <td style={{ padding: '12px 16px', textAlign: 'center', fontSize: 13 }}>
+                  <div style={{ display: 'flex', flexDirection: 'column', gap: 6, alignItems: 'center' }}>
+                    <span style={{ color: C.text, fontWeight: 600 }}>{u.warningCount || 0}</span>
+                    <button onClick={() => handleWarn(u.id, window.prompt('Warning note:', '') || '')} disabled={isViewer || actionLoading === `warn-${u.id}`} style={{ padding: '4px 8px', background: 'transparent', color: C.blurple, border: `1px solid ${C.blurple}`, borderRadius: 6, cursor: 'pointer', fontSize: 11, fontWeight: 600 }}>Warn</button>
+                  </div>
+                </td>
+                <td style={{ padding: '12px 16px', textAlign: 'center', fontSize: 13, color: C.muted }}>
+                  {new Date(u.createdAt).toLocaleDateString()}
+                </td>
+                {!isViewer && (
+                  <td style={{ padding: '12px 16px', textAlign: 'center', fontSize: 13 }}>
+                    <div style={{ display: 'flex', flexWrap: 'wrap', gap: 6, justifyContent: 'center' }}>
+                      {u.suspended ? (
+                        <button onClick={() => handleUnsuspend(u.id)} disabled={actionLoading === `unsuspend-${u.id}`} style={{ padding: '4px 10px', background: C.green, color: 'white', border: 'none', borderRadius: 4, cursor: 'pointer', fontSize: 11, fontWeight: 600 }}>Unsuspend</button>
+                      ) : (
+                        <button onClick={() => handleSuspend(u.id)} disabled={actionLoading === `suspend-${u.id}`} style={{ padding: '4px 10px', background: C.red, color: 'white', border: 'none', borderRadius: 4, cursor: 'pointer', fontSize: 11, fontWeight: 600 }}>Suspend</button>
+                      )}
+                      <button onClick={() => handleBulk('logout', [u.id])} disabled={actionLoading === `bulk-logout`} style={{ padding: '4px 10px', background: '#f59e0b', color: '#111827', border: 'none', borderRadius: 4, cursor: 'pointer', fontSize: 11, fontWeight: 600 }}>Force Logout</button>
+                      <button onClick={() => handleSaveNotes(u.id, notesDrafts[u.id] ?? u.adminNotes ?? '')} disabled={actionLoading === `notes-${u.id}`} style={{ padding: '4px 10px', background: 'transparent', color: C.text, border: `1px solid ${C.border}`, borderRadius: 4, cursor: 'pointer', fontSize: 11, fontWeight: 600 }}>Save Notes</button>
+                    </div>
+                    <textarea
+                      value={notesDrafts[u.id] ?? u.adminNotes ?? ''}
+                      onChange={(e) => setNotesDrafts((current) => ({ ...current, [u.id]: e.target.value }))}
+                      placeholder="Admin notes"
+                      style={{ marginTop: 8, width: 220, minHeight: 70, background: C.bg, color: C.text, border: `1px solid ${C.border}`, borderRadius: 6, padding: 8, fontSize: 12 }}
+                    />
+                  </td>
+                )}
+              </tr>
+            ))}
+          </tbody>
+        </table>
+      </div>
     </div>
   );
 }

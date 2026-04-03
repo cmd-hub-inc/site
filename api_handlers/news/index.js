@@ -2,15 +2,29 @@ import prisma from '../_lib/prisma.js';
 
 export default async function handler(req, res) {
   try {
-    // GET /api/news - Get all published news
+    // GET /api/news - Get all published news with optional filtering
     if (req.method === 'GET') {
       try {
+        const { type, sortBy = 'publishedAt' } = req.query;
+        
+        const where = { published: true };
+        if (type) {
+          where.type = String(type).toLowerCase();
+        }
+
+        const orderBy = {};
+        if (sortBy === 'type') {
+          orderBy.type = 'asc';
+        } else {
+          orderBy[sortBy] = 'desc';
+        }
+
         const news = await prisma.news.findMany({
-          where: { published: true },
+          where,
           include: {
             author: { select: { id: true, username: true, avatar: true } },
           },
-          orderBy: { publishedAt: 'desc' },
+          orderBy,
         });
 
         console.log('[news] Found', news.length, 'published news items');
@@ -19,6 +33,7 @@ export default async function handler(req, res) {
             id: n.id,
             title: n.title,
             content: n.content,
+            type: n.type,
             author: n.author.username,
             authorId: n.author.id,
             authorAvatar: n.author.avatar,

@@ -33,6 +33,40 @@ const CLIENT_URL = process.env.CLIENT_URL || 'http://localhost:5173';
 const SESSION_SECRET = process.env.SESSION_SECRET || 'dev_secret_change_me';
 const isProd = process.env.NODE_ENV === 'production';
 
+async function getUserAuthState(userId) {
+  try {
+    return await prisma.user.findUnique({
+      where: { id: userId },
+      select: {
+        id: true,
+        username: true,
+        avatar: true,
+        isAdmin: true,
+        adminRole: true,
+        suspended: true,
+        sessionVersion: true,
+      },
+    });
+  } catch (err) {
+    const msg = err && err.message ? String(err.message) : '';
+    if (msg.includes('sessionVersion') || msg.includes('Unknown field') || msg.includes('Unknown argument')) {
+      try {
+        const rows = await prisma.$queryRaw`
+          SELECT id, username, avatar, "isAdmin", "adminRole", suspended
+          FROM "User"
+          WHERE id = ${userId}
+          LIMIT 1
+        `;
+        return Array.isArray(rows) ? rows[0] || null : null;
+      } catch (rawErr) {
+        console.warn('[auth] legacy auth lookup failed:', rawErr && rawErr.message ? rawErr.message : rawErr);
+        return null;
+      }
+    }
+    throw err;
+  }
+}
+
 // Configure CORS to allow multiple frontends and echo the request origin
 const allowedOrigins = [
   CLIENT_URL,
@@ -98,9 +132,40 @@ app.use(
 );
 
 // Simple auth middleware for routes that require a logged-in user
-function requireAuth(req, res, next) {
-  if (req.session && req.session.user) return next();
-  return res.status(401).json({ error: 'Not authenticated' });
+async function requireAuth(req, res, next) {
+  const sessionUser = req.session && req.session.user;
+  if (!sessionUser || !sessionUser.id) return res.status(401).json({ error: 'Not authenticated' });
+
+  try {
+    const user = await getUserAuthState(sessionUser.id);
+
+    if (!user) {
+      if (req.session) {
+        req.session.destroy(() => {});
+      }
+      return res.status(401).json({ error: 'Not authenticated' });
+    }
+
+    if ((user.sessionVersion || 0) !== (sessionUser.sessionVersion || 0)) {
+      if (req.session) {
+        req.session.destroy(() => {});
+      }
+      return res.status(401).json({ error: 'Session expired' });
+    }
+
+    if (user.suspended) {
+      if (req.session) {
+        req.session.destroy(() => {});
+      }
+      return res.status(403).json({ error: 'Account suspended' });
+    }
+
+    req.authUser = user;
+    next();
+  } catch (err) {
+    console.error('[auth] Failed to validate session:', err && err.message ? err.message : err);
+    return res.status(500).json({ error: 'Auth validation failed' });
+  }
 }
 
 app.get('/api/health', (req, res) => res.json({ ok: true }));
@@ -439,7 +504,14 @@ app.get('/api/auth/complete', async (req, res) => {
         adminRole = user.adminRole || 'SUPER_ADMIN';
       }
 
-      req.session.user = { id: user.id, username: user.username, avatar: user.avatar, isAdmin, adminRole };
+      req.session.user = {
+        id: user.id,
+        username: user.username,
+        avatar: user.avatar,
+        isAdmin,
+        adminRole,
+        sessionVersion: user.sessionVersion || 0,
+      };
       req.session.save(async (err) => {
         if (err) {
           console.error('session save error', err);
@@ -452,7 +524,7 @@ app.get('/api/auth/complete', async (req, res) => {
         }
         return res.json({
           ok: true,
-          user: { id: user.id, username: user.username, avatar: user.avatar, isAdmin, adminRole },
+          user: { id: user.id, username: user.username, avatar: user.avatar, isAdmin, adminRole, sessionVersion: user.sessionVersion || 0 },
         });
       });
     } catch (e) {
@@ -473,15 +545,28 @@ app.get('/api/me', requireDbReady, async (req, res) => {
     if (!s) return res.json({ user: null });
     
     try {
-      const user = await prisma.user.findUnique({ where: { id: s.id } });
+      const user = await getUserAuthState(s.id);
       if (user) {
+        if ((user.sessionVersion || 0) !== (s.sessionVersion || 0)) {
+          if (req.session) {
+            req.session.destroy(() => {});
+          }
+          return res.json({ user: null });
+        }
+        if (user.suspended) {
+          if (req.session) {
+            req.session.destroy(() => {});
+          }
+          return res.json({ user: null });
+        }
         return res.json({
           user: {
             id: user.id,
             username: user.username,
             avatar: user.avatar,
             isAdmin: user.isAdmin || false,
-            adminRole: user.adminRole || null
+            adminRole: user.adminRole || null,
+            sessionVersion: user.sessionVersion || 0,
           },
           isAdmin: user.isAdmin || false,
         });
@@ -491,7 +576,7 @@ app.get('/api/me', requireDbReady, async (req, res) => {
         user: {
           ...s,
           isAdmin: s.isAdmin || false,
-          adminRole: s.adminRole || null
+          adminRole: s.adminRole || null,
         },
         isAdmin: s.isAdmin || false
       });
@@ -528,6 +613,35 @@ app.post('/api/logout', async (req, res) => {
     return res.json({ ok: true });
   } catch (err) {
     console.error('logout error', err && err.message ? err.message : err);
+    return res.status(500).json({ error: 'failed' });
+  }
+});
+
+// Force logout the current session and revoke all sessions for the current user
+app.post('/api/logout/everywhere', requireAuth, async (req, res) => {
+  try {
+    const sessionUser = req.session && req.session.user;
+    if (sessionUser?.id) {
+      await prisma.user.update({
+        where: { id: sessionUser.id },
+        data: { sessionVersion: { increment: 1 } },
+      });
+    }
+
+    if (req.session) {
+      req.session.destroy((err) => {
+        if (err) {
+          console.warn('session destroy error', err && err.message ? err.message : err);
+        }
+      });
+    }
+
+    try {
+      res.clearCookie && res.clearCookie('connect.sid');
+    } catch (e) {}
+    return res.json({ ok: true });
+  } catch (err) {
+    console.error('force logout error', err && err.message ? err.message : err);
     return res.status(500).json({ error: 'failed' });
   }
 });
@@ -1590,13 +1704,18 @@ async function requireAdmin(req, res, next) {
   }
 
   try {
-    const user = await prisma.user.findUnique({
-      where: { id: sessionUser.id }
-    });
+    const user = await getUserAuthState(sessionUser.id);
     if (!user || !user.isAdmin) {
       return res.status(403).json({ error: 'Forbidden - not an admin' });
     }
+    if (user.suspended || (user.sessionVersion || 0) !== (sessionUser.sessionVersion || 0)) {
+      if (req.session) {
+        req.session.destroy(() => {});
+      }
+      return res.status(401).json({ error: 'Session expired' });
+    }
     req.userRole = user.adminRole || 'SUPER_ADMIN';
+    req.authUser = user;
     next();
   } catch (err) {
     console.error('[admin] Error checking admin status:', err);
@@ -1606,11 +1725,8 @@ async function requireAdmin(req, res, next) {
 
 // Admin: Get admin info
 app.get('/api/admin/info', requireDbReady, requireAuth, async (req, res) => {
-  const sessionUser = req.session && req.session.user;
   try {
-    const user = await prisma.user.findUnique({
-      where: { id: sessionUser.id }
-    });
+    const user = req.authUser || (req.session && req.session.user);
     res.json({
       isAdmin: user?.isAdmin || false,
       role: user?.adminRole || null
@@ -1670,7 +1786,21 @@ app.get('/api/admin/data', requireAdmin, async (req, res) => {
         orderBy: { createdAt: 'desc' }
       });
 
-      return res.json({ users });
+      return res.json({
+        users: users.map((u) => ({
+          id: u.id,
+          username: u.username,
+          avatar: u.avatar,
+          suspended: u.suspended,
+          isAdmin: u.isAdmin,
+          adminRole: u.adminRole,
+          adminNotes: u.adminNotes || '',
+          warningCount: u.warningCount || 0,
+          lastWarningAt: u.lastWarningAt,
+          createdAt: u.createdAt,
+          _count: u._count,
+        })),
+      });
     }
 
     if (section === 'reports') {
@@ -1686,6 +1816,181 @@ app.get('/api/admin/data', requireAdmin, async (req, res) => {
   } catch (error) {
     console.error('Admin data error:', error);
     res.status(500).json({ error: 'Failed to fetch admin data' });
+  }
+});
+
+// Admin: update user role
+app.post('/api/admin/users/:id/role', requireAdmin, async (req, res) => {
+  if (req.userRole === 'VIEWER') {
+    return res.status(403).json({ error: 'Viewers cannot change roles' });
+  }
+
+  const { id } = req.params;
+  const { role } = req.body || {};
+  const allowedRoles = ['SUPER_ADMIN', 'MODERATOR', 'VIEWER', null, ''];
+
+  if (!allowedRoles.includes(role)) {
+    return res.status(400).json({ error: 'Invalid role' });
+  }
+
+  try {
+    await prisma.user.update({
+      where: { id },
+      data: { adminRole: role || null, isAdmin: Boolean(role) },
+    });
+    res.json({ ok: true });
+  } catch (err) {
+    res.status(500).json({ error: 'Failed to update role' });
+  }
+});
+
+// Admin: unsuspend user
+app.post('/api/admin/users/:id/unsuspend', requireAdmin, async (req, res) => {
+  if (req.userRole === 'VIEWER') {
+    return res.status(403).json({ error: 'Viewers cannot unsuspend users' });
+  }
+
+  const { id } = req.params;
+  try {
+    await prisma.user.update({
+      where: { id },
+      data: { suspended: false },
+    });
+    res.json({ ok: true });
+  } catch (err) {
+    res.status(500).json({ error: 'Failed to unsuspend user' });
+  }
+});
+
+// Admin: force user logout everywhere
+app.post('/api/admin/users/:id/logout', requireAdmin, async (req, res) => {
+  if (req.userRole === 'VIEWER') {
+    return res.status(403).json({ error: 'Viewers cannot force logout users' });
+  }
+
+  const { id } = req.params;
+
+  try {
+    const user = await prisma.user.findUnique({ where: { id } });
+    if (!user) return res.status(404).json({ error: 'User not found' });
+
+    await prisma.user.update({
+      where: { id },
+      data: { sessionVersion: { increment: 1 } },
+    });
+
+    res.json({ ok: true });
+  } catch (err) {
+    res.status(500).json({ error: 'Failed to force logout user' });
+  }
+});
+
+// Admin: add warning / note
+app.post('/api/admin/users/:id/warn', requireAdmin, async (req, res) => {
+  if (req.userRole === 'VIEWER') {
+    return res.status(403).json({ error: 'Viewers cannot warn users' });
+  }
+
+  const { id } = req.params;
+  const { note = '' } = req.body || {};
+
+  try {
+    const current = await prisma.user.findUnique({ where: { id } });
+    if (!current) return res.status(404).json({ error: 'User not found' });
+
+    const updated = await prisma.user.update({
+      where: { id },
+      data: {
+        warningCount: (current.warningCount || 0) + 1,
+        lastWarningAt: new Date(),
+        adminNotes: note ? `${(current.adminNotes || '').trim()}${current.adminNotes ? '\n' : ''}${note}\n${new Date().toISOString()}` : current.adminNotes,
+      },
+    });
+    res.json({ ok: true, warningCount: updated.warningCount });
+  } catch (err) {
+    res.status(500).json({ error: 'Failed to warn user' });
+  }
+});
+
+// Admin: update notes
+app.post('/api/admin/users/:id/notes', requireAdmin, async (req, res) => {
+  if (req.userRole === 'VIEWER') {
+    return res.status(403).json({ error: 'Viewers cannot edit notes' });
+  }
+
+  const { id } = req.params;
+  const { notes = '' } = req.body || {};
+
+  try {
+    await prisma.user.update({
+      where: { id },
+      data: { adminNotes: notes },
+    });
+    res.json({ ok: true });
+  } catch (err) {
+    res.status(500).json({ error: 'Failed to update notes' });
+  }
+});
+
+// Admin: bulk user actions
+app.post('/api/admin/users/bulk', requireAdmin, async (req, res) => {
+  if (req.userRole === 'VIEWER') {
+    return res.status(403).json({ error: 'Viewers cannot bulk edit users' });
+  }
+
+  const { userIds = [], action, role, note } = req.body || {};
+  if (!Array.isArray(userIds) || userIds.length === 0) {
+    return res.status(400).json({ error: 'No users selected' });
+  }
+
+  try {
+    if (action === 'suspend') {
+      await prisma.user.updateMany({ where: { id: { in: userIds } }, data: { suspended: true } });
+    } else if (action === 'unsuspend') {
+      await prisma.user.updateMany({ where: { id: { in: userIds } }, data: { suspended: false } });
+    } else if (action === 'logout') {
+      await prisma.user.updateMany({ where: { id: { in: userIds } }, data: { sessionVersion: { increment: 1 } } });
+    } else if (action === 'role') {
+      await prisma.user.updateMany({ where: { id: { in: userIds } }, data: { adminRole: role || null, isAdmin: Boolean(role) } });
+    } else if (action === 'warn') {
+      const users = await prisma.user.findMany({ where: { id: { in: userIds } } });
+      for (const user of users) {
+        await prisma.user.update({
+          where: { id: user.id },
+          data: {
+            warningCount: (user.warningCount || 0) + 1,
+            lastWarningAt: new Date(),
+            adminNotes: note ? `${(user.adminNotes || '').trim()}${user.adminNotes ? '\n' : ''}${note}\n${new Date().toISOString()}` : user.adminNotes,
+          },
+        });
+      }
+    } else {
+      return res.status(400).json({ error: 'Invalid bulk action' });
+    }
+
+    return res.json({ ok: true });
+  } catch (err) {
+    return res.status(500).json({ error: 'Failed to process bulk action' });
+  }
+});
+
+// Admin: export users CSV
+app.get('/api/admin/users/export', requireAdmin, async (req, res) => {
+  try {
+    const users = await prisma.user.findMany({
+      include: { _count: { select: { commands: true, favorites: true, followers: true, following: true } } },
+      orderBy: { createdAt: 'desc' },
+    });
+
+    const header = ['id', 'username', 'isAdmin', 'adminRole', 'suspended', 'warningCount', 'createdAt'];
+    const rows = users.map((u) => [u.id, u.username, u.isAdmin, u.adminRole || '', u.suspended, u.warningCount || 0, u.createdAt?.toISOString?.() || '']);
+    const csv = [header.join(','), ...rows.map((row) => row.map((v) => `"${String(v).replace(/"/g, '""')}"`).join(','))].join('\n');
+
+    res.setHeader('content-type', 'text/csv');
+    res.setHeader('content-disposition', 'attachment; filename="users.csv"');
+    return res.send(csv);
+  } catch (err) {
+    return res.status(500).json({ error: 'Failed to export users' });
   }
 });
 

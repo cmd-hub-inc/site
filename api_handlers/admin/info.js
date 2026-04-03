@@ -31,10 +31,10 @@ export default async function handler(req, res) {
     // Get user from database to check admin status
     const user = await prisma.user.findUnique({
       where: { id: session.id },
-      select: { id: true, isAdmin: true, adminRole: true },
+      select: { id: true, isAdmin: true, adminRole: true, suspended: true, sessionVersion: true },
     });
 
-    if (!user || !user.isAdmin) {
+    if (!user || !user.isAdmin || user.suspended || (user.sessionVersion || 0) !== (session.sessionVersion || 0)) {
       return res.status(403).json({ error: 'Access denied' });
     }
 

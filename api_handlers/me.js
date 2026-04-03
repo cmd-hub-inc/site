@@ -24,6 +24,9 @@ export default async function handler(req, res) {
     if (!s) return res.json({ user: null });
     try {
       const user = await prisma.user.findUnique({ where: { id: s.id } });
+      if (!user || (user.sessionVersion || 0) !== (s.sessionVersion || 0) || user.suspended) {
+        return res.json({ user: null });
+      }
       return res.json({
         user: user
           ? {
