@@ -159,6 +159,26 @@ export default function NewsPage({ user, onReadStateChange }) {
 }
 
 function NewsCard({ news, isRead, onMarkRead }) {
+  const parseNewsMeta = (rawTitle) => {
+    let title = String(rawTitle || '');
+    let category = 'General';
+    let important = false;
+
+    const catMatch = title.match(/^\[([^\]]+)\]\s*/);
+    if (catMatch) {
+      category = catMatch[1];
+      title = title.replace(/^\[[^\]]+\]\s*/, '');
+    }
+
+    if (/^IMPORTANT:\s*/i.test(title)) {
+      important = true;
+      title = title.replace(/^IMPORTANT:\s*/i, '');
+    }
+
+    return { title, category, important };
+  };
+
+  const parsed = parseNewsMeta(news.title);
   const publishedDate = news.publishedAt
     ? new Date(news.publishedAt).toLocaleDateString('en-US', {
         year: 'numeric',
@@ -173,7 +193,7 @@ function NewsCard({ news, isRead, onMarkRead }) {
         padding: 24,
         background: C.darkBlog,
         borderRadius: 12,
-        border: `1px solid ${C.border}`,
+        border: `1px solid ${parsed.important ? C.red : C.border}`,
         transition: 'all 0.2s ease',
       }}
       onMouseEnter={(e) => {
@@ -195,7 +215,7 @@ function NewsCard({ news, isRead, onMarkRead }) {
             color: C.lightText,
           }}
         >
-          {news.title}
+          {parsed.title}
         </h2>
         <button
           onClick={onMarkRead}
@@ -242,6 +262,35 @@ function NewsCard({ news, isRead, onMarkRead }) {
         <span>{news.author}</span>
         <span style={{ color: C.muted }}>•</span>
         <time dateTime={news.publishedAt}>{publishedDate}</time>
+      </div>
+
+      <div style={{ display: 'flex', gap: 8, marginBottom: 14 }}>
+        <span
+          style={{
+            fontSize: 11,
+            padding: '3px 7px',
+            borderRadius: 999,
+            background: 'rgba(88,101,242,0.14)',
+            color: C.blurple,
+            fontWeight: 600,
+          }}
+        >
+          {parsed.category}
+        </span>
+        {parsed.important && (
+          <span
+            style={{
+              fontSize: 11,
+              padding: '3px 7px',
+              borderRadius: 999,
+              background: 'rgba(237,66,69,0.14)',
+              color: C.red,
+              fontWeight: 700,
+            }}
+          >
+            Important
+          </span>
+        )}
       </div>
 
       {/* Content */}

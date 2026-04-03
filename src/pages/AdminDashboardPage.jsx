@@ -1077,9 +1077,36 @@ function ReportsList({ reports, isViewer, onResolve }) {
 
 function NewsList({ news, isViewer, onNewsUpdate }) {
   const [showForm, setShowForm] = useState(false);
-  const [formData, setFormData] = useState({ title: '', content: '', hideAuthor: false });
+  const [formData, setFormData] = useState({
+    title: '',
+    content: '',
+    hideAuthor: false,
+    publishNow: false,
+    category: 'General',
+    priority: 'normal',
+    referenceUrl: '',
+  });
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState(null);
+
+  const parseNewsMeta = (rawTitle) => {
+    let title = String(rawTitle || '');
+    let category = 'General';
+    let important = false;
+
+    const catMatch = title.match(/^\[([^\]]+)\]\s*/);
+    if (catMatch) {
+      category = catMatch[1];
+      title = title.replace(/^\[[^\]]+\]\s*/, '');
+    }
+
+    if (/^IMPORTANT:\s*/i.test(title)) {
+      important = true;
+      title = title.replace(/^IMPORTANT:\s*/i, '');
+    }
+
+    return { title, category, important };
+  };
 
   const handleCreateNews = async (e) => {
     e.preventDefault();
@@ -1091,15 +1118,31 @@ function NewsList({ news, isViewer, onNewsUpdate }) {
     setLoading(true);
     setError(null);
     try {
+      const normalizedTitle = String(formData.title || '').trim();
+      const normalizedContent = String(formData.content || '').trim();
+
+      let composedTitle = normalizedTitle;
+      if (formData.category && formData.category !== 'General') {
+        composedTitle = `[${formData.category}] ${composedTitle}`;
+      }
+      if (formData.priority === 'important') {
+        composedTitle = `IMPORTANT: ${composedTitle}`;
+      }
+
+      const link = String(formData.referenceUrl || '').trim();
+      const composedContent = link
+        ? `${normalizedContent}\n\nMore info: ${link}`
+        : normalizedContent;
+
       const res = await fetch('/api/admin/news', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         credentials: 'include',
         body: JSON.stringify({
-          title: formData.title,
-          content: formData.content,
+          title: composedTitle,
+          content: composedContent,
           hideAuthor: formData.hideAuthor,
-          published: false,
+          published: formData.publishNow,
         }),
       });
 
@@ -1109,7 +1152,15 @@ function NewsList({ news, isViewer, onNewsUpdate }) {
         return;
       }
 
-      setFormData({ title: '', content: '', hideAuthor: false });
+      setFormData({
+        title: '',
+        content: '',
+        hideAuthor: false,
+        publishNow: false,
+        category: 'General',
+        priority: 'normal',
+        referenceUrl: '',
+      });
       setShowForm(false);
       onNewsUpdate();
     } catch (err) {
@@ -1270,6 +1321,74 @@ function NewsList({ news, isViewer, onNewsUpdate }) {
                   }}
                 />
               </div>
+              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 12 }}>
+                <div>
+                  <label style={{ display: 'block', marginBottom: 8, fontWeight: 500, fontSize: 13 }}>
+                    Category
+                  </label>
+                  <select
+                    value={formData.category}
+                    onChange={(e) => setFormData({ ...formData, category: e.target.value })}
+                    style={{
+                      width: '100%',
+                      padding: '10px 12px',
+                      background: C.bg,
+                      border: `1px solid ${C.border}`,
+                      borderRadius: 6,
+                      color: C.text,
+                      fontSize: 13,
+                    }}
+                  >
+                    <option value="General">General</option>
+                    <option value="Announcement">Announcement</option>
+                    <option value="Feature">Feature</option>
+                    <option value="Maintenance">Maintenance</option>
+                    <option value="Security">Security</option>
+                  </select>
+                </div>
+                <div>
+                  <label style={{ display: 'block', marginBottom: 8, fontWeight: 500, fontSize: 13 }}>
+                    Priority
+                  </label>
+                  <select
+                    value={formData.priority}
+                    onChange={(e) => setFormData({ ...formData, priority: e.target.value })}
+                    style={{
+                      width: '100%',
+                      padding: '10px 12px',
+                      background: C.bg,
+                      border: `1px solid ${C.border}`,
+                      borderRadius: 6,
+                      color: C.text,
+                      fontSize: 13,
+                    }}
+                  >
+                    <option value="normal">Normal</option>
+                    <option value="important">Important</option>
+                  </select>
+                </div>
+              </div>
+              <div>
+                <label style={{ display: 'block', marginBottom: 8, fontWeight: 500, fontSize: 13 }}>
+                  Reference URL (optional)
+                </label>
+                <input
+                  type="url"
+                  value={formData.referenceUrl}
+                  onChange={(e) => setFormData({ ...formData, referenceUrl: e.target.value })}
+                  placeholder="https://example.com/more-info"
+                  style={{
+                    width: '100%',
+                    padding: '10px 12px',
+                    background: C.bg,
+                    border: `1px solid ${C.border}`,
+                    borderRadius: 6,
+                    color: C.text,
+                    fontSize: 13,
+                    boxSizing: 'border-box',
+                  }}
+                />
+              </div>
               <label
                 style={{
                   display: 'flex',
@@ -1286,6 +1405,23 @@ function NewsList({ news, isViewer, onNewsUpdate }) {
                   onChange={(e) => setFormData({ ...formData, hideAuthor: e.target.checked })}
                 />
                 Post anonymously as <strong style={{ color: C.lightText }}>Site Admin</strong>
+              </label>
+              <label
+                style={{
+                  display: 'flex',
+                  alignItems: 'center',
+                  gap: 8,
+                  fontSize: 13,
+                  color: C.text,
+                  cursor: 'pointer',
+                }}
+              >
+                <input
+                  type="checkbox"
+                  checked={formData.publishNow}
+                  onChange={(e) => setFormData({ ...formData, publishNow: e.target.checked })}
+                />
+                Publish immediately
               </label>
               <div style={{ display: 'flex', gap: 8 }}>
                 <button
@@ -1343,11 +1479,39 @@ function NewsList({ news, isViewer, onNewsUpdate }) {
               <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'start', marginBottom: 12 }}>
                 <div style={{ flex: 1 }}>
                   <h3 style={{ margin: '0 0 8px 0', fontSize: 16, fontWeight: 600, color: C.lightText }}>
-                    {item.title}
+                    {parseNewsMeta(item.title).title}
                   </h3>
                   <p style={{ margin: '0 0 12px 0', fontSize: 13, color: C.muted }}>
                     by {item.hideAuthor ? 'Site Admin (hidden)' : item.author} • {new Date(item.createdAt).toLocaleDateString()}
                   </p>
+                  <div style={{ display: 'flex', gap: 8, marginBottom: 10 }}>
+                    <span
+                      style={{
+                        fontSize: 11,
+                        padding: '3px 7px',
+                        borderRadius: 999,
+                        background: 'rgba(88,101,242,0.14)',
+                        color: C.blurple,
+                        fontWeight: 600,
+                      }}
+                    >
+                      {parseNewsMeta(item.title).category}
+                    </span>
+                    {parseNewsMeta(item.title).important && (
+                      <span
+                        style={{
+                          fontSize: 11,
+                          padding: '3px 7px',
+                          borderRadius: 999,
+                          background: 'rgba(237,66,69,0.14)',
+                          color: C.red,
+                          fontWeight: 700,
+                        }}
+                      >
+                        Important
+                      </span>
+                    )}
+                  </div>
                   <p
                     style={{
                       margin: 0,
