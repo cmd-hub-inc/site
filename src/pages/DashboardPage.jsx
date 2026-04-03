@@ -3,12 +3,32 @@ import { C } from '../constants';
 import { TrendingUp, Calendar, BarChart3, Table2, LogIn, Eye, Download, Heart, Link2, Star, Users, Clock } from 'lucide-react';
 import { saveReturnTo } from '../lib/authHelpers';
 
+const DASHBOARD_PERIODS = ['7days', '30days', '90days'];
+const DASHBOARD_VIEWS = ['cards', 'table'];
+
+function getDashboardStateFromHash() {
+  try {
+    const rawHash = (window.location.hash || '').replace(/^#/, '');
+    const params = new URLSearchParams(rawHash);
+    const period = params.get('period');
+    const view = params.get('view');
+
+    return {
+      period: DASHBOARD_PERIODS.includes(period) ? period : '30days',
+      viewMode: DASHBOARD_VIEWS.includes(view) ? view : 'cards',
+    };
+  } catch {
+    return { period: '30days', viewMode: 'cards' };
+  }
+}
+
 export default function DashboardPage({ user, onNavigate }) {
+  const initial = getDashboardStateFromHash();
   const [analytics, setAnalytics] = useState(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
-  const [period, setPeriod] = useState('30days');
-  const [viewMode, setViewMode] = useState('cards'); // 'cards' or 'table'
+  const [period, setPeriod] = useState(initial.period);
+  const [viewMode, setViewMode] = useState(initial.viewMode); // 'cards' or 'table'
 
   // Redirect to home if not authenticated
   useEffect(() => {
@@ -45,6 +65,29 @@ export default function DashboardPage({ user, onNavigate }) {
 
     fetchAnalytics();
   }, [user, period]);
+
+  useEffect(() => {
+    const onHashChange = () => {
+      const next = getDashboardStateFromHash();
+      setPeriod((current) => (current === next.period ? current : next.period));
+      setViewMode((current) => (current === next.viewMode ? current : next.viewMode));
+    };
+
+    onHashChange();
+    window.addEventListener('hashchange', onHashChange);
+    return () => window.removeEventListener('hashchange', onHashChange);
+  }, []);
+
+  useEffect(() => {
+    try {
+      const nextHash = `#period=${period}&view=${viewMode}`;
+      if (window.location.hash !== nextHash) {
+        window.history.replaceState({}, '', `${window.location.pathname}${window.location.search}${nextHash}`);
+      }
+    } catch {
+      // ignore history updates
+    }
+  }, [period, viewMode]);
 
   if (!user) return null;
 

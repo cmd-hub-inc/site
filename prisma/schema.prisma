@@ -8,19 +8,20 @@ datasource db {
 }
 
 model User {
-  id        String    @id @default(uuid())
-  username  String    @unique
-  avatar    String?
-  suspended Boolean   @default(false)
-  isAdmin   Boolean   @default(false)
-  adminRole String?   // "SUPER_ADMIN", "MODERATOR", "VIEWER"
-  createdAt DateTime  @default(now())
-  commands  Command[]
-  ratings   Rating[]
-  favorites Favorite[]
-  followers Follow[]   @relation("followers")
-  following Follow[]   @relation("following")
-  reportsSubmitted Report[] @relation("reporter")
+  id               String     @id @default(uuid())
+  username         String     @unique
+  avatar           String?
+  suspended        Boolean    @default(false)
+  isAdmin          Boolean    @default(false)
+  adminRole        String? // "SUPER_ADMIN", "MODERATOR", "VIEWER"
+  createdAt        DateTime   @default(now())
+  commands         Command[]
+  ratings          Rating[]
+  favorites        Favorite[]
+  followers        Follow[]   @relation("followers")
+  following        Follow[]   @relation("following")
+  reportsSubmitted Report[]   @relation("reporter")
+  news             News[]
 
   @@index([createdAt])
   @@index([suspended])
@@ -28,30 +29,30 @@ model User {
 }
 
 model Command {
-  id             String   @id @default(uuid())
-  name           String   @unique
+  id             String            @id @default(uuid())
+  name           String            @unique
   description    String
   type           String
   framework      String
-  uploadCategory String   @default("Framework")
+  uploadCategory String            @default("Framework")
   version        String
-  tags           String[] @default([])
+  tags           String[]          @default([])
   githubUrl      String?
   websiteUrl     String?
-  downloads      Int      @default(0)
-  rating         Float    @default(0)
-  ratingCount    Int      @default(0)
-  favourites     Int      @default(0)
-  views          Int      @default(0)
+  downloads      Int               @default(0)
+  rating         Float             @default(0)
+  ratingCount    Int               @default(0)
+  favourites     Int               @default(0)
+  views          Int               @default(0)
   changelog      String?
   rawData        String
-  approved       Boolean  @default(false)
+  approved       Boolean           @default(false)
   approvedBy     String?
   approvalReason String?
-  createdAt      DateTime @default(now())
-  updatedAt      DateTime @updatedAt
+  createdAt      DateTime          @default(now())
+  updatedAt      DateTime          @updatedAt
   authorId       String
-  author         User     @relation(fields: [authorId], references: [id])
+  author         User              @relation(fields: [authorId], references: [id])
   ratings        Rating[]
   favorites      Favorite[]
   analytics      CommandAnalytics?
@@ -78,9 +79,9 @@ model Favorite {
 }
 
 model Follow {
-  followerId String
+  followerId  String
   followingId String
-  createdAt  DateTime @default(now())
+  createdAt   DateTime @default(now())
 
   follower  User @relation("followers", fields: [followerId], references: [id], onDelete: Cascade)
   following User @relation("following", fields: [followingId], references: [id], onDelete: Cascade)
@@ -92,25 +93,25 @@ model Follow {
 }
 
 model CommandAnalytics {
-  id             String   @id @default(uuid())
-  commandId      String   @unique
-  command        Command  @relation(fields: [commandId], references: [id], onDelete: Cascade)
-  views          Int      @default(0)
-  downloads      Int      @default(0)
-  favorites      Int      @default(0)
-  ratings        Int      @default(0)
-  updatedAt      DateTime @updatedAt
+  id        String   @id @default(uuid())
+  commandId String   @unique
+  command   Command  @relation(fields: [commandId], references: [id], onDelete: Cascade)
+  views     Int      @default(0)
+  downloads Int      @default(0)
+  favorites Int      @default(0)
+  ratings   Int      @default(0)
+  updatedAt DateTime @updatedAt
 
   @@index([updatedAt])
 }
 
 model TrendingCommand {
-  id            String   @id @default(uuid())
-  commandId     String
-  rank          Int
-  timeWindow    String   // "weekly" or "monthly"
-  score         Float
-  computedAt    DateTime @default(now())
+  id         String   @id @default(uuid())
+  commandId  String
+  rank       Int
+  timeWindow String // "weekly" or "monthly"
+  score      Float
+  computedAt DateTime @default(now())
 
   @@unique([commandId, timeWindow])
   @@index([rank])
@@ -133,7 +134,7 @@ model Share {
   id        String   @id @default(uuid())
   commandId String
   userId    String?
-  platform  String   // "twitter", "facebook", "linkedin", "discord", "reddit"
+  platform  String // "twitter", "facebook", "linkedin", "discord", "reddit"
   createdAt DateTime @default(now())
 
   @@index([commandId])
@@ -145,7 +146,7 @@ model Share {
 model Event {
   id        String   @id @default(uuid())
   commandId String
-  type      String   // "view" or "download"
+  type      String // "view" or "download"
   userId    String?
   createdAt DateTime @default(now())
 
@@ -157,23 +158,40 @@ model Event {
 }
 
 model Report {
-  id            String   @id @default(uuid())
-  reporterId    String
-  reporter      User     @relation("reporter", fields: [reporterId], references: [id], onDelete: Cascade)
-  commandId     String?
-  userId        String?
-  reason        String
-  reportType    String   // "spam", "abuse", "inappropriate", "copyright", "other"
-  resolved      Boolean  @default(false)
-  resolvedBy    String?
+  id             String    @id @default(uuid())
+  reporterId     String
+  reporter       User      @relation("reporter", fields: [reporterId], references: [id], onDelete: Cascade)
+  commandId      String?
+  userId         String?
+  reason         String
+  reportType     String // "spam", "abuse", "inappropriate", "copyright", "other"
+  resolved       Boolean   @default(false)
+  resolvedBy     String?
   resolutionNote String?
-  createdAt     DateTime @default(now())
-  resolvedAt    DateTime?
+  createdAt      DateTime  @default(now())
+  resolvedAt     DateTime?
 
   @@index([reporterId])
   @@index([commandId])
   @@index([userId])
   @@index([reportType])
   @@index([resolved])
+  @@index([createdAt])
+}
+
+model News {
+  id          String    @id @default(uuid())
+  title       String
+  content     String
+  published   Boolean   @default(false)
+  publishedAt DateTime?
+  createdBy   String
+  author      User      @relation(fields: [createdBy], references: [id], onDelete: Cascade)
+  createdAt   DateTime  @default(now())
+  updatedAt   DateTime  @updatedAt
+
+  @@index([published])
+  @@index([publishedAt])
+  @@index([createdBy])
   @@index([createdAt])
 }

@@ -9,16 +9,43 @@ const prisma = new PrismaClient();
 async function ensure() {
   console.log(`[dbEnsure] Checking database tables...`);
   try {
-    const needed = ['User', 'Command', 'Favourite', 'Rating'];
-    console.log(`[dbEnsure] Querying information_schema for tables: ${needed.join(', ')}`);
+    const needed = ['User', 'Command', 'Favorite', 'Rating', 'News'];
+    const aliases = { Favorite: ['Favorite', 'Favourite'] };
+    const queryTables = ['User', 'Command', 'Favorite', 'Favourite', 'Rating', 'News'];
+    console.log(`[dbEnsure] Querying information_schema for tables: ${queryTables.join(', ')}`);
     const rows = await prisma.$queryRaw`
       SELECT table_name FROM information_schema.tables
-      WHERE table_schema = 'public' AND table_name = ANY(${needed})
+      WHERE table_schema = 'public' AND table_name = ANY(${queryTables})
     `;
     const existing = rows.map((r) => (r.table_name || r.tableName || '').toString());
-    const missing = needed.filter((n) => !existing.includes(n));
+    const missing = needed.filter((n) => {
+      const acceptable = aliases[n] || [n];
+      return !acceptable.some((name) => existing.includes(name));
+    });
     if (missing.length === 0) {
       console.log('[dbEnsure] All required tables exist.');
+      // Ensure News table exists for admin publishing flows.
+      try {
+        await prisma.$executeRawUnsafe(`
+          CREATE TABLE IF NOT EXISTS "News" (
+            "id" text PRIMARY KEY,
+            "title" text NOT NULL,
+            "content" text NOT NULL,
+            "published" boolean NOT NULL DEFAULT false,
+            "publishedAt" timestamptz,
+            "createdBy" text NOT NULL,
+            "createdAt" timestamptz DEFAULT now(),
+            "updatedAt" timestamptz DEFAULT now(),
+            CONSTRAINT fk_news_author FOREIGN KEY ("createdBy") REFERENCES "User"(id) ON DELETE CASCADE
+          )
+        `);
+      } catch (newsErr) {
+        console.warn(
+          '[dbEnsure] Failed to ensure News table:',
+          newsErr && newsErr.message ? newsErr.message : newsErr,
+        );
+      }
+
       // Ensure required columns exist (in case schema changed without migration)
       try {
         const colRows = await prisma.$queryRaw`
@@ -168,27 +195,27 @@ async function ensure() {
         )
       `);
 
-      // Create Favourite join table for user favourites
+      // Create Favorite join table for user favorites
       await prisma.$executeRawUnsafe(`
-        CREATE TABLE IF NOT EXISTS "Favourite" (
+        CREATE TABLE IF NOT EXISTS "Favorite" (
           "userId" text NOT NULL,
           "commandId" text NOT NULL,
           "createdAt" timestamptz DEFAULT now(),
           PRIMARY KEY ("userId", "commandId"),
-          CONSTRAINT fk_fav_user FOREIGN KEY ("userId") REFERENCES "User"(id) ON DELETE CASCADE,
-          CONSTRAINT fk_fav_command FOREIGN KEY ("commandId") REFERENCES "Command"(id) ON DELETE CASCADE
+          CONSTRAINT fk_favorite_user FOREIGN KEY ("userId") REFERENCES "User"(id) ON DELETE CASCADE,
+          CONSTRAINT fk_favorite_command FOREIGN KEY ("commandId") REFERENCES "Command"(id) ON DELETE CASCADE
         )
       `);
 
-      // Create Follower table for follow/unfollow feature
+      // Create Follow table for follow/unfollow feature
       await prisma.$executeRawUnsafe(`
-        CREATE TABLE IF NOT EXISTS "Follower" (
+        CREATE TABLE IF NOT EXISTS "Follow" (
           "followerId" text NOT NULL,
-          "followeeId" text NOT NULL,
+          "followingId" text NOT NULL,
           "createdAt" timestamptz DEFAULT now(),
-          PRIMARY KEY ("followerId", "followeeId"),
+          PRIMARY KEY ("followerId", "followingId"),
           CONSTRAINT fk_follow_follower FOREIGN KEY ("followerId") REFERENCES "User"(id) ON DELETE CASCADE,
-          CONSTRAINT fk_follow_followee FOREIGN KEY ("followeeId") REFERENCES "User"(id) ON DELETE CASCADE
+          CONSTRAINT fk_follow_following FOREIGN KEY ("followingId") REFERENCES "User"(id) ON DELETE CASCADE
         )
       `);
 
@@ -202,6 +229,21 @@ async function ensure() {
           PRIMARY KEY ("userId", "commandId"),
           CONSTRAINT fk_rating_user FOREIGN KEY ("userId") REFERENCES "User"(id) ON DELETE CASCADE,
           CONSTRAINT fk_rating_command FOREIGN KEY ("commandId") REFERENCES "Command"(id) ON DELETE CASCADE
+        )
+      `);
+
+      // Create News table for admin-published updates
+      await prisma.$executeRawUnsafe(`
+        CREATE TABLE IF NOT EXISTS "News" (
+          "id" text PRIMARY KEY,
+          "title" text NOT NULL,
+          "content" text NOT NULL,
+          "published" boolean NOT NULL DEFAULT false,
+          "publishedAt" timestamptz,
+          "createdBy" text NOT NULL,
+          "createdAt" timestamptz DEFAULT now(),
+          "updatedAt" timestamptz DEFAULT now(),
+          CONSTRAINT fk_news_author FOREIGN KEY ("createdBy") REFERENCES "User"(id) ON DELETE CASCADE
         )
       `);
 

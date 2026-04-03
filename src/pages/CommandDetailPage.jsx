@@ -20,6 +20,17 @@ import { StatPill } from '../components/Stars';
 import ShareButtons from '../components/ShareButtons';
 import { getCommandMetaTags } from '../lib/metaTags';
 
+const DETAIL_TABS = ['raw', 'changelog'];
+
+function getDetailTabFromHash() {
+  try {
+    const tab = (window.location.hash || '').replace(/^#/, '').trim().toLowerCase();
+    return DETAIL_TABS.includes(tab) ? tab : 'raw';
+  } catch {
+    return 'raw';
+  }
+}
+
 export default function CommandDetailPage({ cmd, onBack, user, loading = false }) {
   if (loading || !cmd) {
     return (
@@ -49,7 +60,7 @@ export default function CommandDetailPage({ cmd, onBack, user, loading = false }
   const [hoverRating, setHoverRating] = useState(0);
   const [aggRating, setAggRating] = useState(cmd.rating || 0);
   const [aggRatingCount, setAggRatingCount] = useState(cmd.ratingCount || 0);
-  const [activeTab, setActiveTab] = useState('raw');
+  const [activeTab, setActiveTab] = useState(() => getDetailTabFromHash());
   const API_BASE = import.meta.env.VITE_API_BASE ?? (import.meta.env.DEV ? '' : '');
 
   const canEdit = Boolean(user && (user.id === (cmd.author && cmd.author.id) || user.isAdmin));
@@ -105,6 +116,28 @@ export default function CommandDetailPage({ cmd, onBack, user, loading = false }
     setAggRatingCount(cmd.ratingCount || 0);
     if (cmd && cmd.myRating != null) setUserRating(Number(cmd.myRating) || 0);
   }, [cmd.id, cmd.rating, cmd.ratingCount, cmd.myRating]);
+
+  useEffect(() => {
+    const onHashChange = () => {
+      const next = getDetailTabFromHash();
+      setActiveTab((current) => (current === next ? current : next));
+    };
+
+    onHashChange();
+    window.addEventListener('hashchange', onHashChange);
+    return () => window.removeEventListener('hashchange', onHashChange);
+  }, []);
+
+  useEffect(() => {
+    try {
+      const nextHash = `#${activeTab}`;
+      if (window.location.hash !== nextHash) {
+        window.history.replaceState({}, '', `${window.location.pathname}${window.location.search}${nextHash}`);
+      }
+    } catch {
+      // ignore history updates
+    }
+  }, [activeTab]);
 
   const handleCopy = () => {
     try {

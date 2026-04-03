@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { Home, Grid, Upload, LogOut, Users, BarChart3, Code2, Menu, X, Shield } from 'lucide-react';
+import { Home, Grid, Upload, LogOut, Users, BarChart3, Code2, Menu, X, Shield, Newspaper } from 'lucide-react';
 import { C } from '../constants';
 
 export default function Navbar({ page, user, pageParams, onNavigate, onLogin, onLogout }) {
@@ -142,27 +142,59 @@ export default function Navbar({ page, user, pageParams, onNavigate, onLogin, on
             Dashboard
           </button>
           {user.isAdmin && (
-            <button
-              onClick={() => onNavigate('admin')}
-              title="Admin Dashboard"
-              className="nav-btn"
-              style={{
-                background: page === 'admin' ? C.blurpleDim : 'none',
-                border: 'none',
-                cursor: 'pointer',
-                borderRadius: 8,
-                padding: '6px 14px',
-                display: 'flex',
-                alignItems: 'center',
-                gap: 6,
-                color: page === 'admin' ? C.blurple : C.muted,
-                fontSize: 14,
-                fontWeight: page === 'admin' ? 600 : 400,
-              }}
-            >
-              <Shield size={15} />
-              Admin
-            </button>
+            <>
+              <button
+                onClick={() => onNavigate('admin')}
+                title="Admin Dashboard"
+                className="nav-btn"
+                style={{
+                  background: page === 'admin' ? C.blurpleDim : 'none',
+                  border: 'none',
+                  cursor: 'pointer',
+                  borderRadius: 8,
+                  padding: '6px 14px',
+                  display: 'flex',
+                  alignItems: 'center',
+                  gap: 6,
+                  color: page === 'admin' ? C.blurple : C.muted,
+                  fontSize: 14,
+                  fontWeight: page === 'admin' ? 600 : 400,
+                }}
+              >
+                <Shield size={15} />
+                Admin
+              </button>
+              <button
+                onClick={() => onNavigate('admin', { hash: 'news' })}
+                title="Post News"
+                className="nav-btn"
+                style={{
+                  background:
+                    page === 'admin' && typeof window !== 'undefined' && window.location.hash === '#news'
+                      ? C.blurpleDim
+                      : 'none',
+                  border: 'none',
+                  cursor: 'pointer',
+                  borderRadius: 8,
+                  padding: '6px 14px',
+                  display: 'flex',
+                  alignItems: 'center',
+                  gap: 6,
+                  color:
+                    page === 'admin' && typeof window !== 'undefined' && window.location.hash === '#news'
+                      ? C.blurple
+                      : C.muted,
+                  fontSize: 14,
+                  fontWeight:
+                    page === 'admin' && typeof window !== 'undefined' && window.location.hash === '#news'
+                      ? 600
+                      : 400,
+                }}
+              >
+                <Newspaper size={15} />
+                News
+              </button>
+            </>
           )}
           <button
             onClick={() => onNavigate('profile', { id: user && user.id ? user.id : undefined })}
@@ -298,6 +330,26 @@ export default function Navbar({ page, user, pageParams, onNavigate, onLogin, on
                         <BarChart3 size={15} />
                         <span style={{ marginLeft: 8 }}>Dashboard</span>
                 </button>
+                {user.isAdmin && (
+                  <button
+                    className="nav-btn"
+                    onClick={() => {
+                      onNavigate('admin', { hash: 'news' });
+                      setMobileOpen(false);
+                    }}
+                    style={{
+                      background: 'none',
+                      border: 'none',
+                      color: C.text,
+                      textAlign: 'left',
+                      padding: '8px 6px',
+                      cursor: 'pointer',
+                    }}
+                  >
+                    <Newspaper size={15} />
+                    <span style={{ marginLeft: 8 }}>News</span>
+                  </button>
+                )}
                 <button
                   className="nav-btn"
                   onClick={() => {

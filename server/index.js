@@ -1494,6 +1494,32 @@ app.get('/api/analytics/creator', requireDbReady, requireAuth, async (req, res) 
   }
 });
 
+// Public: list published news
+app.get('/api/news', requireDbReady, async (req, res) => {
+  try {
+    const news = await prisma.news.findMany({
+      where: { published: true },
+      include: { author: { select: { id: true, username: true, avatar: true } } },
+      orderBy: { publishedAt: 'desc' },
+    });
+
+    return res.json({
+      news: news.map((n) => ({
+        id: n.id,
+        title: n.title,
+        content: n.content,
+        author: n.author?.username,
+        authorId: n.author?.id,
+        authorAvatar: n.author?.avatar,
+        publishedAt: n.publishedAt,
+      })),
+    });
+  } catch (err) {
+    console.error('[news] Failed to fetch published news:', err);
+    return res.status(500).json({ error: 'Failed to fetch news' });
+  }
+});
+
 // Helper: Calculate peak hour
 function calculatePeakHour(commands, shares) {
   const hours = {};
@@ -1752,6 +1778,136 @@ app.post('/api/admin/reports/:id/resolve', requireAdmin, async (req, res) => {
     res.json({ ok: true });
   } catch (err) {
     res.status(500).json({ error: 'Failed to resolve report' });
+  }
+});
+
+// Admin: list all news
+app.get('/api/admin/news', requireAdmin, async (req, res) => {
+  try {
+    const news = await prisma.news.findMany({
+      include: { author: { select: { id: true, username: true, avatar: true } } },
+      orderBy: { createdAt: 'desc' },
+    });
+
+    return res.json({
+      news: news.map((n) => ({
+        id: n.id,
+        title: n.title,
+        content: n.content,
+        published: n.published,
+        publishedAt: n.publishedAt,
+        author: n.author?.username,
+        authorId: n.author?.id,
+        createdAt: n.createdAt,
+        updatedAt: n.updatedAt,
+      })),
+    });
+  } catch (err) {
+    console.error('[admin/news] Failed to fetch news:', err);
+    const code = err && err.code ? String(err.code) : '';
+    const msg = err && err.message ? String(err.message) : 'Unknown error';
+    if (code === 'P2021' || msg.includes('does not exist') || msg.includes('relation "News"')) {
+      return res.status(503).json({
+        error: 'News table is not ready yet. Run Prisma migration/db push and restart the server.',
+      });
+    }
+    return res.status(500).json({ error: `Failed to fetch admin news: ${msg}` });
+  }
+});
+
+// Admin: create news
+app.post('/api/admin/news', requireAdmin, async (req, res) => {
+  if (req.userRole === 'VIEWER') {
+    return res.status(403).json({ error: 'Viewers cannot create news' });
+  }
+
+  const { title, content, published } = req.body || {};
+  const sessionUser = req.session && req.session.user;
+
+  if (!title || !content) {
+    return res.status(400).json({ error: 'Title and content are required' });
+  }
+
+  try {
+    const created = await prisma.news.create({
+      data: {
+        title,
+        content,
+        published: Boolean(published),
+        publishedAt: published ? new Date() : null,
+        createdBy: sessionUser.id,
+      },
+      include: { author: { select: { id: true, username: true, avatar: true } } },
+    });
+
+    return res.status(201).json({
+      id: created.id,
+      title: created.title,
+      content: created.content,
+      published: created.published,
+      publishedAt: created.publishedAt,
+      author: created.author?.username,
+      authorId: created.author?.id,
+      createdAt: created.createdAt,
+      updatedAt: created.updatedAt,
+    });
+  } catch (err) {
+    console.error('[admin/news] Failed to create news:', err);
+    const msg = err && err.message ? String(err.message) : 'Unknown error';
+    return res.status(500).json({ error: `Failed to create news: ${msg}` });
+  }
+});
+
+// Admin: update news
+app.put('/api/admin/news/:id', requireAdmin, async (req, res) => {
+  if (req.userRole === 'VIEWER') {
+    return res.status(403).json({ error: 'Viewers cannot edit news' });
+  }
+
+  const { id } = req.params;
+  const { title, content, published } = req.body || {};
+
+  try {
+    const existing = await prisma.news.findUnique({ where: { id } });
+    if (!existing) return res.status(404).json({ error: 'News not found' });
+
+    const nextPublished =
+      typeof published === 'boolean' ? published : existing.published;
+    const data = {
+      ...(title !== undefined ? { title } : {}),
+      ...(content !== undefined ? { content } : {}),
+      ...(published !== undefined ? { published: nextPublished } : {}),
+      ...(published !== undefined
+        ? { publishedAt: nextPublished ? existing.publishedAt || new Date() : null }
+        : {}),
+    };
+
+    const updated = await prisma.news.update({ where: { id }, data });
+    return res.json(updated);
+  } catch (err) {
+    console.error('[admin/news] Failed to update news:', err);
+    const msg = err && err.message ? String(err.message) : 'Unknown error';
+    return res.status(500).json({ error: `Failed to update news: ${msg}` });
+  }
+});
+
+// Admin: delete news
+app.delete('/api/admin/news/:id', requireAdmin, async (req, res) => {
+  if (req.userRole === 'VIEWER') {
+    return res.status(403).json({ error: 'Viewers cannot delete news' });
+  }
+
+  const { id } = req.params;
+  try {
+    const existing = await prisma.news.findUnique({ where: { id } });
+    if (!existing) return res.status(404).json({ error: 'News not found' });
+
+    await prisma.news.delete({ where: { id } });
+    return res.json({ success: true });
+  } catch (err) {
+    console.error('[admin/news] Failed to delete news:', err);
+    const msg = err && err.message ? String(err.message) : 'Unknown error';
+    return res.status(500).json({ error: `Failed to delete news: ${msg}` });
   }
 });
 

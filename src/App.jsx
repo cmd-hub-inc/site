@@ -16,6 +16,7 @@ const NotFound = lazy(() => import('./pages/NotFound'));
 const CreatorsPage = lazy(() => import('./pages/CreatorsPage'));
 const DashboardPage = lazy(() => import('./pages/DashboardPage'));
 const AdminDashboardPage = lazy(() => import('./pages/AdminDashboardPage'));
+const NewsPage = lazy(() => import('./pages/NewsPage'));
 
 // Loading component for lazy-loaded pages
 function PageLoadingSpinner() {
@@ -33,6 +34,7 @@ export default function App() {
       if (pathname === '/' || pathname === '') return 'home';
       if (pathname.startsWith('/browse')) return 'browse';
       if (pathname.startsWith('/creators')) return 'creators';
+      if (pathname.startsWith('/news')) return 'news';
       if (pathname.startsWith('/dashboard')) return 'dashboard';
       if (pathname.startsWith('/admin')) return 'admin';
       if (pathname.startsWith('/upload')) return 'upload';
@@ -62,8 +64,10 @@ export default function App() {
     // update URL for shareable links
     try {
       let newPath = '/';
+      const hash = params && params.hash ? String(params.hash).replace(/^#/, '') : '';
       if (p === 'browse') newPath = '/browse';
       else if (p === 'creators') newPath = '/creators';
+      else if (p === 'news') newPath = '/news';
       else if (p === 'dashboard') newPath = '/dashboard';
       else if (p === 'admin') newPath = '/admin';
       else if (p === 'upload') newPath = '/upload';
@@ -78,6 +82,7 @@ export default function App() {
       } else if (p === 'edit' && params && params.id) {
         newPath = `/command/${encodeURIComponent(params.id)}/edit`;
       }
+      if (hash) newPath = `${newPath}#${encodeURIComponent(hash)}`;
       window.history.pushState({}, '', newPath);
     } catch (e) {
       // ignore history push failures
@@ -124,6 +129,18 @@ export default function App() {
     let cancelled = false;
     const pollInterval = 1000;
     const maxAttempts = 30;
+    const waitUntilReady = async () => {
+      for (let i = 0; i < maxAttempts && !cancelled; i++) {
+        try {
+          const r = await fetch(`${API_BASE}/api/ready`);
+          if (r.ok) return true;
+        } catch (e) {
+          // ignore and retry
+        }
+        await new Promise((r) => setTimeout(r, pollInterval));
+      }
+      return false;
+    };
     // Start a background poll for `/api/ready` but do not block initialization.
     (async () => {
       try {
@@ -240,6 +257,8 @@ export default function App() {
         }
 
         try {
+          // Wait for backend readiness before checking auth session.
+          await waitUntilReady();
           const resp = await fetch(`${API_BASE}/api/me`, { credentials: 'include' });
           if (resp.ok) {
             const body = await resp.json();
@@ -358,6 +377,11 @@ export default function App() {
           setSelectedCmd(null);
           return;
         }
+        if (pathname.startsWith('/news')) {
+          setPage('news');
+          setSelectedCmd(null);
+          return;
+        }
 
         // default to notfound for unknown client paths
         setPage('notfound');
@@ -437,6 +461,7 @@ export default function App() {
             {page === 'edit' && <EditCommandPage user={user} pageParams={pageParams} />}
             {page === 'dashboard' && <DashboardPage user={user} onNavigate={navigate} />}
             {page === 'admin' && <AdminDashboardPage user={user} onNavigate={navigate} />}
+            {page === 'news' && <NewsPage />}
             {page === 'notfound' && <NotFound />}
           </Suspense>
         </ErrorBoundary>
