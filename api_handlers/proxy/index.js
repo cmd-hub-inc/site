@@ -1,21 +1,13 @@
-const TARGET = process.env.PROXY_TARGET || 'http://cmd-hub.devvyyxyz';
+import { resolveProxyTarget } from './_security.js';
 
 export default async function handler(req, res) {
-  // Guard against PROXY_TARGET pointing to this deployment (infinite loop)
-  try {
-    const t = new URL(TARGET);
-    const reqHost = req.headers && req.headers.host;
-    if (reqHost && (t.host === reqHost || t.hostname === reqHost)) {
-      res
-        .status(502)
-        .end(
-          'Bad Gateway: PROXY_TARGET points to this deployment — configure an external backend.',
-        );
-      return;
-    }
-  } catch (e) {}
+  const target = resolveProxyTarget(req.headers && req.headers.host);
+  if (!target.ok) {
+    res.status(target.status).end(target.message);
+    return;
+  }
 
-  const targetUrl = TARGET + '/';
+  const targetUrl = `${target.target.origin}/`;
   try {
     const backendRes = await fetch(targetUrl, { headers: { accept: 'application/json' } });
     const body = await backendRes.text();
