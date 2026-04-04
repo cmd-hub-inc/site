@@ -10,6 +10,41 @@ const handlersDir = path.join(process.cwd(), 'api_handlers');
 const handlerExistsCache = new Map();
 const routeMatchCache = new Map();
 
+const PUBLIC_CACHEABLE_ROUTES = new Set([
+  'commands',
+  'commands/[id]',
+  'trending',
+  'news/index',
+  'collections/index',
+  'collections/[id]/index',
+  'users/[id]',
+  'users/[id]/commands',
+]);
+
+function applyCachePolicy(req, res, matchedRoute) {
+  const method = String(req.method || '').toUpperCase();
+  if (method !== 'GET') {
+    res.setHeader('cache-control', 'no-store, no-cache, no-transform, must-revalidate, private');
+    res.setHeader('pragma', 'no-cache');
+    res.setHeader('expires', '0');
+    return;
+  }
+
+  if (matchedRoute === 'og-image') {
+    res.setHeader('cache-control', 'public, max-age=300, s-maxage=900, stale-while-revalidate=3600');
+    return;
+  }
+
+  if (PUBLIC_CACHEABLE_ROUTES.has(matchedRoute)) {
+    res.setHeader('cache-control', 'public, max-age=30, s-maxage=120, stale-while-revalidate=300');
+    return;
+  }
+
+  res.setHeader('cache-control', 'no-store, no-cache, no-transform, must-revalidate, private');
+  res.setHeader('pragma', 'no-cache');
+  res.setHeader('expires', '0');
+}
+
 function runMiddleware(middleware, req, res) {
   return new Promise((resolve, reject) => {
     let finished = false;
@@ -127,15 +162,6 @@ export default async function handler(req, res) {
   }
   installServerErrorJsonGuard(res);
 
-  // Aggressively disable caching and ETags to prevent 304 responses
-  res.setHeader('cache-control', 'no-store, no-cache, no-transform, must-revalidate, private');
-  res.setHeader('pragma', 'no-cache');
-  res.setHeader('expires', '0');
-  res.setHeader('etag', ''); // Clear any ETag
-  res.setHeader('last-modified', ''); // Clear Last-Modified
-  res.removeHeader('etag');
-  res.removeHeader('last-modified');
-
   const parsedUrl = parse(req.url || '/', true);
   const pathname = parsedUrl.pathname;
   const matched = matchHandler(pathname || '/');
@@ -151,6 +177,8 @@ export default async function handler(req, res) {
     res.end(JSON.stringify({ error: 'handler_missing' }));
     return;
   }
+
+  applyCachePolicy(req, res, matched);
 
   // Apply rate limiting in serverless mode to mirror the Express server protections.
   req.ip =
