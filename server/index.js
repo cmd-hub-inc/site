@@ -977,58 +977,51 @@ app.get('/api/users', requireDbReady, async (req, res) => {
     const page = Math.max(1, Number(req.query.page) || 1);
     const limit = Math.min(100, Number(req.query.limit) || 20);
     const offset = (page - 1) * limit;
-    // Simple, safe aggregation per user (no complex filters yet)
-    const sql = `
-      SELECT u.id, u.username, u.avatar,
-        (SELECT COUNT(*) FROM "Command" c WHERE c."authorId" = u.id) AS commands,
-        (SELECT COALESCE(SUM(downloads),0) FROM "Command" c WHERE c."authorId" = u.id) AS downloads,
-        (SELECT COALESCE(ROUND(AVG(NULLIF(rating,0))::numeric,2),0) FROM "Command" c WHERE c."authorId" = u.id) AS avg_rating
-      FROM "User" u
-      ORDER BY commands DESC NULLS LAST
-      LIMIT ${limit} OFFSET ${offset}
-    `;
-    // Log SQL for debugging when this endpoint errors in dev (opt-in via DEBUG_SQL=true)
-    if (String(process.env.DEBUG_SQL).toLowerCase() === 'true') {
-      console.log('[api] users list SQL:', sql.replace(/\s+/g, ' ').trim());
-    }
-    let rows = [];
-    try {
-      rows = await prisma.$queryRawUnsafe(sql);
-    } catch (queryErr) {
-      console.warn(
-        '[api] prisma.$queryRawUnsafe failed for /api/users, falling back to Prisma client findMany',
-        queryErr && queryErr.message ? queryErr.message : queryErr,
-      );
-      // fallback: simpler query via Prisma client (may be less performant)
-      try {
-        rows = await prisma.user.findMany({
-          select: { id: true, username: true, avatar: true },
-          skip: offset,
-          take: limit,
-        });
-        // map to expected shape
-        rows = (rows || []).map((r) => ({
-          id: r.id,
-          username: r.username,
-          avatar: r.avatar,
-          commands: 0,
-          downloads: 0,
-          avg_rating: 0,
-        }));
-      } catch (clientErr) {
-        console.error(
-          '[api] fallback findMany also failed for /api/users',
-          clientErr && clientErr.stack ? clientErr.stack : clientErr,
-        );
-        throw clientErr;
-      }
-    }
+    const users = await prisma.user.findMany({
+      select: {
+        id: true,
+        username: true,
+        avatar: true,
+        commands: {
+          select: {
+            downloads: true,
+            rating: true,
+          },
+        },
+      },
+    });
 
-    const countRes = await prisma.$queryRawUnsafe('SELECT COUNT(*) AS cnt FROM "User"');
-    const total = Array.isArray(countRes) && countRes.length ? Number(countRes[0].cnt || 0) : 0;
+    const rows = (users || [])
+      .map((user) => {
+        const commands = Array.isArray(user.commands) ? user.commands : [];
+        const commandCount = commands.length;
+        const downloads = commands.reduce((sum, command) => sum + Number(command.downloads || 0), 0);
+        const ratings = commands.map((command) => Number(command.rating || 0)).filter((value) => value > 0);
+        const avgRating = ratings.length
+          ? Number((ratings.reduce((sum, value) => sum + value, 0) / ratings.length).toFixed(2))
+          : 0;
+
+        return {
+          id: user.id,
+          username: user.username,
+          avatar: user.avatar,
+          commands: commandCount,
+          downloads,
+          avg_rating: avgRating,
+        };
+      })
+      .sort((left, right) => {
+        return (
+          (Number(right.commands) || 0) - (Number(left.commands) || 0) ||
+          String(left.username || '').localeCompare(String(right.username || ''))
+        );
+      });
+
+    const total = await prisma.user.count();
+    const pagedRows = rows.slice(offset, offset + limit);
 
     // Normalize DB driver types (e.g., BigInt) to JSON-serializable values
-    const normalized = (Array.isArray(rows) ? rows : []).map((r) => {
+    const normalized = (Array.isArray(pagedRows) ? pagedRows : []).map((r) => {
       const obj = {};
       for (const [k, v] of Object.entries(r || {})) {
         if (typeof v === 'bigint') obj[k] = Number(v);
@@ -1543,56 +1536,39 @@ app.post('/api/commands', requireDbReady, requireAuth, async (req, res) => {
     const data = req.body;
     // Use session user as authorId and ignore any client-supplied authorId
     const authorId = req.session.user.id;
-    // Create command via Prisma but avoid passing unknown DB columns (uploadCategory)
-    const createData = { ...data };
-    delete createData.uploadCategory;
+    const createData = {
+      id: data.id,
+      name: data.name,
+      description: data.description,
+      type: data.type,
+      framework: data.framework,
+      version: data.version,
+      tags: Array.isArray(data.tags) ? data.tags : [],
+      githubUrl: data.githubUrl || null,
+      websiteUrl: data.websiteUrl || null,
+      changelog: data.changelog || null,
+      rawData: data.rawData || '{}',
+      authorId,
+    };
+
+    if (data.uploadCategory) {
+      createData.uploadCategory = data.uploadCategory;
+    }
+
     let cmd = null;
     try {
-      cmd = await prisma.command.create({ data: { ...createData, authorId } });
+      cmd = await prisma.command.create({ data: createData });
     } catch (e) {
       const msg = (e && e.message) || String(e);
-      // If Prisma complains that `uploadCategory` column doesn't exist, fall back to raw INSERT
+      // If Prisma complains that `uploadCategory` column doesn't exist, retry safely without it.
       if (msg.includes('uploadCategory') || msg.includes('does not exist')) {
         try {
-          // Build safe SQL-literal helpers
-          const esc = (v) =>
-            v === null || v === undefined ? 'NULL' : `'${String(v).replace(/'/g, "''")}'`;
-          const tags = Array.isArray(data.tags) ? data.tags : [];
-          const tagsSql =
-            tags.length > 0
-              ? `ARRAY[${tags.map((t) => `'${String(t).replace(/'/g, "''")}'`).join(',')}]::text[]`
-              : `ARRAY[]::text[]`;
-          const id = data.id || randomUUID();
-          const name = esc(data.name || id);
-          const description = esc(data.description || '');
-          const type = esc(data.type || '');
-          const framework = esc(data.framework || '');
-          const version = esc(data.version || '');
-          const githubUrl = esc(data.githubUrl || null);
-          const websiteUrl = esc(data.websiteUrl || null);
-          const changelog = esc(data.changelog || null);
-          const rawData = esc(data.rawData || '{}');
-
-          const insertSQL = `INSERT INTO "Command" (id, name, description, type, framework, version, tags, "githubUrl", "websiteUrl", downloads, rating, "ratingCount", favourites, views, changelog, "rawData", "createdAt", "updatedAt", "authorId") VALUES (${esc(id)}, ${name}, ${description}, ${type}, ${framework}, ${version}, ${tagsSql}, ${githubUrl}, ${websiteUrl}, 0, 0, 0, 0, 0, ${changelog}, ${rawData}, now(), now(), ${esc(authorId)}) RETURNING id`;
-          const inserted = await prisma.$queryRawUnsafe(insertSQL);
-          // inserted may be an array of rows or a single row depending on adapter
-          const insertedId =
-            Array.isArray(inserted) && inserted.length
-              ? inserted[0].id || Object.values(inserted[0])[0]
-              : id;
-          // Try to fetch via Prisma; if that fails, return minimal object
-          try {
-            const withAuthor = await prisma.command.findUnique({
-              where: { id: insertedId },
-              include: { author: true },
-            });
-            cmd = withAuthor || { id: insertedId, name: data.name, authorId };
-          } catch (fetchErr) {
-            cmd = { id: insertedId, name: data.name, authorId };
-          }
+          const retryData = { ...createData };
+          delete retryData.uploadCategory;
+          cmd = await prisma.command.create({ data: retryData });
         } catch (rawErr) {
           console.error(
-            'raw insert fallback failed',
+            'safe create retry failed',
             rawErr && rawErr.message ? rawErr.message : rawErr,
           );
           return res.status(500).json({ error: 'failed_to_create_command' });
