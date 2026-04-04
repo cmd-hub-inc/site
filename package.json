@@ -14,7 +14,8 @@
     "format": "prettier --write .",
     "prisma:generate": "prisma generate",
     "prisma:format": "prisma format",
-    "prisma:migrate": "prisma migrate dev --name init --preview-feature"
+    "prisma:migrate": "prisma migrate dev --name init --preview-feature",
+    "test:error-responses": "node scripts/test-error-responses.js"
   },
   "dependencies": {
     "@monaco-editor/react": "latest",
