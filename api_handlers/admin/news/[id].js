@@ -1,42 +1,10 @@
-import prisma from '../../../_lib/prisma.js';
-import { verifyToken } from '../../../_lib/jwt.js';
-
-function parseCookies(cookieHeader) {
-  const out = {};
-  if (!cookieHeader) return out;
-  const parts = cookieHeader.split(';');
-  for (const p of parts) {
-    const idx = p.indexOf('=');
-    if (idx === -1) continue;
-    const k = p.slice(0, idx).trim();
-    const v = p.slice(idx + 1).trim();
-    out[k] = v;
-  }
-  return out;
-}
+import prisma from '../../_lib/prisma.js';
+import { requireAdminOrFail } from '../../_lib/adminAuth.js';
 
 export default async function handler(req, res) {
   try {
-    const cookies = parseCookies(req.headers.cookie || '');
-    const token = cookies.session;
-    if (!token) {
-      return res.status(401).json({ error: 'Not authenticated' });
-    }
-
-    const session = verifyToken(token);
-    if (!session) {
-      return res.status(401).json({ error: 'Invalid session' });
-    }
-
-    // Get user from database to check admin status
-    const user = await prisma.user.findUnique({
-      where: { id: session.id },
-      select: { id: true, isAdmin: true, adminRole: true },
-    });
-
-    if (!user || !user.isAdmin) {
-      return res.status(403).json({ error: 'Access denied' });
-    }
+    const auth = await requireAdminOrFail(req, res);
+    if (!auth) return;
 
     const newsId = req.query.id;
     if (!newsId) {
