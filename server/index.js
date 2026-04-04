@@ -11,6 +11,7 @@ import ensure from '../scripts/dbEnsure.js';
 import { PrismaClient } from '@prisma/client';
 import { expressLoggingMiddleware, logError } from '../api_handlers/_lib/logger.js';
 import { rateLimiters } from '../api_handlers/_lib/rateLimiter.js';
+import { installServerErrorJsonGuard } from '../api_handlers/_lib/errorResponses.js';
 import { scheduleAnalyticsFlush } from '../api_handlers/_lib/analytics.js';
 import { scheduleTrendingComputation } from '../api_handlers/trending.js';
 import { verifyToken } from '../api_handlers/_lib/jwt.js';
@@ -99,6 +100,12 @@ app.use(
   }),
 );
 app.use(express.json());
+
+// Keep 500 responses generic while preserving specific 4xx domain errors.
+app.use((req, res, next) => {
+  installServerErrorJsonGuard(res);
+  next();
+});
 
 // Add request logging middleware
 app.use(expressLoggingMiddleware);

@@ -4,6 +4,7 @@ import { fileURLToPath } from 'url';
 import fs from 'fs';
 import path from 'path';
 import { rateLimiters } from '../api_handlers/_lib/rateLimiter.js';
+import { installServerErrorJsonGuard } from '../api_handlers/_lib/errorResponses.js';
 
 const handlersDir = path.join(process.cwd(), 'api_handlers');
 
@@ -91,6 +92,7 @@ export default async function handler(req, res) {
       return this;
     };
   }
+  installServerErrorJsonGuard(res);
 
   // Aggressively disable caching and ETags to prevent 304 responses
   res.setHeader('cache-control', 'no-store, no-cache, no-transform, must-revalidate, private');
