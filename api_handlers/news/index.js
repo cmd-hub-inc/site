@@ -47,13 +47,13 @@ export default async function handler(req, res) {
           console.log('[news] News table does not exist yet, returning empty list');
           return res.json({ news: [] });
         }
-        return res.status(500).json({ error: 'Database error: ' + dbErr.message });
+        return res.status(500).json({ error: 'Database error' });
       }
     }
 
     return res.status(405).json({ error: 'Method not allowed' });
   } catch (error) {
     console.error('[news] Handler error:', error);
-    return res.status(500).json({ error: 'Server error: ' + error.message });
+    return res.status(500).json({ error: 'Server error' });
   }
 }
