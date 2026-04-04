@@ -1,15 +1,40 @@
-import { signPending } from '../../_lib/jwt.js';
+import { signPending, verifyToken } from '../../_lib/jwt.js';
+
+function resolveTrustedBaseUrl() {
+  const configured = process.env.BASE_URL;
+  if (configured) {
+    try {
+      return new URL(configured).origin;
+    } catch {
+      return null;
+    }
+  }
+
+  if (process.env.NODE_ENV === 'production') {
+    return null;
+  }
+
+  const port = process.env.PORT || 4000;
+  return `http://localhost:${port}`;
+}
 
 export default async function handler(req, res) {
   try {
-    const { code } = req.query;
+    const { code, state } = req.query;
     if (!code) return res.status(400).send('Missing code');
+    if (!state) return res.status(400).send('Missing state');
+
+    const parsedState = verifyToken(String(state));
+    if (!parsedState || parsedState.type !== 'oauth_state' || !parsedState.nonce) {
+      return res.status(400).send('Invalid state');
+    }
 
     const DISCORD_CLIENT_ID = process.env.DISCORD_CLIENT_ID;
     const DISCORD_CLIENT_SECRET = process.env.DISCORD_CLIENT_SECRET;
-    const BASE_URL =
-      process.env.BASE_URL ||
-      `${req.headers['x-forwarded-proto'] || 'https'}://${req.headers.host}`;
+    const BASE_URL = resolveTrustedBaseUrl();
+    if (!BASE_URL) {
+      return res.status(500).send('Server misconfigured: invalid or missing BASE_URL');
+    }
 
     const tokenResp = await fetch('https://discord.com/api/oauth2/token', {
       method: 'POST',
