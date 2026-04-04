@@ -32,8 +32,18 @@ const PORT = process.env.PORT || 4000;
 const DISCORD_CLIENT_ID = process.env.DISCORD_CLIENT_ID;
 const DISCORD_CLIENT_SECRET = process.env.DISCORD_CLIENT_SECRET;
 const CLIENT_URL = process.env.CLIENT_URL || 'http://localhost:5173';
-const SESSION_SECRET = process.env.SESSION_SECRET || 'dev_secret_change_me';
 const isProd = process.env.NODE_ENV === 'production';
+const rawSessionSecret = process.env.SESSION_SECRET;
+
+if (isProd && !rawSessionSecret) {
+  throw new Error('SESSION_SECRET is required in production');
+}
+
+if (!isProd && !rawSessionSecret) {
+  console.warn('[start] SESSION_SECRET is not set; using insecure development fallback secret');
+}
+
+const SESSION_SECRET = rawSessionSecret || 'dev_insecure_local_secret_change_me';
 
 async function getUserAuthState(userId) {
   try {
