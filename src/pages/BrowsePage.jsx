@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from 'react';
+import { useEffect, useState } from 'react';
 import { Search, Filter, X, Flame, Command, Zap, AlertCircle } from 'lucide-react';
 import CommandCard from '../components/CommandCard';
 import SavedSearches from '../components/SavedSearches';
@@ -20,7 +20,13 @@ export default function BrowsePage({ initialTag, initialUploadCategory, onViewCo
 
   const API_BASE = import.meta.env.VITE_API_BASE ?? (import.meta.env.DEV ? '' : '');
   const [commands, setCommands] = useState([]);
+  const [topDownloaded, setTopDownloaded] = useState([]);
+  const [pagination, setPagination] = useState({ page: 1, limit: 24, total: 0, totalPages: 1 });
+  const [page, setPage] = useState(1);
+  const [debouncedSearch, setDebouncedSearch] = useState('');
+  const [apiReady, setApiReady] = useState(false);
   const [loadingCommands, setLoadingCommands] = useState(true);
+  const [loadingTop, setLoadingTop] = useState(true);
   const [errorCommands, setErrorCommands] = useState(null);
 
   // Get user token from session
@@ -46,6 +52,17 @@ export default function BrowsePage({ initialTag, initialUploadCategory, onViewCo
   useEffect(() => {
     if (initialUploadCategory) setSelectedCategory(initialUploadCategory);
   }, [initialUploadCategory]);
+
+  useEffect(() => {
+    const handle = setTimeout(() => {
+      setDebouncedSearch(search.trim());
+    }, 250);
+    return () => clearTimeout(handle);
+  }, [search]);
+
+  useEffect(() => {
+    setPage(1);
+  }, [debouncedSearch, selectedTags, selectedFW, selectedType, selectedCategory, sort]);
 
   // Fetch trending commands
   useEffect(() => {
@@ -79,40 +96,71 @@ export default function BrowsePage({ initialTag, initialUploadCategory, onViewCo
   useEffect(() => {
     let cancelled = false;
     (async () => {
-      // Preflight /api/ready before attempting to fetch commands
       const readyAttempts = 8;
-      const readyBackoff = 200; // ms
-      let ready = false;
+      const readyBackoff = 200;
       for (let i = 0; i < readyAttempts && !cancelled; i++) {
         try {
           const r = await fetch(`${API_BASE}/api/ready`);
           if (r.ok) {
-            ready = true;
-            break;
+            if (!cancelled) setApiReady(true);
+            return;
           }
         } catch (e) {
           // ignore
         }
         await new Promise((r) => setTimeout(r, readyBackoff));
       }
+      if (!cancelled) {
+        setLoadingCommands(false);
+      }
+    })();
+    return () => {
+      cancelled = true;
+    };
+  }, [API_BASE]);
 
-      if (!ready) {
-        // DB not ready — stop loading skeleton sooner
-        if (!cancelled) setLoadingCommands(false);
-        return;
+  useEffect(() => {
+    if (!apiReady) return;
+    let cancelled = false;
+
+    (async () => {
+      setLoadingCommands(true);
+      const maxAttempts = 4;
+      const backoff = 250;
+      let lastError = null;
+
+      const params = new URLSearchParams({
+        includeMeta: '1',
+        page: String(page),
+        limit: '24',
+        sort,
+      });
+      if (debouncedSearch) params.set('q', debouncedSearch);
+      if (selectedFW) params.set('framework', selectedFW);
+      if (selectedType) params.set('type', selectedType);
+      if (selectedCategory) params.set('uploadCategory', selectedCategory);
+      if (selectedTags.length > 0) {
+        params.set('tags', selectedTags.join(','));
+        params.set('tagsMode', 'all');
       }
 
-      // Now fetch commands with a few short retries
-      const maxAttempts = 6;
-      const backoff = 250; // ms
-      let lastError = null;
       for (let i = 0; i < maxAttempts && !cancelled; i++) {
         try {
-          const r = await fetch(`${API_BASE}/api/commands`);
+          const r = await fetch(`${API_BASE}/api/commands?${params.toString()}`);
           if (r.ok) {
             const data = await r.json();
-            if (!cancelled && Array.isArray(data)) {
-              setCommands(data);
+            if (!cancelled) {
+              const items = Array.isArray(data.items)
+                ? data.items
+                : Array.isArray(data)
+                  ? data
+                  : [];
+              setCommands(items);
+              setPagination(
+                data && data.pagination
+                  ? data.pagination
+                  : { page, limit: 24, total: items.length, totalPages: 1 },
+              );
               setErrorCommands(null);
             }
             break;
@@ -128,48 +176,29 @@ export default function BrowsePage({ initialTag, initialUploadCategory, onViewCo
           await new Promise((r) => setTimeout(r, backoff));
         }
       }
+
       if (!cancelled) {
-        if (lastError && commands.length === 0) {
+        if (lastError) {
           setErrorCommands('Failed to load commands: ' + lastError);
         }
         setLoadingCommands(false);
       }
     })();
+
     return () => {
       cancelled = true;
     };
-  }, []);
-
-  const filtered = useMemo(() => {
-    return commands
-      .filter((cmd) => {
-        if (search) {
-          const q = search.toLowerCase();
-          const name = (cmd.name || '').toLowerCase();
-          const desc = (cmd.description || '').toLowerCase();
-          if (!name.includes(q) && !desc.includes(q)) return false;
-        }
-        if (selectedTags.length && !selectedTags.every((t) => (cmd.tags || []).includes(t))) {
-          return false;
-        }
-        if (
-          selectedCategory &&
-          String(cmd.uploadCategory || 'Framework').toLowerCase() !==
-            String(selectedCategory).toLowerCase()
-        ) {
-          return false;
-        }
-        if (selectedFW && cmd.framework !== selectedFW) return false;
-        if (selectedType && cmd.type !== selectedType) return false;
-        return true;
-      })
-      .sort((a, b) => {
-        if (sort === 'downloads') return (b.downloads || 0) - (a.downloads || 0);
-        if (sort === 'rating') return (b.rating || 0) - (a.rating || 0);
-        if (sort === 'newest') return new Date(b.createdAt) - new Date(a.createdAt);
-        return 0;
-      });
-  }, [commands, search, selectedTags, selectedCategory, selectedFW, selectedType, sort]);
+  }, [
+    apiReady,
+    API_BASE,
+    page,
+    debouncedSearch,
+    selectedFW,
+    selectedType,
+    selectedCategory,
+    selectedTags,
+    sort,
+  ]);
 
   const activeFilterCount = selectedTags.length + (selectedFW ? 1 : 0) + (selectedType ? 1 : 0) + (selectedCategory ? 1 : 0);
 
@@ -182,11 +211,34 @@ export default function BrowsePage({ initialTag, initialUploadCategory, onViewCo
     fontSize: 14,
   };
 
-  // Top downloaded commands (used in the section below the search controls)
-  const topDownloaded = useMemo(() => {
-    if (loadingCommands) return [];
-    return [...commands].sort((a, b) => (b.downloads || 0) - (a.downloads || 0)).slice(0, 4);
-  }, [commands, loadingCommands]);
+  useEffect(() => {
+    if (!apiReady) return;
+    let cancelled = false;
+    (async () => {
+      try {
+        setLoadingTop(true);
+        const params = new URLSearchParams({
+          includeMeta: '1',
+          sort: 'downloads',
+          page: '1',
+          limit: '4',
+        });
+        const r = await fetch(`${API_BASE}/api/commands?${params.toString()}`);
+        if (!r.ok) return;
+        const data = await r.json();
+        if (!cancelled) {
+          setTopDownloaded(Array.isArray(data.items) ? data.items : []);
+        }
+      } catch {
+        // ignore
+      } finally {
+        if (!cancelled) setLoadingTop(false);
+      }
+    })();
+    return () => {
+      cancelled = true;
+    };
+  }, [apiReady, API_BASE]);
 
   return (
     <div className="browse-page" style={{ maxWidth: 1200, margin: '0 auto', padding: '60px 24px' }}>
@@ -611,6 +663,7 @@ export default function BrowsePage({ initialTag, initialUploadCategory, onViewCo
                 setSelectedTags([]);
                 setSelectedFW('');
                 setSelectedType('');
+                setSelectedCategory('');
               }}
               style={{
                 marginTop: 20,
@@ -684,6 +737,7 @@ export default function BrowsePage({ initialTag, initialUploadCategory, onViewCo
               }}
             >
               {loadingCommands
+                || loadingTop
                 ? [1, 2, 3].map((i) => (
                     <CommandCard key={`top-skel-${i}`} loading={true} cmd={{}} onClick={() => {}} />
                   ))
@@ -711,7 +765,7 @@ export default function BrowsePage({ initialTag, initialUploadCategory, onViewCo
             </h2>
           </div>
           <p style={{ color: C.muted, fontSize: 13, margin: 0 }}>
-            {filtered.length} command{filtered.length !== 1 ? 's' : ''} found
+            {pagination.total} command{pagination.total !== 1 ? 's' : ''} found
           </p>
         </div>
 
@@ -746,7 +800,7 @@ export default function BrowsePage({ initialTag, initialUploadCategory, onViewCo
               <CommandCard key={`skel-${i}`} loading={true} cmd={{}} onClick={() => {}} />
             ))}
           </div>
-        ) : filtered.length > 0 ? (
+        ) : commands.length > 0 ? (
           <div
             className="command-grid"
             style={{
@@ -755,7 +809,7 @@ export default function BrowsePage({ initialTag, initialUploadCategory, onViewCo
               gap: 16,
             }}
           >
-            {filtered.map((cmd) => (
+            {commands.map((cmd) => (
               <CommandCard key={cmd.id} cmd={cmd} onClick={onViewCommand} />
             ))}
           </div>
@@ -780,6 +834,8 @@ export default function BrowsePage({ initialTag, initialUploadCategory, onViewCo
                 setSelectedTags([]);
                 setSelectedFW('');
                 setSelectedType('');
+                setSelectedCategory('');
+                setPage(1);
               }}
               style={{
                 background: C.blurple,
@@ -800,6 +856,51 @@ export default function BrowsePage({ initialTag, initialUploadCategory, onViewCo
               }}
             >
               Reset filters
+            </button>
+          </div>
+        )}
+
+        {!loadingCommands && !errorCommands && pagination.totalPages > 1 && (
+          <div
+            style={{
+              marginTop: 24,
+              display: 'flex',
+              justifyContent: 'center',
+              alignItems: 'center',
+              gap: 10,
+            }}
+          >
+            <button
+              onClick={() => setPage((p) => Math.max(1, p - 1))}
+              disabled={pagination.page <= 1}
+              style={{
+                background: pagination.page <= 1 ? 'rgba(255,255,255,0.06)' : C.surface,
+                border: `1px solid ${C.border}`,
+                color: pagination.page <= 1 ? C.faint : C.text,
+                borderRadius: 8,
+                padding: '8px 12px',
+                cursor: pagination.page <= 1 ? 'not-allowed' : 'pointer',
+              }}
+            >
+              Previous
+            </button>
+            <span style={{ color: C.muted, fontSize: 14 }}>
+              Page {pagination.page} of {pagination.totalPages}
+            </span>
+            <button
+              onClick={() => setPage((p) => Math.min(pagination.totalPages, p + 1))}
+              disabled={pagination.page >= pagination.totalPages}
+              style={{
+                background:
+                  pagination.page >= pagination.totalPages ? 'rgba(255,255,255,0.06)' : C.surface,
+                border: `1px solid ${C.border}`,
+                color: pagination.page >= pagination.totalPages ? C.faint : C.text,
+                borderRadius: 8,
+                padding: '8px 12px',
+                cursor: pagination.page >= pagination.totalPages ? 'not-allowed' : 'pointer',
+              }}
+            >
+              Next
             </button>
           </div>
         )}

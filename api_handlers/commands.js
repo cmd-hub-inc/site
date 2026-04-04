@@ -1,11 +1,170 @@
 import prisma from './_lib/prisma.js';
 import { requireAuthOrFail } from './_lib/utils.js';
 
+function parsePositiveInt(value, fallback, min = 1, max = 100) {
+  const n = Number.parseInt(String(value || ''), 10);
+  if (!Number.isFinite(n) || Number.isNaN(n)) return fallback;
+  return Math.min(max, Math.max(min, n));
+}
+
+function normalizeSort(sort) {
+  if (sort === 'rating') return [{ rating: 'desc' }, { downloads: 'desc' }, { createdAt: 'desc' }];
+  if (sort === 'newest') return [{ createdAt: 'desc' }];
+  return [{ downloads: 'desc' }, { rating: 'desc' }, { createdAt: 'desc' }];
+}
+
+function parseTagFilters(rawTags) {
+  if (!rawTags) return [];
+  return String(rawTags)
+    .split(',')
+    .map((t) => t.trim())
+    .filter(Boolean);
+}
+
+function applyInMemoryQuery(rows, query) {
+  const q = String(query.q || '').trim().toLowerCase();
+  const framework = String(query.framework || '').trim();
+  const type = String(query.type || '').trim();
+  const uploadCategory = String(query.uploadCategory || '').trim().toLowerCase();
+  const tags = parseTagFilters(query.tags);
+  const tagsMode = String(query.tagsMode || 'all').toLowerCase();
+  const sort = String(query.sort || 'downloads');
+  const page = parsePositiveInt(query.page, 1, 1, 100000);
+  const limit = parsePositiveInt(query.limit, 24, 1, 50);
+
+  let filtered = Array.isArray(rows) ? [...rows] : [];
+
+  if (q) {
+    filtered = filtered.filter((cmd) => {
+      const name = String(cmd.name || '').toLowerCase();
+      const desc = String(cmd.description || '').toLowerCase();
+      return name.includes(q) || desc.includes(q);
+    });
+  }
+
+  if (framework) {
+    filtered = filtered.filter((cmd) => String(cmd.framework || '') === framework);
+  }
+
+  if (type) {
+    filtered = filtered.filter((cmd) => String(cmd.type || '') === type);
+  }
+
+  if (uploadCategory) {
+    filtered = filtered.filter(
+      (cmd) => String(cmd.uploadCategory || 'Framework').toLowerCase() === uploadCategory,
+    );
+  }
+
+  if (tags.length > 0) {
+    filtered = filtered.filter((cmd) => {
+      const cmdTags = Array.isArray(cmd.tags) ? cmd.tags : [];
+      if (tagsMode === 'some') return tags.some((tag) => cmdTags.includes(tag));
+      return tags.every((tag) => cmdTags.includes(tag));
+    });
+  }
+
+  filtered.sort((a, b) => {
+    if (sort === 'rating') return (Number(b.rating) || 0) - (Number(a.rating) || 0);
+    if (sort === 'newest') return new Date(b.createdAt) - new Date(a.createdAt);
+    return (Number(b.downloads) || 0) - (Number(a.downloads) || 0);
+  });
+
+  const total = filtered.length;
+  const totalPages = Math.max(1, Math.ceil(total / limit));
+  const safePage = Math.min(page, totalPages);
+  const start = (safePage - 1) * limit;
+  const items = filtered.slice(start, start + limit);
+
+  return {
+    items,
+    pagination: {
+      page: safePage,
+      limit,
+      total,
+      totalPages,
+    },
+  };
+}
+
 async function listCommands(req, res) {
+  const query = req.query || {};
+  const includeMeta = ['1', 'true', 'yes'].includes(
+    String(query.includeMeta || '').toLowerCase(),
+  );
+
+  const page = parsePositiveInt(query.page, 1, 1, 100000);
+  const limit = parsePositiveInt(query.limit, 24, 1, 50);
+  const q = String(query.q || '').trim();
+  const framework = String(query.framework || '').trim();
+  const type = String(query.type || '').trim();
+  const uploadCategory = String(query.uploadCategory || '').trim();
+  const tags = parseTagFilters(query.tags);
+  const tagsMode = String(query.tagsMode || 'all').toLowerCase();
+  const sort = String(query.sort || 'downloads');
+
   try {
-    const cmds = await prisma.command.findMany({ include: { author: true } });
-    const out = cmds.map((c) => ({ ...c, uploadCategory: c.uploadCategory || 'Framework' }));
-    return res.json(out);
+    if (!includeMeta) {
+      const cmds = await prisma.command.findMany({ include: { author: true } });
+      const out = cmds.map((c) => ({ ...c, uploadCategory: c.uploadCategory || 'Framework' }));
+      return res.json(out);
+    }
+
+    const where = {};
+
+    if (q) {
+      where.OR = [
+        { name: { contains: q, mode: 'insensitive' } },
+        { description: { contains: q, mode: 'insensitive' } },
+      ];
+    }
+
+    if (framework) {
+      where.framework = framework;
+    }
+
+    if (type) {
+      where.type = type;
+    }
+
+    if (uploadCategory) {
+      where.uploadCategory = uploadCategory;
+    }
+
+    if (tags.length > 0) {
+      where.tags = tagsMode === 'some' ? { hasSome: tags } : { hasEvery: tags };
+    }
+
+    const [items, total] = await prisma.$transaction([
+      prisma.command.findMany({
+        where,
+        skip: (page - 1) * limit,
+        take: limit,
+        orderBy: normalizeSort(sort),
+        include: {
+          author: {
+            select: {
+              id: true,
+              username: true,
+              avatar: true,
+            },
+          },
+        },
+      }),
+      prisma.command.count({ where }),
+    ]);
+
+    const normalizedItems = items.map((c) => ({ ...c, uploadCategory: c.uploadCategory || 'Framework' }));
+    const totalPages = Math.max(1, Math.ceil(total / limit));
+    return res.json({
+      items: normalizedItems,
+      pagination: {
+        page: Math.min(page, totalPages),
+        limit,
+        total,
+        totalPages,
+      },
+    });
   } catch (prismaErr) {
     console.warn(
       '[api] Prisma findMany failed, falling back to raw SQL:',
@@ -42,7 +201,24 @@ async function listCommands(req, res) {
           uploadCategory: r.uploadCategory || r.uploadcategory || 'Framework',
         };
       });
-      return res.json(out);
+
+      if (!includeMeta) {
+        return res.json(out);
+      }
+
+      const queried = applyInMemoryQuery(out, {
+        q,
+        framework,
+        type,
+        uploadCategory,
+        tags: tags.join(','),
+        tagsMode,
+        sort,
+        page,
+        limit,
+      });
+
+      return res.json(queried);
     } catch (rawErr) {
       console.error(
         'raw SQL fallback failed for /api/commands',

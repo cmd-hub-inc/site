@@ -136,7 +136,8 @@ export default async function handler(req, res) {
   res.removeHeader('etag');
   res.removeHeader('last-modified');
 
-  const { pathname } = parse(req.url || '/');
+  const parsedUrl = parse(req.url || '/', true);
+  const pathname = parsedUrl.pathname;
   const matched = matchHandler(pathname || '/');
   if (!matched) {
     res.statusCode = 404;
@@ -166,7 +167,7 @@ export default async function handler(req, res) {
 
   // Extract path parameters from URL based on matched handler pattern
   // e.g., if matched='commands/[id]' and pathname='/api/commands/my-cmd', extract id='my-cmd'
-  req.query = req.query || {};
+  req.query = { ...(parsedUrl.query || {}), ...(req.query || {}) };
   const pathParts = (pathname || '').replace(/^\/api\/|\/$/, '').split('/').filter(Boolean);
   const handlerParts = matched.split('/').filter(Boolean);
   for (let i = 0; i < handlerParts.length; i++) {
