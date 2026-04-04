@@ -73,50 +73,38 @@ async function createCommand(req, res) {
   try {
     const data = req.body || {};
     const authorId = session.id;
-    const createData = { ...data };
-    delete createData.uploadCategory;
+    const createData = {
+      id: data.id,
+      name: data.name,
+      description: data.description,
+      type: data.type,
+      framework: data.framework,
+      version: data.version,
+      tags: Array.isArray(data.tags) ? data.tags : [],
+      githubUrl: data.githubUrl || null,
+      websiteUrl: data.websiteUrl || null,
+      changelog: data.changelog || null,
+      rawData: data.rawData || '{}',
+      authorId,
+    };
+
+    if (data.uploadCategory) {
+      createData.uploadCategory = data.uploadCategory;
+    }
+
     let cmd = null;
     try {
-      cmd = await prisma.command.create({ data: { ...createData, authorId } });
+      cmd = await prisma.command.create({ data: createData });
     } catch (e) {
       const msg = (e && e.message) || String(e);
       if (msg.includes('uploadCategory') || msg.includes('does not exist')) {
         try {
-          const esc = (v) =>
-            v === null || v === undefined ? 'NULL' : `'${String(v).replace(/'/g, "''")}'`;
-          const tags = Array.isArray(data.tags) ? data.tags : [];
-          const tagsSql =
-            tags.length > 0
-              ? `ARRAY[${tags.map((t) => `'${String(t).replace(/'/g, "''")}'`).join(',')}]::text[]`
-              : `ARRAY[]::text[]`;
-          const id = data.id || cryptoRandomId();
-          const name = esc(data.name || id);
-          const description = esc(data.description || '');
-          const type = esc(data.type || '');
-          const framework = esc(data.framework || '');
-          const version = esc(data.version || '');
-          const githubUrl = esc(data.githubUrl || null);
-          const websiteUrl = esc(data.websiteUrl || null);
-          const changelog = esc(data.changelog || null);
-          const rawData = esc(data.rawData || '{}');
-          const insertSQL = `INSERT INTO "Command" (id, name, description, type, framework, version, tags, "githubUrl", "websiteUrl", downloads, rating, "ratingCount", favourites, views, changelog, "rawData", "createdAt", "updatedAt", "authorId") VALUES (${esc(id)}, ${name}, ${description}, ${type}, ${framework}, ${version}, ${tagsSql}, ${githubUrl}, ${websiteUrl}, 0, 0, 0, 0, 0, ${changelog}, ${rawData}, now(), now(), ${esc(authorId)}) RETURNING id`;
-          const inserted = await prisma.$queryRawUnsafe(insertSQL);
-          const insertedId =
-            Array.isArray(inserted) && inserted.length
-              ? inserted[0].id || Object.values(inserted[0])[0]
-              : id;
-          try {
-            const withAuthor = await prisma.command.findUnique({
-              where: { id: insertedId },
-              include: { author: true },
-            });
-            cmd = withAuthor || { id: insertedId, name: data.name, authorId };
-          } catch (fetchErr) {
-            cmd = { id: insertedId, name: data.name, authorId };
-          }
+          const retryData = { ...createData };
+          delete retryData.uploadCategory;
+          cmd = await prisma.command.create({ data: retryData });
         } catch (rawErr) {
           console.error(
-            'raw insert fallback failed',
+            'safe create retry failed',
             rawErr && rawErr.message ? rawErr.message : rawErr,
           );
           return res.status(500).json({ error: 'failed_to_create_command' });
@@ -153,10 +141,6 @@ async function createCommand(req, res) {
     console.error('create command error', err && err.message ? err.message : err);
     return res.status(500).json({ error: 'failed' });
   }
-}
-
-function cryptoRandomId() {
-  return 'id-' + Math.random().toString(36).slice(2, 10);
 }
 
 export default async function handler(req, res) {
