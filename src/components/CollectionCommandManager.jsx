@@ -1,4 +1,4 @@
-import React, { useMemo, useState } from 'react';
+import { useMemo, useState } from 'react';
 import { Plus, AlertCircle, Trash2 } from 'lucide-react';
 import { addCommandToCollection, removeCommandFromCollection, fetchCommands } from '../api';
 import CommandCard from './CommandCard';

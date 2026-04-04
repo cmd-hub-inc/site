@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import { useState, useEffect } from 'react';
 import { BookOpen, Plus, AlertCircle } from 'lucide-react';
 import { fetchCollections, deleteCollection } from '../api';
 import CollectionCard from '../components/CollectionCard';

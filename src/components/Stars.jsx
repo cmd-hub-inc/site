@@ -1,4 +1,3 @@
-import React from 'react';
 import { C } from '../constants';
 
 export function StarRow({ rating, count, size = 12 }) {

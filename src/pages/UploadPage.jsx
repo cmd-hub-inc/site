@@ -1,7 +1,7 @@
-import React, { useState, useEffect } from 'react';
+import { useState, useEffect } from 'react';
 import { LogIn, Upload, Check, AlertCircle, Eye, EyeOff, Rocket, Clipboard, Save, XCircle, Lightbulb, CheckCircle2 } from 'lucide-react';
-import { C, CMD_TYPES, FRAMEWORKS, BOT_TOOLS, ALL_TAGS, fmt } from '../constants';
-import { TagBadge, FrameworkBadge, TypeBadge } from '../components/Badges';
+import { C, CMD_TYPES, FRAMEWORKS, BOT_TOOLS, ALL_TAGS } from '../constants';
+import { TagBadge } from '../components/Badges';
 import MonacoEditor from '../components/MonacoEditor';
 import CommandCard from '../components/CommandCard';
 import { saveReturnTo } from '../lib/authHelpers';

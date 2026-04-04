@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import { useState, useEffect } from 'react';
 import { Bookmark, Trash2, Plus, Loader } from 'lucide-react';
 import { C } from '../constants';
 

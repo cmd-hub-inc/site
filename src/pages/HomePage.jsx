@@ -1,10 +1,9 @@
-import React, { useEffect, useState } from 'react';
+import { useEffect, useState } from 'react';
 import { Helmet } from 'react-helmet-async';
 import { Zap, ChevronRight, TrendingUp, Bell } from 'lucide-react';
 import CommandCard from '../components/CommandCard';
 import Recommendations from '../components/Recommendations';
 import { C } from '../constants';
-import { MOCK_COMMANDS } from '../data/mockCommands';
 import CountUp from '../components/CountUp';
 
 export default function HomePage({ onNavigate, onViewCommand }) {

@@ -4,7 +4,7 @@
  * Follows site theme with proper styling
  */
 
-import React, { useState } from 'react';
+import { useState } from 'react';
 import {
   Twitter,
   Facebook,

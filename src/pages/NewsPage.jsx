@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import { useState, useEffect } from 'react';
 import { Newspaper, AlertCircle } from 'lucide-react';
 import { C } from '../constants';
 import {

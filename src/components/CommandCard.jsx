@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import { useState } from 'react';
 import { Download, Heart, Copy, ChevronRight } from 'lucide-react';
 import { C } from '../constants';
 import { FrameworkBadge, TypeBadge, TagBadge } from './Badges';

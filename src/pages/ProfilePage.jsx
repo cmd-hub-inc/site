@@ -1,10 +1,9 @@
-import React, { useEffect, useState } from 'react';
+import { useEffect, useState } from 'react';
 import { User, Package, Download, Heart, Check, UserPlus, BookOpen } from 'lucide-react';
 import { C } from '../constants';
 import CommandCard from '../components/CommandCard';
 import CollectionCard from '../components/CollectionCard';
 import ShareButtons from '../components/ShareButtons';
-import { MOCK_COMMANDS } from '../data/mockCommands';
 import CountUp from '../components/CountUp';
 import { fetchCollections } from '../api';
 

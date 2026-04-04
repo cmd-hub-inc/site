@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import { useState } from 'react';
 import { Grid, Upload, LogOut, Users, BarChart3, Code2, Menu, X, Shield, Newspaper, BookOpen, Sun, Moon } from 'lucide-react';
 import { C } from '../constants';
 

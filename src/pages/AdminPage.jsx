@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from 'react';
+import { useEffect, useState } from 'react';
 import { Shield, AlertCircle } from 'lucide-react';
 import { C } from '../constants';
 

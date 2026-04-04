@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import { useState, useEffect } from 'react';
 import { Helmet } from 'react-helmet-async';
 import { ArrowLeft, AlertCircle, Edit2, Trash2, BookOpen } from 'lucide-react';
 import { fetchCollection, deleteCollection } from '../api';

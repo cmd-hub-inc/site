@@ -1,5 +1,4 @@
-import React, { useEffect, useRef, useState } from 'react';
-
+import { useEffect, useRef, useState } from 'react';
 function easeOutCubic(t) {
   return 1 - Math.pow(1 - t, 3);
 }

@@ -1,9 +1,8 @@
-import React, { useEffect, useState } from 'react';
+import { useEffect, useState } from 'react';
 import { Search, Filter, X, Flame, Command, Zap, AlertCircle } from 'lucide-react';
 import CommandCard from '../components/CommandCard';
 import SavedSearches from '../components/SavedSearches';
 import { C, ALL_TAGS, FRAMEWORKS, CMD_TYPES } from '../constants';
-import { MOCK_COMMANDS } from '../data/mockCommands';
 import { TagBadge } from '../components/Badges';
 
 export default function BrowsePage({ initialTag, initialUploadCategory, onViewCommand }) {

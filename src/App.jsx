@@ -1,8 +1,7 @@
-import React, { useState, useEffect, Suspense, lazy } from 'react';
+import { useState, useEffect, Suspense, lazy } from 'react';
 import Navbar from './components/Navbar';
 import ErrorBoundary from './components/ErrorBoundary';
 import Footer from './components/Footer';
-import { MOCK_USER } from './constants';
 import { getReturnTo, clearReturnTo, saveReturnTo } from './lib/authHelpers';
 import { getUnreadNewsCount } from './lib/newsReadState';
 

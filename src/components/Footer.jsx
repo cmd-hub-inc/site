@@ -1,4 +1,3 @@
-import React from 'react';
 import { Code2, ExternalLink } from 'lucide-react';
 import { C } from '../constants';
 

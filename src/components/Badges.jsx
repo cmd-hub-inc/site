@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import { useState } from 'react';
 import { Code2, MousePointer, MessageSquare } from 'lucide-react';
 import { C, FW_COLORS, TYPE_COLORS } from '../constants';
 

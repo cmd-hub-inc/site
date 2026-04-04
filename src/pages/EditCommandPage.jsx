@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from 'react';
+import { useEffect, useState } from 'react';
 import { C, FRAMEWORKS, CMD_TYPES, ALL_TAGS } from '../constants';
 import { LogIn } from 'lucide-react';
 import { saveReturnTo } from '../lib/authHelpers';

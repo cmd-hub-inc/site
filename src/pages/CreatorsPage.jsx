@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from 'react';
+import { useEffect, useState } from 'react';
 import { ChevronLeft, ChevronRight, Download, Package, Search, SlidersHorizontal, Users } from 'lucide-react';
 import { C } from '../constants';
 import StarRow from '../components/Stars';

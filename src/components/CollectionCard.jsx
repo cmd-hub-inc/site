@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import { useState } from 'react';
 import { BookOpen, Trash2, Edit2 } from 'lucide-react';
 import { C } from '../constants';
 

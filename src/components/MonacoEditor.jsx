@@ -1,5 +1,3 @@
-import React from 'react';
-
 let Monaco = null;
 try {
   Monaco = require('@monaco-editor/react').default;
