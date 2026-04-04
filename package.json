@@ -15,6 +15,7 @@
     "prisma:generate": "prisma generate",
     "prisma:format": "prisma format",
     "prisma:migrate": "prisma migrate dev --name init --preview-feature",
+    "test": "npm run test:error-responses",
     "test:error-responses": "node scripts/test-error-responses.js"
   },
   "dependencies": {
