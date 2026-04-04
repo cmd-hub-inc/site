@@ -3,8 +3,40 @@ import { parse } from 'url';
 import { fileURLToPath } from 'url';
 import fs from 'fs';
 import path from 'path';
+import { rateLimiters } from '../api_handlers/_lib/rateLimiter.js';
 
 const handlersDir = path.join(process.cwd(), 'api_handlers');
+
+function runMiddleware(middleware, req, res) {
+  return new Promise((resolve, reject) => {
+    let finished = false;
+    const done = (result) => {
+      if (finished) return;
+      finished = true;
+      resolve(result);
+    };
+
+    try {
+      middleware(req, res, (err) => {
+        if (err) return reject(err);
+        done(true);
+      });
+      if (res.writableEnded) {
+        done(false);
+      }
+    } catch (err) {
+      reject(err);
+    }
+  });
+}
+
+function pickRateLimiter(routePath) {
+  if (!routePath) return rateLimiters.api;
+  if (routePath.startsWith('auth/')) return rateLimiters.auth;
+  if (routePath.startsWith('commands/') || routePath === 'commands') return rateLimiters.read;
+  if (routePath.includes('/rate')) return rateLimiters.rating;
+  return rateLimiters.api;
+}
 
 function loadHandler(routePath) {
   const file = path.join(handlersDir, routePath + '.js');
@@ -81,6 +113,19 @@ export default async function handler(req, res) {
   if (!mod || !mod.default) {
     res.statusCode = 500;
     res.end(JSON.stringify({ error: 'handler_missing' }));
+    return;
+  }
+
+  // Apply rate limiting in serverless mode to mirror the Express server protections.
+  req.ip =
+    req.ip ||
+    (req.headers['x-forwarded-for'] && String(req.headers['x-forwarded-for']).split(',')[0].trim()) ||
+    req.socket?.remoteAddress ||
+    req.connection?.remoteAddress ||
+    '';
+  const limiter = pickRateLimiter(matched);
+  const canProceed = await runMiddleware(limiter, req, res);
+  if (!canProceed || res.writableEnded) {
     return;
   }
 
