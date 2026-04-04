@@ -55,7 +55,7 @@ export async function listCollections(req, res) {
     });
   } catch (error) {
     logError('Failed to list collections', error);
-    return res.status(500).json({ error: 'Failed to list collections' });
+    return res.status(500).json({ error: 'Server error' });
   }
 }
 
@@ -102,7 +102,7 @@ export async function createCollection(req, res) {
     });
   } catch (error) {
     logError('Failed to create collection', error, { userId: session.id });
-    return res.status(500).json({ error: 'Failed to create collection' });
+    return res.status(500).json({ error: 'Server error' });
   }
 }
 

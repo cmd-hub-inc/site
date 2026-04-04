@@ -48,7 +48,7 @@ export async function trackShare(req, res) {
     return res.status(201).json(share);
   } catch (error) {
     logError('Failed to track share', error);
-    return res.status(500).json({ error: 'Failed to track share' });
+    return res.status(500).json({ error: 'Server error' });
   }
 }
 
@@ -82,7 +82,7 @@ export async function getCommandShares(req, res) {
     return res.json(result);
   } catch (error) {
     logError('Failed to get share stats', error);
-    return res.status(500).json({ error: 'Failed to get share stats' });
+    return res.status(500).json({ error: 'Server error' });
   }
 }
 
@@ -144,7 +144,7 @@ export async function getCreatorShares(req, res) {
     });
   } catch (error) {
     logError('Failed to get creator shares', error);
-    return res.status(500).json({ error: 'Failed to get creator shares' });
+    return res.status(500).json({ error: 'Server error' });
   }
 }
 

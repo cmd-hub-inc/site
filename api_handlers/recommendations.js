@@ -40,7 +40,7 @@ export async function trackView(req, res) {
     res.status(201).json({ success: true, id: record.id });
   } catch (error) {
     logError('Failed to track view', error);
-    res.status(500).json({ error: 'Failed to track view' });
+    res.status(500).json({ error: 'Server error' });
   }
 }
 
@@ -154,7 +154,7 @@ export async function getRecommendations(req, res) {
     res.json(recommendations);
   } catch (error) {
     logError('Failed to get recommendations', error);
-    res.status(500).json({ error: 'Failed to get recommendations' });
+    res.status(500).json({ error: 'Server error' });
   }
 }
 
@@ -210,7 +210,7 @@ export async function getSimilarCommands(req, res) {
     res.json(similar);
   } catch (error) {
     logError('Failed to get similar commands', error);
-    res.status(500).json({ error: 'Failed to get similar commands' });
+    res.status(500).json({ error: 'Server error' });
   }
 }
 
@@ -237,6 +237,6 @@ export async function getBrowseHistory(req, res) {
     res.json(history);
   } catch (error) {
     logError('Failed to get browse history', error);
-    res.status(500).json({ error: 'Failed to get browse history' });
+    res.status(500).json({ error: 'Server error' });
   }
 }

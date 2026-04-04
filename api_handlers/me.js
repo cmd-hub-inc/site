@@ -43,6 +43,6 @@ export default async function handler(req, res) {
     }
   } catch (err) {
     console.error('me endpoint error', err && err.message ? err.message : err);
-    return res.status(500).json({ error: 'failed' });
+    return res.status(500).json({ error: 'Server error' });
   }
 }

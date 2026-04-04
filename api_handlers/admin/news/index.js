@@ -50,7 +50,7 @@ export default async function handler(req, res) {
             return res.json({ news: [] });
           }
 
-          return res.status(500).json({ error: 'Database error' });
+          return res.status(500).json({ error: 'Server error' });
         }
       }
 
@@ -89,7 +89,7 @@ export default async function handler(req, res) {
           });
         } catch (dbErr) {
           console.error('[admin/news] POST Database error:', dbErr.message, dbErr);
-          return res.status(500).json({ error: 'Database error' });
+          return res.status(500).json({ error: 'Server error' });
         }
       }
 

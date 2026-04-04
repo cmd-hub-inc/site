@@ -39,6 +39,6 @@ export default async function handler(req, res) {
     return res.json({ ok: true, rating: cmd.rating, ratingCount: cmd.ratingCount, myRating: r });
   } catch (err) {
     console.error('rate error', err && err.message ? err.message : err);
-    return res.status(500).json({ error: 'failed' });
+    return res.status(500).json({ error: 'Server error' });
   }
 }

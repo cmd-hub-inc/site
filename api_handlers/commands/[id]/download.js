@@ -13,6 +13,6 @@ export default async function handler(req, res) {
     return res.json({ ok: true, downloads: updated.downloads });
   } catch (err) {
     console.error('download increment error', err && err.message ? err.message : err);
-    return res.status(500).json({ error: 'failed' });
+    return res.status(500).json({ error: 'Server error' });
   }
 }

@@ -27,7 +27,7 @@ export async function getUserFavorites(req, res) {
     return res.json(result);
   } catch (error) {
     logError('Failed to get user favorites', error, { userId: session.id });
-    return res.status(500).json({ error: 'Failed to get favorites' });
+    return res.status(500).json({ error: 'Server error' });
   }
 }
 
@@ -77,7 +77,7 @@ export async function addToFavorites(req, res) {
     return res.status(201).json(favorite);
   } catch (error) {
     logError('Failed to add to favorites', error, { userId: session.id });
-    return res.status(500).json({ error: 'Failed to add to favorites' });
+    return res.status(500).json({ error: 'Server error' });
   }
 }
 
@@ -123,7 +123,7 @@ export async function removeFromFavorites(req, res) {
     return res.json({ success: true });
   } catch (error) {
     logError('Failed to remove from favorites', error, { userId: session.id });
-    return res.status(500).json({ error: 'Failed to remove from favorites' });
+    return res.status(500).json({ error: 'Server error' });
   }
 }
 
@@ -147,7 +147,7 @@ export async function isFavorited(req, res) {
     return res.json({ isFavorited: !!favorite });
   } catch (error) {
     logError('Failed to check favorite status', error, { userId: session.id });
-    return res.status(500).json({ error: 'Failed to check favorite status' });
+    return res.status(500).json({ error: 'Server error' });
   }
 }
 

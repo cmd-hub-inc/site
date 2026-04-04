@@ -63,6 +63,6 @@ export default async function handler(req, res) {
     });
   } catch (err) {
     console.error('auth complete error', err && err.message ? err.message : err);
-    return res.status(500).json({ error: 'server_error' });
+    return res.status(500).json({ error: 'Server error' });
   }
 }

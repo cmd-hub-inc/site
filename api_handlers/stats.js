@@ -33,6 +33,6 @@ export default async function handler(req, res) {
     });
   } catch (err) {
     console.error('stats error', err && err.message ? err.message : err);
-    return res.status(500).json({ error: 'failed_to_get_stats' });
+    return res.status(500).json({ error: 'Server error' });
   }
 }

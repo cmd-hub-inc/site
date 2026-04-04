@@ -111,7 +111,7 @@ export async function getTrendingCommands(req, res) {
     return res.json(result);
   } catch (error) {
     logError('Failed to get trending commands', error);
-    return res.status(500).json({ error: 'Failed to get trending commands' });
+    return res.status(500).json({ error: 'Server error' });
   }
 }
 

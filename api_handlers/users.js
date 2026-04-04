@@ -93,6 +93,6 @@ export default async function handler(req, res) {
       'users list error',
       err && err.stack ? err.stack : err && err.message ? err.message : err,
     );
-    return res.status(500).json({ error: 'failed' });
+    return res.status(500).json({ error: 'Server error' });
   }
 }

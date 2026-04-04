@@ -29,7 +29,7 @@ export async function getFollowers(req, res) {
     return res.json(result);
   } catch (error) {
     logError('Failed to get followers', error, { userId: req.params.userId });
-    return res.status(500).json({ error: 'Failed to get followers' });
+    return res.status(500).json({ error: 'Server error' });
   }
 }
 
@@ -55,7 +55,7 @@ export async function getFollowing(req, res) {
     return res.json(result);
   } catch (error) {
     logError('Failed to get following', error, { userId: req.params.userId });
-    return res.status(500).json({ error: 'Failed to get following' });
+    return res.status(500).json({ error: 'Server error' });
   }
 }
 
@@ -97,7 +97,7 @@ export async function followUser(req, res) {
     return res.status(201).json(follow);
   } catch (error) {
     logError('Failed to follow user', error, { userId: session.id });
-    return res.status(500).json({ error: 'Failed to follow user' });
+    return res.status(500).json({ error: 'Server error' });
   }
 }
 
@@ -132,7 +132,7 @@ export async function unfollowUser(req, res) {
     return res.json({ success: true });
   } catch (error) {
     logError('Failed to unfollow user', error, { userId: session.id });
-    return res.status(500).json({ error: 'Failed to unfollow user' });
+    return res.status(500).json({ error: 'Server error' });
   }
 }
 
@@ -156,7 +156,7 @@ export async function isFollowing(req, res) {
     return res.json({ isFollowing: !!follow });
   } catch (error) {
     logError('Failed to check following status', error, { userId: session.id });
-    return res.status(500).json({ error: 'Failed to check following status' });
+    return res.status(500).json({ error: 'Server error' });
   }
 }
 
@@ -187,7 +187,7 @@ export async function getFollowingFeed(req, res) {
     return res.json(commands);
   } catch (error) {
     logError('Failed to get following feed', error, { userId: session.id });
-    return res.status(500).json({ error: 'Failed to get following feed' });
+    return res.status(500).json({ error: 'Server error' });
   }
 }
 

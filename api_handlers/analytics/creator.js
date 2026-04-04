@@ -155,7 +155,7 @@ export default async function handler(req, res) {
     });
   } catch (error) {
     console.error('Analytics error:', error);
-    res.status(500).json({ error: 'Failed to fetch analytics' });
+    res.status(500).json({ error: 'Server error' });
   }
 }
 

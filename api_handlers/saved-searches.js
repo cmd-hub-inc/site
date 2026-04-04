@@ -34,7 +34,7 @@ export async function listSavedSearches(req, res) {
     res.json(savedSearches);
   } catch (error) {
     logError('Failed to list saved searches', error);
-    res.status(500).json({ error: 'Failed to list saved searches' });
+    res.status(500).json({ error: 'Server error' });
   }
 }
 
@@ -85,7 +85,7 @@ export async function createSavedSearch(req, res) {
     res.status(201).json(savedSearch);
   } catch (error) {
     logError('Failed to create saved search', error);
-    res.status(500).json({ error: 'Failed to create saved search' });
+    res.status(500).json({ error: 'Server error' });
   }
 }
 
@@ -140,7 +140,7 @@ export async function updateSavedSearch(req, res) {
     res.json(updated);
   } catch (error) {
     logError('Failed to update saved search', error);
-    res.status(500).json({ error: 'Failed to update saved search' });
+    res.status(500).json({ error: 'Server error' });
   }
 }
 
@@ -173,7 +173,7 @@ export async function deleteSavedSearch(req, res) {
     res.status(204).send();
   } catch (error) {
     logError('Failed to delete saved search', error);
-    res.status(500).json({ error: 'Failed to delete saved search' });
+    res.status(500).json({ error: 'Server error' });
   }
 }
 
@@ -205,6 +205,6 @@ export async function getSavedSearch(req, res) {
     res.json(savedSearch);
   } catch (error) {
     logError('Failed to get saved search', error);
-    res.status(500).json({ error: 'Failed to get saved search' });
+    res.status(500).json({ error: 'Server error' });
   }
 }

@@ -117,7 +117,7 @@ export async function listCommands(req, res) {
     return res.json(result);
   } catch (error) {
     logError('Failed to list commands', error);
-    return res.status(500).json({ error: 'Failed to list commands' });
+    return res.status(500).json({ error: 'Server error' });
   }
 }
 
@@ -168,7 +168,7 @@ export async function getCommand(req, res) {
     return res.json(result);
   } catch (error) {
     logError('Failed to get command', error, { commandId: req.params.id });
-    return res.status(500).json({ error: 'Failed to get command' });
+    return res.status(500).json({ error: 'Server error' });
   }
 }
 
@@ -236,7 +236,7 @@ export async function createCommand(req, res) {
     return res.status(201).json(command);
   } catch (error) {
     logError('Failed to create command', error, { userId: session.id });
-    return res.status(500).json({ error: 'Failed to create command' });
+    return res.status(500).json({ error: 'Server error' });
   }
 }
 
@@ -322,7 +322,7 @@ export async function updateCommand(req, res) {
     return res.json(updated);
   } catch (error) {
     logError('Failed to update command', error, { commandId: req.params.id, userId: session.id });
-    return res.status(500).json({ error: 'Failed to update command' });
+    return res.status(500).json({ error: 'Server error' });
   }
 }
 
@@ -360,7 +360,7 @@ export async function deleteCommand(req, res) {
     return res.json({ success: true });
   } catch (error) {
     logError('Failed to delete command', error, { commandId: req.params.id, userId: session.id });
-    return res.status(500).json({ error: 'Failed to delete command' });
+    return res.status(500).json({ error: 'Server error' });
   }
 }
 
@@ -396,7 +396,7 @@ export async function rateCommand(req, res) {
     return res.json({ success: true, ...stats });
   } catch (error) {
     logError('Failed to rate command', error, { commandId: req.params.id, userId: session.id });
-    return res.status(500).json({ error: 'Failed to rate command' });
+    return res.status(500).json({ error: 'Server error' });
   }
 }
 
@@ -429,7 +429,7 @@ export async function downloadCommand(req, res) {
     return res.json(command);
   } catch (error) {
     logError('Failed to download command', error, { commandId: req.params.id });
-    return res.status(500).json({ error: 'Failed to download command' });
+    return res.status(500).json({ error: 'Server error' });
   }
 }
 

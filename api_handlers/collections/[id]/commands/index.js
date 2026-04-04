@@ -74,7 +74,7 @@ export async function addCommandToCollection(req, res) {
       collectionId: req.query.id,
       userId: session.id,
     });
-    return res.status(500).json({ error: 'Failed to add command to collection' });
+    return res.status(500).json({ error: 'Server error' });
   }
 }
 
@@ -135,7 +135,7 @@ export async function removeCommandFromCollection(req, res) {
       collectionId: req.query.id,
       userId: session.id,
     });
-    return res.status(500).json({ error: 'Failed to remove command from collection' });
+    return res.status(500).json({ error: 'Server error' });
   }
 }
 

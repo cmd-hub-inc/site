@@ -32,6 +32,6 @@ export default async function handler(req, res) {
     }
   } catch (err) {
     console.error('favourite toggle error', err && err.message ? err.message : err);
-    return res.status(500).json({ error: 'failed_to_toggle_favourite' });
+    return res.status(500).json({ error: 'Server error' });
   }
 }

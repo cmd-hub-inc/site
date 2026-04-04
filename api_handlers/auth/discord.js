@@ -23,7 +23,7 @@ export default function handler(req, res) {
   const DISCORD_CLIENT_ID = process.env.DISCORD_CLIENT_ID;
   const BASE_URL = resolveTrustedBaseUrl();
   if (!BASE_URL) {
-    return res.status(500).json({ error: 'Server misconfigured: invalid or missing BASE_URL' });
+    return res.status(500).json({ error: 'Server error' });
   }
 
   const state = signPending({ type: 'oauth_state', nonce: randomUUID() }, { expiresIn: '10m' });

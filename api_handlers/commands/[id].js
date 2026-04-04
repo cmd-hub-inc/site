@@ -34,7 +34,7 @@ export default async function handler(req, res) {
             'raw SQL fallback failed for increment views',
             rawErr && rawErr.message ? rawErr.message : rawErr,
           );
-          return res.status(500).json({ error: 'failed' });
+          return res.status(500).json({ error: 'Server error' });
         }
       }
 
@@ -127,6 +127,6 @@ export default async function handler(req, res) {
     return res.setHeader('Allow', 'GET, PUT') && res.status(405).end('Method Not Allowed');
   } catch (err) {
     console.error('command by id error', err && err.message ? err.message : err);
-    return res.status(500).json({ error: 'failed' });
+    return res.status(500).json({ error: 'Server error' });
   }
 }

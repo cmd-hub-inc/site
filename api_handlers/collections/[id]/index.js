@@ -45,7 +45,7 @@ export async function getCollection(req, res) {
     return res.json(result);
   } catch (error) {
     logError('Failed to get collection', error, { collectionId: req.query.id });
-    return res.status(500).json({ error: 'Failed to get collection' });
+    return res.status(500).json({ error: 'Server error' });
   }
 }
 
@@ -115,7 +115,7 @@ export async function updateCollection(req, res) {
     return res.json(collection);
   } catch (error) {
     logError('Failed to update collection', error, { collectionId: req.query.id, userId: session.id });
-    return res.status(500).json({ error: 'Failed to update collection' });
+    return res.status(500).json({ error: 'Server error' });
   }
 }
 
@@ -155,7 +155,7 @@ export async function deleteCollection(req, res) {
     return res.json({ success: true });
   } catch (error) {
     logError('Failed to delete collection', error, { collectionId: req.query.id, userId: session.id });
-    return res.status(500).json({ error: 'Failed to delete collection' });
+    return res.status(500).json({ error: 'Server error' });
   }
 }
 

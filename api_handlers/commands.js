@@ -62,7 +62,7 @@ async function listCommands(req, res) {
         'raw SQL fallback failed for /api/commands',
         rawErr && rawErr.message ? rawErr.message : rawErr,
       );
-      return res.status(500).json({ error: 'failed' });
+      return res.status(500).json({ error: 'Server error' });
     }
   }
 }
@@ -107,7 +107,7 @@ async function createCommand(req, res) {
             'safe create retry failed',
             rawErr && rawErr.message ? rawErr.message : rawErr,
           );
-          return res.status(500).json({ error: 'failed_to_create_command' });
+          return res.status(500).json({ error: 'Server error' });
         }
       } else {
         throw e;
@@ -139,7 +139,7 @@ async function createCommand(req, res) {
     }
   } catch (err) {
     console.error('create command error', err && err.message ? err.message : err);
-    return res.status(500).json({ error: 'failed' });
+    return res.status(500).json({ error: 'Server error' });
   }
 }
 
