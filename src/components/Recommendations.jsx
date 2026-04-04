@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { Spark, Loader, ChevronRight } from 'lucide-react';
+import { Sparkles } from 'lucide-react';
 import { C } from '../constants';
 import CommandCard from './CommandCard';
 
@@ -42,7 +42,7 @@ export default function Recommendations({ onViewCommand }) {
     return (
       <div style={{ marginBottom: 48 }}>
         <div style={{ display: 'flex', alignItems: 'center', gap: 12, marginBottom: 24 }}>
-          <Spark size={28} strokeWidth={2} color={C.blurple} />
+          <Sparkles size={28} strokeWidth={2} color={C.blurple} />
           <h2 style={{
             fontSize: 24,
             fontWeight: 700,
@@ -73,7 +73,7 @@ export default function Recommendations({ onViewCommand }) {
   return (
     <div style={{ marginBottom: 48 }}>
       <div style={{ display: 'flex', alignItems: 'center', gap: 12, marginBottom: 24 }}>
-        <Spark size={28} strokeWidth={2} color={C.blurple} />
+        <Sparkles size={28} strokeWidth={2} color={C.blurple} />
         <h2 style={{
           fontSize: 24,
           fontWeight: 700,
