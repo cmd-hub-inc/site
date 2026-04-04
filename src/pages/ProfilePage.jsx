@@ -25,6 +25,7 @@ export default function ProfilePage({ user, profileId, onViewCommand, onNavigate
   const [userCmds, setUserCmds] = useState([]);
   const [favCmds, setFavCmds] = useState([]);
   const [userCollections, setUserCollections] = useState([]);
+  const [userCollectionsTotal, setUserCollectionsTotal] = useState(0);
   const [loadingUserCmds, setLoadingUserCmds] = useState(true);
   const [loadingFavCmds, setLoadingFavCmds] = useState(true);
   const [loadingCollections, setLoadingCollections] = useState(true);
@@ -148,10 +149,15 @@ export default function ProfilePage({ user, profileId, onViewCommand, onNavigate
         const id = viewUser && viewUser.id ? viewUser.id : profileId;
         const payload = await fetchCollections(id, 100, 1);
         if (!cancelled) {
-          setUserCollections(Array.isArray(payload?.data) ? payload.data : []);
+          const collections = Array.isArray(payload?.data) ? payload.data : [];
+          setUserCollections(collections);
+          setUserCollectionsTotal(Number(payload?.pagination?.total) || collections.length);
         }
       } catch (e) {
-        if (!cancelled) setUserCollections([]);
+        if (!cancelled) {
+          setUserCollections([]);
+          setUserCollectionsTotal(0);
+        }
       } finally {
         if (!cancelled) setLoadingCollections(false);
       }
@@ -210,7 +216,7 @@ export default function ProfilePage({ user, profileId, onViewCommand, onNavigate
                 <div className="skeleton" style={{ width: 120, height: 14, borderRadius: 6 }} />
               </div>
               <div style={{ display: 'flex', gap: 16, rowGap: 12, flexWrap: 'wrap', maxWidth: '100%' }}>
-                {[1, 2, 3].map((i) => (
+                {[1, 2, 3, 4].map((i) => (
                   <div key={i} style={{ textAlign: 'center' }}>
                     <div className="skeleton" style={{ width: 64, height: 22, borderRadius: 6 }} />
                     <div style={{ color: C.muted, fontSize: 12 }}>&nbsp;</div>
@@ -290,7 +296,7 @@ export default function ProfilePage({ user, profileId, onViewCommand, onNavigate
               <div className="skeleton" style={{ width: 120, height: 14, borderRadius: 6 }} />
             </div>
             <div style={{ display: 'flex', gap: 16, rowGap: 12, flexWrap: 'wrap', maxWidth: '100%' }}>
-              {[1, 2, 3].map((i) => (
+              {[1, 2, 3, 4].map((i) => (
                 <div key={i} style={{ textAlign: 'center' }}>
                   <div className="skeleton" style={{ width: 64, height: 22, borderRadius: 6 }} />
                   <div style={{ color: C.muted, fontSize: 12 }}>&nbsp;</div>
@@ -447,6 +453,7 @@ export default function ProfilePage({ user, profileId, onViewCommand, onNavigate
               { label: 'Commands', value: loadingUserCmds ? null : userCmds.length, icon: Package, accentColor: '#3b82f6' },
               { label: 'Downloads', value: loadingUserCmds ? null : totalDownloads, icon: Download, accentColor: '#10b981' },
               { label: 'Favourites', value: loadingUserCmds ? null : totalFavs, icon: Heart, accentColor: '#ef4444' },
+              { label: 'Collections', value: loadingCollections ? null : userCollectionsTotal, icon: BookOpen, accentColor: '#8b5cf6' },
             ].map((s) => (
               <div key={s.label} style={{ textAlign: 'center', minWidth: 80, flex: '0 1 92px' }}>
                 <div
