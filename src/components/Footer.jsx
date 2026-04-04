@@ -1,5 +1,5 @@
 import React from 'react';
-import { Code2, Github, MessageCircle, ExternalLink } from 'lucide-react';
+import { Code2, ExternalLink } from 'lucide-react';
 import { C } from '../constants';
 
 export default function Footer({ onNavigate }) {

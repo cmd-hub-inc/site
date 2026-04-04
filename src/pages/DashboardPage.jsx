@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react';
 import { C } from '../constants';
-import { TrendingUp, Calendar, BarChart3, Table2, LogIn, Eye, Download, Heart, Link2, Star, Users, Clock } from 'lucide-react';
+import { TrendingUp, Calendar, BarChart3, Table2, Eye, Download, Heart, Link2, Star, Users, Clock } from 'lucide-react';
 import { saveReturnTo } from '../lib/authHelpers';
 
 const DASHBOARD_PERIODS = ['7days', '30days', '90days'];

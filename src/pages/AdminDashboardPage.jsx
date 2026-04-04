@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react';
 import { C } from '../constants';
-import { Users, Package, AlertCircle, CheckCircle, XCircle, Eye, Filter, Newspaper, Trash2 } from 'lucide-react';
+import { Users, Package, AlertCircle, Filter, Newspaper, Trash2 } from 'lucide-react';
 
 const ADMIN_SECTIONS = ['overview', 'commands', 'users', 'reports', 'news'];
 

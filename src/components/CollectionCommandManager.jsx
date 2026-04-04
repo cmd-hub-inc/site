@@ -1,5 +1,5 @@
 import React, { useMemo, useState } from 'react';
-import { Plus, X, AlertCircle, Trash2 } from 'lucide-react';
+import { Plus, AlertCircle, Trash2 } from 'lucide-react';
 import { addCommandToCollection, removeCommandFromCollection, fetchCommands } from '../api';
 import CommandCard from './CommandCard';
 import { C } from '../constants';

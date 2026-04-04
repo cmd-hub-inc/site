@@ -1,5 +1,4 @@
 import React from 'react';
-import { Star } from 'lucide-react';
 import { C } from '../constants';
 
 export function StarRow({ rating, count, size = 12 }) {
