@@ -78,10 +78,14 @@ export async function deleteCache(...keys) {
 export async function invalidateCachePattern(pattern) {
   if (!redis) return;
   try {
-    const keys = await redis.keys(pattern);
-    if (keys.length > 0) {
-      await redis.del(...keys);
-    }
+    let cursor = '0';
+    do {
+      const [nextCursor, keys] = await redis.scan(cursor, 'MATCH', pattern, 'COUNT', 200);
+      if (Array.isArray(keys) && keys.length > 0) {
+        await redis.del(...keys);
+      }
+      cursor = nextCursor;
+    } while (cursor !== '0');
   } catch (err) {
     console.warn(`[cache] INVALIDATE pattern error for ${pattern}:`, err.message);
   }
