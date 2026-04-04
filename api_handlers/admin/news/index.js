@@ -50,7 +50,7 @@ export default async function handler(req, res) {
             return res.json({ news: [] });
           }
 
-          return res.status(500).json({ error: 'Database error: ' + msg });
+          return res.status(500).json({ error: 'Database error' });
         }
       }
 
@@ -89,17 +89,17 @@ export default async function handler(req, res) {
           });
         } catch (dbErr) {
           console.error('[admin/news] POST Database error:', dbErr.message, dbErr);
-          return res.status(500).json({ error: 'Database error: ' + dbErr.message });
+          return res.status(500).json({ error: 'Database error' });
         }
       }
 
       return res.status(405).json({ error: 'Method not allowed' });
     } catch (userError) {
       console.error('[admin/news] User lookup error:', userError.message, userError);
-      return res.status(500).json({ error: 'User lookup error: ' + userError.message });
+      return res.status(500).json({ error: 'Server error' });
     }
   } catch (error) {
     console.error('[admin/news] Handler error:', error.message, error);
-    return res.status(500).json({ error: 'Server error: ' + error.message });
+    return res.status(500).json({ error: 'Server error' });
   }
 }
