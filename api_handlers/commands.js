@@ -4,22 +4,8 @@ import { requireAuthOrFail } from './_lib/utils.js';
 async function listCommands(req, res) {
   try {
     const cmds = await prisma.command.findMany({ include: { author: true } });
-    const ids = cmds.map((c) => c.id).filter(Boolean);
-    if (ids.length > 0) {
-      const rows = await prisma.$queryRaw`
-        SELECT id, "uploadCategory" FROM "Command" WHERE id = ANY(${ids})
-      `;
-      const map = {};
-      if (Array.isArray(rows))
-        rows.forEach(
-          (r) =>
-            (map[r.id || r.ID || Object.values(r)[0]] =
-              r.uploadCategory || r.uploadcategory || r.UploadCategory),
-        );
-      const out = cmds.map((c) => ({ ...c, uploadCategory: map[c.id] || 'Framework' }));
-      return res.json(out);
-    }
-    return res.json(cmds);
+    const out = cmds.map((c) => ({ ...c, uploadCategory: c.uploadCategory || 'Framework' }));
+    return res.json(out);
   } catch (prismaErr) {
     console.warn(
       '[api] Prisma findMany failed, falling back to raw SQL:',

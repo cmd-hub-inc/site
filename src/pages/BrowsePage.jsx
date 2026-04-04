@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import { Search, Filter, X, Flame, Command, Zap, AlertCircle } from 'lucide-react';
 import CommandCard from '../components/CommandCard';
 import SavedSearches from '../components/SavedSearches';
@@ -140,28 +140,36 @@ export default function BrowsePage({ initialTag, initialUploadCategory, onViewCo
     };
   }, []);
 
-  const filtered = commands
-    .filter((cmd) => {
-      if (search) {
-        const q = search.toLowerCase();
-        const name = (cmd.name || '').toLowerCase();
-        const desc = (cmd.description || '').toLowerCase();
-        if (!name.includes(q) && !desc.includes(q)) return false;
-      }
-      if (selectedTags.length && !selectedTags.every((t) => (cmd.tags || []).includes(t)))
-        return false;
-      if (selectedCategory && String(cmd.uploadCategory || 'Framework').toLowerCase() !== String(selectedCategory).toLowerCase())
-        return false;
-      if (selectedFW && cmd.framework !== selectedFW) return false;
-      if (selectedType && cmd.type !== selectedType) return false;
-      return true;
-    })
-    .sort((a, b) => {
-      if (sort === 'downloads') return (b.downloads || 0) - (a.downloads || 0);
-      if (sort === 'rating') return (b.rating || 0) - (a.rating || 0);
-      if (sort === 'newest') return new Date(b.createdAt) - new Date(a.createdAt);
-      return 0;
-    });
+  const filtered = useMemo(() => {
+    return commands
+      .filter((cmd) => {
+        if (search) {
+          const q = search.toLowerCase();
+          const name = (cmd.name || '').toLowerCase();
+          const desc = (cmd.description || '').toLowerCase();
+          if (!name.includes(q) && !desc.includes(q)) return false;
+        }
+        if (selectedTags.length && !selectedTags.every((t) => (cmd.tags || []).includes(t))) {
+          return false;
+        }
+        if (
+          selectedCategory &&
+          String(cmd.uploadCategory || 'Framework').toLowerCase() !==
+            String(selectedCategory).toLowerCase()
+        ) {
+          return false;
+        }
+        if (selectedFW && cmd.framework !== selectedFW) return false;
+        if (selectedType && cmd.type !== selectedType) return false;
+        return true;
+      })
+      .sort((a, b) => {
+        if (sort === 'downloads') return (b.downloads || 0) - (a.downloads || 0);
+        if (sort === 'rating') return (b.rating || 0) - (a.rating || 0);
+        if (sort === 'newest') return new Date(b.createdAt) - new Date(a.createdAt);
+        return 0;
+      });
+  }, [commands, search, selectedTags, selectedCategory, selectedFW, selectedType, sort]);
 
   const activeFilterCount = selectedTags.length + (selectedFW ? 1 : 0) + (selectedType ? 1 : 0) + (selectedCategory ? 1 : 0);
 
@@ -175,9 +183,10 @@ export default function BrowsePage({ initialTag, initialUploadCategory, onViewCo
   };
 
   // Top downloaded commands (used in the section below the search controls)
-  const topDownloaded = loadingCommands
-    ? []
-    : [...commands].sort((a, b) => (b.downloads || 0) - (a.downloads || 0)).slice(0, 4);
+  const topDownloaded = useMemo(() => {
+    if (loadingCommands) return [];
+    return [...commands].sort((a, b) => (b.downloads || 0) - (a.downloads || 0)).slice(0, 4);
+  }, [commands, loadingCommands]);
 
   return (
     <div className="browse-page" style={{ maxWidth: 1200, margin: '0 auto', padding: '60px 24px' }}>

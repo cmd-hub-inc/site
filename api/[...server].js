@@ -7,6 +7,8 @@ import { rateLimiters } from '../api_handlers/_lib/rateLimiter.js';
 import { installServerErrorJsonGuard } from '../api_handlers/_lib/errorResponses.js';
 
 const handlersDir = path.join(process.cwd(), 'api_handlers');
+const handlerExistsCache = new Map();
+const routeMatchCache = new Map();
 
 function runMiddleware(middleware, req, res) {
   return new Promise((resolve, reject) => {
@@ -48,14 +50,36 @@ function loadHandler(routePath) {
   return null;
 }
 
+function handlerPathExists(routePath) {
+  if (handlerExistsCache.has(routePath)) {
+    return handlerExistsCache.get(routePath);
+  }
+
+  const exists =
+    fs.existsSync(path.join(handlersDir, routePath + '.js')) ||
+    fs.existsSync(path.join(handlersDir, routePath, 'index.js'));
+  handlerExistsCache.set(routePath, exists);
+  return exists;
+}
+
 function matchHandler(reqPath) {
   // Try exact match then index. Normalize and strip leading /api prefix.
   let p = String(reqPath || '').replace(/^\//, '');
   if (p.startsWith('api/')) p = p.slice(4);
+
+  if (routeMatchCache.has(p)) {
+    return routeMatchCache.get(p);
+  }
+
   if (!p) return 'index';
   const exact = p;
-  if (fs.existsSync(path.join(handlersDir, exact + '.js'))) return exact;
-  if (fs.existsSync(path.join(handlersDir, exact, 'index.js'))) return path.join(exact, 'index');
+  if (handlerPathExists(exact)) {
+    const matched = fs.existsSync(path.join(handlersDir, exact + '.js'))
+      ? exact
+      : path.join(exact, 'index');
+    routeMatchCache.set(p, matched);
+    return matched;
+  }
 
   // Try dynamic segment matching by replacing segments with [id]
   const segs = p.split('/').filter(Boolean);
@@ -68,12 +92,21 @@ function matchHandler(reqPath) {
       parts.push(mask & (1 << i) ? '[id]' : segs[i]);
     }
     const cand = parts.join('/');
-    if (fs.existsSync(path.join(handlersDir, cand + '.js'))) return cand;
-    if (fs.existsSync(path.join(handlersDir, cand, 'index.js'))) return path.join(cand, 'index');
+    if (handlerPathExists(cand)) {
+      const matched = fs.existsSync(path.join(handlersDir, cand + '.js'))
+        ? cand
+        : path.join(cand, 'index');
+      routeMatchCache.set(p, matched);
+      return matched;
+    }
   }
 
   // Fallback: global catch-all handler
-  if (fs.existsSync(path.join(handlersDir, '[...path].js'))) return '[...path]';
+  if (handlerPathExists('[...path]')) {
+    routeMatchCache.set(p, '[...path]');
+    return '[...path]';
+  }
+  routeMatchCache.set(p, null);
   return null;
 }
 

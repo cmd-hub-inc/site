@@ -180,23 +180,6 @@ export default function App() {
       }
       return false;
     };
-    // Start a background poll for `/api/ready` but do not block initialization.
-    (async () => {
-      try {
-        for (let i = 0; i < maxAttempts && !cancelled; i++) {
-          try {
-            const r = await fetch(`${API_BASE}/api/ready`);
-            if (r.ok) break;
-          } catch (e) {
-            // ignore and retry
-          }
-          await new Promise((r) => setTimeout(r, pollInterval));
-        }
-      } catch (e) {
-        // ignore
-      }
-    })();
-
     // Continue with the rest of initialization immediately (do not wait for /api/ready)
     (async () => {
       try {
